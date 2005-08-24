@@ -35,7 +35,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.eclipse.mylar.core.MylarPlugin;
-import org.eclipse.mylar.tasklist.AbstractCategory;
+import org.eclipse.mylar.tasklist.ICategory;
+import org.eclipse.mylar.tasklist.IQuery;
 import org.eclipse.mylar.tasklist.ITask;
 import org.eclipse.mylar.tasklist.ITaskHandler;
 import org.eclipse.mylar.tasklist.ITaskListExternalizer;
@@ -100,10 +101,11 @@ public class TaskListExternalizer {
 			externalizer.createRegistry(doc, root);
 		}		
 
-		for (AbstractCategory category : tlist.getCategories()) {
+		for (ICategory category : tlist.getCategories()) {
 			Element element = null;
 			for (ITaskListExternalizer externalizer : externalizers) {
-				if (externalizer.canCreateElementFor(category)) element = externalizer.createCategoryElement(category, doc, root);
+				if (externalizer.canCreateElementFor(category)) 
+					element = externalizer.createCategoryElement(category, doc, root);
 			}
 			if (element == null && defaultExternalizer.canCreateElementFor(category)) {
 				defaultExternalizer.createCategoryElement(category, doc, root);		
@@ -111,6 +113,19 @@ public class TaskListExternalizer {
 				MylarPlugin.log("Did not externalize: " + category, this);
 			}
 		}
+		
+		for (IQuery query: tlist.getQueries()) {
+			Element element = null;
+			for (ITaskListExternalizer externalizer : externalizers) {
+				if (externalizer.canCreateElementFor(query)) element = externalizer.createQueryElement(query, doc, root);
+			}
+			if (element == null && defaultExternalizer.canCreateElementFor(query)) {
+				defaultExternalizer.createQueryElement(query, doc, root);		
+			} else if(element == null){
+				MylarPlugin.log("Did not externalize: " + query, this);
+			}
+		}
+		
 		for (ITask task : tlist.getRootTasks()) {
 			try {
 				Element element = null;
@@ -188,10 +203,6 @@ public class TaskListExternalizer {
 			e1.printStackTrace();
 		}
 	}
-	
-//	private void writeTask(ITask task, Document doc, Element parent) {
-//
-//	}
 	
 	public void readTaskList(TaskList tlist, File inFile) {
 		initExtensions();
@@ -495,7 +506,7 @@ public class TaskListExternalizer {
 			externalizer.createRegistry(doc, root);
 		}		
 
-		for (AbstractCategory category : tlist.getCategories()) {
+		for (ICategory category : tlist.getCategories()) {
 			Element element = null;
 			for (ITaskListExternalizer externalizer : externalizers) {
 				if (externalizer.canCreateElementFor(category)) element = externalizer.createCategoryElement(category, doc, root);

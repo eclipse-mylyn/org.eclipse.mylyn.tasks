@@ -65,7 +65,7 @@ public class PlanningGameSorter extends ViewerSorter {
 	}
 	
 	private int compareDescription(ITask task1, ITask task2) {
-		return task1.getLabel().compareTo(task2.getLabel());
+		return task1.getDescription(false).compareTo(task2.getDescription(false));
 	}
 	
 	private int comparePriority(ITask task1, ITask task2) {

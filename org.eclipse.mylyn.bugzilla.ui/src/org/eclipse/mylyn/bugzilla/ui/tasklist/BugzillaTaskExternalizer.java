@@ -84,10 +84,10 @@ public class BugzillaTaskExternalizer extends DefaultTaskListExternalizer {
 	}
 
 	public String getQueryTagNameForElement(IQuery query) {
-		if(query instanceof BugzillaQueryCategory){
-			return TAG_BUGZILLA_QUERY;
-		} else if(query instanceof BugzillaCustomQuery){
+		if(query instanceof BugzillaCustomQuery){
 			return TAG_BUGZILLA_CUSTOM_QUERY;
+		} else if(query instanceof BugzillaQueryCategory){
+			return TAG_BUGZILLA_QUERY;
 		}
 		return "";
 	}

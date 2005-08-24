@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.bugzilla.ui.BugzillaOpenStructure;
@@ -106,8 +107,27 @@ public class BugzillaTaskHandler implements ITaskHandler {
 			} else {
 				// not supported
 			}
-		}
-		else if (element instanceof BugzillaQueryCategory){
+		}else if (element instanceof BugzillaCustomQuery){
+			BugzillaCustomQuery queryCategory = (BugzillaCustomQuery)element;
+			
+			InputDialog d = new InputDialog(Display.getCurrent().getActiveShell(), "Name the query", "Name the query", queryCategory.getDescription(false), null);
+	    	d.open();
+	    	queryCategory.setDescription(d.getValue());
+	    	
+	    	d = new InputDialog(Display.getCurrent().getActiveShell(), "MaxHits", "MaxHits", queryCategory.getMaxHits()+"", null);
+	    	d.open();
+	    	int maxHits = -1;
+        	try{
+        		maxHits = Integer.parseInt(d.getValue());
+        	} catch(Exception e){}
+	    	queryCategory.setMaxHits(maxHits);
+	    	
+	    	d = new InputDialog(Display.getCurrent().getActiveShell(), "URL", "URL", queryCategory.getQueryString(), null);
+	    	d.open();
+	    	queryCategory.setQueryString(d.getValue());
+	    	new RefreshBugzillaAction(queryCategory).run();
+        	
+	    } else if (element instanceof BugzillaQueryCategory){
 			BugzillaQueryCategory queryCategory = (BugzillaQueryCategory)element;
 	       	BugzillaQueryDialog sqd = new BugzillaQueryDialog(Display.getCurrent().getActiveShell(), queryCategory.getQueryString(), queryCategory.getDescription(false), queryCategory.getMaxHits()+"");
         	if(sqd.open() == Dialog.OK){

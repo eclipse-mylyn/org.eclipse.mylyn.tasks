@@ -63,19 +63,6 @@ public class TaskListExternalizer {
 		TaskListExtensionReader.initExtensions(externalizers, defaultExternalizer);
 	}
 	
-//	public void addExternalizer(ITaskListExternalizer externalizer) {
-//		externalizers.add(externalizer);
-//		defaultExternalizer.setExternalizers(externalizers);
-//		MylarTasklistPlugin.getTaskListManager().getTaskList().clear();
-//		readTaskList(MylarTasklistPlugin.getTaskListManager().getTaskList(), MylarTasklistPlugin.getTaskListManager().getTaskListFile());
-//		if(MylarTasklistPlugin.getDefault().getContributor() != null){
-//			MylarTasklistPlugin.getDefault().getContributor().restoreState(TaskListView.getDefault());
-//			if (TaskListView.getDefault() != null) {
-//				TaskListView.getDefault().getViewer().refresh();
-//			}
-//		}
-//	}
-	
 	public void removeExternalizer(ITaskListExternalizer externalizer) {
 		externalizers.remove(externalizer);
 	}
@@ -251,7 +238,21 @@ public class TaskListExternalizer {
 								// MylarPlugin.log("Did not read: " +
 								// child.getNodeName(), this);
 							}						
-						} else {
+						} else if (child.getNodeName().endsWith(DefaultTaskListExternalizer.TAG_QUERY)) {													
+							for (ITaskListExternalizer externalizer : externalizers) {
+								if (externalizer.canReadQuery(child)) {
+									externalizer.readQuery(child, tlist);
+									wasRead = true;
+									break;
+								}
+							}
+							if (!wasRead && defaultExternalizer.canReadCategory(child)) {
+								defaultExternalizer.readQuery(child, tlist);
+							} else {
+								// MylarPlugin.log("Did not read: " +
+								// child.getNodeName(), this);
+							}						
+						}else {
 							for (ITaskListExternalizer externalizer : externalizers) {
 								if (externalizer.canReadTask(child)) {
 									// TODO add the tasks properly
@@ -375,7 +376,42 @@ public class TaskListExternalizer {
     
     
     
-    
+    /*
+     *
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     */
     
     
     

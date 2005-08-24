@@ -34,11 +34,9 @@ public interface ITaskListExternalizer {
 	
 	public abstract String getTaskTagName();
 	
+	public abstract String getQueryTagNameForElement(IQuery query);
+	
 	public abstract boolean canCreateElementFor(ICategory category);
-	
-	public abstract boolean canCreateElementFor(IQuery category);
-	
-	public abstract Element createQueryElement(IQuery query, Document doc, Element parent);
 	
 	/**
 	 * @return the element that was created, null if failed
@@ -59,4 +57,14 @@ public interface ITaskListExternalizer {
 	public abstract boolean canReadTask(Node node);
 	
 	public abstract ITask readTask(Node node, TaskList tlist, ICategory category, ITask parent) throws MylarExternalizerException;
+	
+	
+	
+	public abstract boolean canCreateElementFor(IQuery category);
+	
+	public abstract Element createQueryElement(IQuery query, Document doc, Element parent);
+	
+	public abstract boolean canReadQuery(Node node);
+	
+	public abstract void readQuery(Node node, TaskList tlist) throws MylarExternalizerException;
 }

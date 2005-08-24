@@ -31,6 +31,10 @@ import org.w3c.dom.NodeList;
  */
 public class DefaultTaskListExternalizer implements ITaskListExternalizer {
 
+	public static final String TAG_QUERY = "Query";
+	public static final String MAX_HITS = "MaxHits";
+	public static final String QUERY_STRING = "QueryString";
+	
 	public static final String LABEL = "Label";
 	public static final String HANDLE = "Handle";
 	public static final String TAG_CATEGORY = "Category";
@@ -286,12 +290,28 @@ public class DefaultTaskListExternalizer implements ITaskListExternalizer {
 
 	
 	public boolean canCreateElementFor(IQuery category) {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	public Element createQueryElement(IQuery query, Document doc, Element parent) {
-		// TODO Auto-generated method stub
-		return null;
+		Element node = doc.createElement(getQueryTagNameForElement(query));
+		node.setAttribute(NAME, query.getDescription(false));
+		node.setAttribute(MAX_HITS, query.getMaxHits()+"");
+		node.setAttribute(QUERY_STRING, query.getQueryString());
+		parent.appendChild(node);
+		return node;
+	}
+
+	public boolean canReadQuery(Node node) {
+		return false;
+	}
+
+	public void readQuery(Node node, TaskList tlist) throws MylarExternalizerException {
+		// doesn't know how to read any queries
+		
+	}
+
+	public String getQueryTagNameForElement(IQuery query) {
+		return "";
 	}
 }

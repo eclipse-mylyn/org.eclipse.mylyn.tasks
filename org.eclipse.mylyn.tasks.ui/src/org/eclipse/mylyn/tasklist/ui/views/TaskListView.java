@@ -1099,7 +1099,7 @@ public class TaskListView extends ViewPart {
 
     private void updateActionEnablement(Action action, ITaskListElement element){
     
-		if(element instanceof Task){
+		if(element instanceof ITask){
 			if(action instanceof MarkTaskCompleteAction){
 				if(element.isCompleted()){
 					action.setEnabled(false);

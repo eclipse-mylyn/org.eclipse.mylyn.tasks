@@ -41,12 +41,15 @@ public class BugzillaTaskExternalizer extends DefaultTaskListExternalizer {
 	private static final String BUGZILLA = "Bugzilla";
 	private static final String LAST_DATE = "LastDate";
 	private static final String DIRTY = "Dirty";
-	private static final String URL = "URL";
 	private static final String DESCRIPTION = "Description";
-	private static final String MAX_HITS = "MaxHits";
+	private static final String URL = "URL";
 
 	private static final String BUGZILLA_TASK_REGISTRY = "BugzillaTaskRegistry" + TAG_CATEGORY;
 	private static final String TAG_BUGZILLA_CATEGORY = "BugzillaQuery" + TAG_CATEGORY;
+	
+	private static final String TAG_BUGZILLA_QUERY = "Bugzilla" + TAG_QUERY;
+	private static final String TAG_BUGZILLA_CUSTOM_QUERY = "BugzillaCustom" + TAG_QUERY;
+	
 	private static final String TAG_TASK = "BugzillaReport";
 	
 	@Override
@@ -80,12 +83,38 @@ public class BugzillaTaskExternalizer extends DefaultTaskListExternalizer {
 		}
 	}
 
+	public String getQueryTagNameForElement(IQuery query) {
+		if(query instanceof BugzillaQueryCategory){
+			return TAG_BUGZILLA_QUERY;
+		} else if(query instanceof BugzillaCustomQuery){
+			return TAG_BUGZILLA_CUSTOM_QUERY;
+		}
+		return "";
+	}
+	
+	public boolean canReadQuery(Node node) {
+		return node.getNodeName().equals(TAG_BUGZILLA_CUSTOM_QUERY) || node.getNodeName().equals(TAG_BUGZILLA_QUERY);
+	}
+
+	public void readQuery(Node node, TaskList tlist) throws MylarExternalizerException {
+		Element e = (Element) node;
+		IQuery cat = null;
+		if(node.getNodeName().equals(TAG_BUGZILLA_CUSTOM_QUERY)){
+			cat = new BugzillaCustomQuery(e.getAttribute(NAME), e.getAttribute(QUERY_STRING), e.getAttribute(MAX_HITS));
+		} else if(node.getNodeName().equals(TAG_BUGZILLA_QUERY)){
+			cat = new BugzillaQueryCategory(e.getAttribute(NAME), e.getAttribute(QUERY_STRING), e.getAttribute(MAX_HITS));
+		}
+		if(cat != null){
+			tlist.internalAddQuery(cat);
+		}
+	}
+	
 	public void readRegistry(Node node, TaskList taskList)  throws MylarExternalizerException {
 		boolean hasCaughtException = false;
 		NodeList list = node.getChildNodes();
 		TaskCategory cat = new TaskCategory("Bugzilla Archive");
 		cat.setIsArchive(true);
-		taskList.addCategory(cat);
+		taskList.internalAddCategory(cat);
 		BugzillaUiPlugin.getDefault().getBugzillaTaskListManager().setTaskRegistyCategory(cat);
 		for (int i = 0; i < list.getLength(); i++) {
 			try {
@@ -103,22 +132,8 @@ public class BugzillaTaskExternalizer extends DefaultTaskListExternalizer {
 		if (hasCaughtException) throw new MylarExternalizerException("Failed to restore all tasks");
 	}
 	
-	public boolean canCreateElementFor(IQuery query) {
-		return query instanceof BugzillaQueryCategory;
-	}
-	
 	public boolean canCreateElementFor(ICategory cat) {
 		return false;
-	}
-	
-	public Element createQueryElement(IQuery query, Document doc, Element parent) {
-		BugzillaQueryCategory queryCategory = (BugzillaQueryCategory)query;
-		Element node = doc.createElement(getCategoryTagName());
-		node.setAttribute(DESCRIPTION, queryCategory.getDescription(false));
-		node.setAttribute(URL, queryCategory.getQueryString());
-		node.setAttribute(MAX_HITS, ""+queryCategory.getMaxHits());
-		parent.appendChild(node);
-		return node;
 	}
 
 	public boolean canCreateElementFor(ITask task) {

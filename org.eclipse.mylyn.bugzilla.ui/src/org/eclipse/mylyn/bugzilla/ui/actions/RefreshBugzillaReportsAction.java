@@ -146,13 +146,15 @@ public class RefreshBugzillaReportsAction extends Action implements IViewActionD
 		}
 		for (ICategory cat : MylarTasklistPlugin
 				.getTaskListManager().getTaskList().getCategories()) {
-			if(cat.isArchive())
-				continue;
+//			if(cat.isArchive())
+//				continue;
 			
 			if (cat instanceof TaskCategory) {
 				for (ITask task : ((TaskCategory) cat).getChildren()) {
 					if (task instanceof BugzillaTask && !task.isCompleted()) {
-						BugzillaUiPlugin.getDefault().getBugzillaRefreshManager().addTaskToBeRefreshed((BugzillaTask)task);
+						if(BugzillaTask.getLastRefreshTimeInMinutes(((BugzillaTask)task).getLastRefresh()) > 2){
+							BugzillaUiPlugin.getDefault().getBugzillaRefreshManager().addTaskToBeRefreshed((BugzillaTask)task);
+						} else System.out.println("skipped " + task.getHandle());
 //						((BugzillaTask) task).refresh();
 					}
 				}

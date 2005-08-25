@@ -141,18 +141,7 @@
 	            toolbarPath="mylar"
 	            tooltip="Add Bugzilla Query"> 
   			</action>
-  			
-  			<action
-	            class="org.eclipse.mylar.bugzilla.ui.actions.CreateCustomBugzillaQueryAction"
-	            enablesFor="*"
-	            icon="icons/etool16/category-query-new.gif"
-	            id="org.eclipse.mylar.bugzilla.tasklist.addCustomQuery"
-	            label="Add Custom Bugzilla Query"
-	            style="push"
-	            toolbarPath="mylar"
-	            tooltip="Add Custom Bugzilla Query"> 
-  			</action>
-  			
+  			  			
   			<action
 	            class="org.eclipse.mylar.bugzilla.ui.actions.CreateNewBugzillaTaskAction"
 	            enablesFor="*"

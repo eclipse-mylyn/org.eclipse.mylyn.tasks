@@ -344,14 +344,6 @@ public class BugzillaTask extends Task {
 		}
 	
 	/**
-	 * @return Returns the last time this task's bug report was downloaded from
-	 *         the server.
-	 */
-	public Date getLastRefreshTime() {
-		return lastRefresh;
-	}
-	
-	/**
 	 * @return The number of seconds ago that this task's bug report was
 	 *         downloaded from the server.
 	 */
@@ -576,5 +568,12 @@ public class BugzillaTask extends Task {
 	
 	public String getStringForSortingDescription() {
 		return getBugId(getHandle())+"";
+	}
+
+	public static long getLastRefreshTimeInMinutes(Date lastRefresh) {
+		Date timeNow = new Date();
+		if (lastRefresh == null) lastRefresh = new Date();
+		long timeDifference = (timeNow.getTime() - lastRefresh.getTime())/60000;
+		return timeDifference;
 	}
 }

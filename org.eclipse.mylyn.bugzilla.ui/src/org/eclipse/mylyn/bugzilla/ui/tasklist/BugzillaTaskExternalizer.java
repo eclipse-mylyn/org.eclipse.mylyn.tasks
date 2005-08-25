@@ -145,7 +145,7 @@ public class BugzillaTaskExternalizer extends DefaultTaskListExternalizer {
 		BugzillaTask bt = (BugzillaTask) task;
 		node.setAttribute(BUGZILLA, TRUE);
 		if (bt.getLastRefresh() != null) {
-			node.setAttribute(LAST_DATE, new Long(bt.getLastRefreshTime()
+			node.setAttribute(LAST_DATE, new Long(bt.getLastRefresh()
 					.getTime()).toString());
 		} else {
 			node.setAttribute(LAST_DATE, new Long(new Date().getTime()).toString());

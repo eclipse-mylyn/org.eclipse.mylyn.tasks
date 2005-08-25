@@ -77,7 +77,12 @@ public class PlanningGameSorter extends ViewerSorter {
 	}
 
 	private int compareCreationDate(ITask task1, ITask task2) {
-		return task2.getCreationDate().compareTo(task1.getCreationDate());
+		if(task1.getCreationDate() == null)
+			return 1;
+		else if(task2.getCreationDate() == null)
+			return -1;
+		else
+			return task2.getCreationDate().compareTo(task1.getCreationDate());
 	}
 	
 	private int compareDuration(ITask task1, ITask task2) {

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="org.eclipse.mylar_feature"
-      label="Mylar"
+      label="Mylar IDE Integration"
       version="0.4.0"
       provider-name="Eclipse.org"
       plugin="org.eclipse.mylar">
 
    <description url="http://eclipse.org/mylar">
-      Mylar Plugin
+      Mylar UI and support for the Eclipse SDK.
    </description>
 
    <license url="http://www.eclipse.org/legal/epl-v10.html">
@@ -213,33 +213,34 @@ litigation.
       <update label="Mylar for Eclipse 3.1" url="http://download.eclipse.org/technology/mylar/update-site/e3.1"/>
    </url>
 
-   <includes
-         id="org.eclipse.mylar.bugzilla_feature"
-         version="0.0.0"/>
-
    <requires>
-      <import plugin="org.eclipse.ui" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.ui" version="3.1.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.core.runtime" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.core.resources" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.jdt" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.jdt.core" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.jdt.ui" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.ui.editors" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.jface.text" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.ui.workbench.texteditor" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.search" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.ui.views" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.ui.ide" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.ui.console" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.ui.forms" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.osgi.util" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.osgi.services" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.jdt.debug.ui"/>
+      <import plugin="org.eclipse.jdt.ui" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.team.cvs.ui"/>
+      <import plugin="org.eclipse.debug.ui"/>
+      <import plugin="org.eclipse.jdt.junit"/>
+      <import plugin="org.eclipse.jdt.junit.runtime"/>
+      <import plugin="org.eclipse.pde.junit.runtime"/>
+      <import plugin="org.eclipse.jdt.launching"/>
+      <import plugin="org.eclipse.debug.core"/>
       <import plugin="org.eclipse.pde.ui" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.ant.ui" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.ant.core" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.pde.core" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.mylar.core"/>
-      <import plugin="org.eclipse.mylar.bugzilla.core"/>
+      <import plugin="org.eclipse.ui.ide" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.ant.ui" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.ui.forms" version="0.0.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.update.ui"/>
+      <import plugin="org.eclipse.update.core"/>
+      <import plugin="org.eclipse.ui.browser"/>
    </requires>
 
    <plugin
@@ -278,13 +279,6 @@ litigation.
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.mylar.bugs"
-         download-size="0"
-         install-size="0"
-         version="0.4.0"
-         unpack="false"/>
-
-   <plugin
          id="org.eclipse.mylar.ide"
          download-size="0"
          install-size="0"
@@ -307,6 +301,12 @@ litigation.
 
    <plugin
          id="org.eclipse.mylar.core"
+         download-size="0"
+         install-size="0"
+         version="0.4.0"/>
+
+   <plugin
+         id="org.eclipse.mylar"
          download-size="0"
          install-size="0"
          version="0.4.0"/>

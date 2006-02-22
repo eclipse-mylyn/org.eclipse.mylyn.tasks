@@ -17,7 +17,6 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.forms.widgets.Hyperlink;
 import org.eclipse.ui.internal.dialogs.FilteredTree;
 import org.eclipse.ui.internal.dialogs.PatternFilter;
 
@@ -26,15 +25,15 @@ import org.eclipse.ui.internal.dialogs.PatternFilter;
  */
 public class TaskListFilteredTree extends FilteredTree {
 
-	private static final int LABEL_MAX_SIZE = 30;
+//	private static final int LABEL_MAX_SIZE = 30;
 
 	private static final int DELAY_REFRESH = 700;
 
-	private static final String LABEL_NO_ACTIVE = "          <no active task>";
+//	private static final String LABEL_NO_ACTIVE = "          <no active task>";
 	
 	private Job refreshJob;
 	
-	private Hyperlink activeTaskLabel;
+//	private Hyperlink activeTaskLabel;
 	
 	public TaskListFilteredTree(Composite parent, int treeStyle, PatternFilter filter) {
 		super(parent, treeStyle, filter);
@@ -60,17 +59,17 @@ public class TaskListFilteredTree extends FilteredTree {
     }
 
     public void indicateActiveTask(ITask task) {
-    	String text = task.getDescription();
-    	if (text.length() > LABEL_MAX_SIZE) {
-    		text = text.substring(0, LABEL_MAX_SIZE);
-    	}
-    	activeTaskLabel.setText(text);
-		activeTaskLabel.setUnderlined(true);
+//    	String text = task.getDescription();
+//    	if (text.length() > LABEL_MAX_SIZE) {
+//    		text = text.substring(0, LABEL_MAX_SIZE);
+//    	}
+//    	activeTaskLabel.setText(text);
+//		activeTaskLabel.setUnderlined(true);
     }
     
     public void indicateNoActiveTask() {
-    	activeTaskLabel.setText(LABEL_NO_ACTIVE);
-		activeTaskLabel.setUnderlined(false);
+//    	activeTaskLabel.setText(LABEL_NO_ACTIVE);
+//		activeTaskLabel.setUnderlined(false);
     }
     
 }

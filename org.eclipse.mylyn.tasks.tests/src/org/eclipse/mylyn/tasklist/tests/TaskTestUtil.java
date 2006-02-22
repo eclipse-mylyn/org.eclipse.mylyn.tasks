@@ -20,7 +20,7 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.util.Date;
 
-import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.mylar.bugzilla.core.Attribute;
 import org.eclipse.mylar.bugzilla.core.BugReport;
 import org.eclipse.mylar.bugzilla.core.Comment;
@@ -35,7 +35,8 @@ public class TaskTestUtil {
 	public static File getLocalFile(String path) {
 		try {
 			URL installURL = MylarTasksTestsPlugin.getDefault().getBundle().getEntry(path);
-			URL localURL = FileLocator.toFileURL(installURL);
+			
+			URL localURL = Platform.asLocalURL(installURL);//FileLocator.toFileURL(installURL);
 			return new File(localURL.getFile());
 		} catch (IOException e) {
 			return null;

@@ -19,9 +19,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.swt.events.ShellEvent;
-import org.eclipse.swt.events.ShellListener;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
 /**
@@ -33,13 +30,13 @@ public class TaskListNotificationManager {
 
 	private static final String OPEN_NOTIFICATION_JOB = "Open Notification Job";
 
-	private static final long CLOSE_POPUP_DELAY = 1000 * 10;
+//	private static final long CLOSE_POPUP_DELAY = 1000 * 10;
 
 	private static final long OPEN_POPUP_DELAY = 1000 * 60;
 
 	private static final boolean runSystem = true;
 
-	private TaskListNotificationPopup popup;
+//	private TaskListNotificationPopup popup;
 
 	private List<ITaskListNotification> notifications = new ArrayList<ITaskListNotification>();
 
@@ -56,23 +53,22 @@ public class TaskListNotificationManager {
 				if (!PlatformUI.getWorkbench().getDisplay().isDisposed()) {
 					PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 						public void run() {
-							if ((popup != null && popup.close()) || popup == null) {
-								closeJob.cancel();							
-								collectNotifications();
-								synchronized (TaskListNotificationManager.class) {
-									if (currentlyNotifying.size() > 0) {
-										popup = new TaskListNotificationPopup(new Shell(PlatformUI.getWorkbench().getDisplay()));
-										popup.setContents(new ArrayList<ITaskListNotification>(currentlyNotifying));
-										cleanNotified();
-										popup.setBlockOnOpen(false);
-										popup.open();
-										closeJob.setSystem(runSystem);
-										closeJob.schedule(CLOSE_POPUP_DELAY);										
-										popup.getShell().addShellListener(SHELL_LISTENER);
-									}
-								}
-							}
-
+//							if ((popup != null && popup.close()) || popup == null) {
+//								closeJob.cancel();							
+//								collectNotifications();
+//								synchronized (TaskListNotificationManager.class) {
+//									if (currentlyNotifying.size() > 0) {
+//										popup = new TaskListNotificationPopup(new Shell(PlatformUI.getWorkbench().getDisplay()));
+//										popup.setContents(new ArrayList<ITaskListNotification>(currentlyNotifying));
+//										cleanNotified();
+//										popup.setBlockOnOpen(false);
+//										popup.open();
+//										closeJob.setSystem(runSystem);
+//										closeJob.schedule(CLOSE_POPUP_DELAY);										
+//										popup.getShell().addShellListener(SHELL_LISTENER);
+//									}
+//								}
+//							}
 						}
 					});
 				}
@@ -95,11 +91,11 @@ public class TaskListNotificationManager {
 			if (!PlatformUI.getWorkbench().getDisplay().isDisposed()) {
 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 					public void run() {
-						if (popup != null) {
-							synchronized (popup) {
-								popup.close();
-							}
-						}
+//						if (popup != null) {
+//							synchronized (popup) {
+//								popup.close();
+//							}
+//						}
 					}
 				});
 			}
@@ -111,43 +107,43 @@ public class TaskListNotificationManager {
 
 	};
 
-	private ShellListener SHELL_LISTENER = new ShellListener() {
+//	private ShellListener SHELL_LISTENER = new ShellListener() {
+//
+//		public void shellClosed(ShellEvent arg0) {
+//		}
+//
+//		public void shellDeactivated(ShellEvent arg0) {
+////			popup.close();
+//			// don't want notifications right away
+//			openJob.cancel();
+//			openJob.schedule(OPEN_POPUP_DELAY);
+//		}
+//
+//		public void shellActivated(ShellEvent arg0) {
+//			closeJob.cancel();
+//		}
+//
+//		public void shellDeiconified(ShellEvent arg0) {
+//			// ingore
+//		}
+//
+//		public void shellIconified(ShellEvent arg0) {
+//			// ignore
+//		}
+//	};
 
-		public void shellClosed(ShellEvent arg0) {
-		}
-
-		public void shellDeactivated(ShellEvent arg0) {
-			popup.close();
-			// don't want notifications right away
-			openJob.cancel();
-			openJob.schedule(OPEN_POPUP_DELAY);
-		}
-
-		public void shellActivated(ShellEvent arg0) {
-			closeJob.cancel();
-		}
-
-		public void shellDeiconified(ShellEvent arg0) {
-			// ingore
-		}
-
-		public void shellIconified(ShellEvent arg0) {
-			// ignore
-		}
-	};
-
-	private void cleanNotified() {
-		 for (ITaskListNotification notification : currentlyNotifying) {
-			notification.setNotified(true);
-		 }
-		currentlyNotifying.clear();
-	}
-
-	private void collectNotifications() {
-		for (ITaskListNotificationProvider provider : notificationProviders) {
-			currentlyNotifying.addAll(provider.getNotifications());
-		}		
-	}
+//	private void cleanNotified() {
+//		 for (ITaskListNotification notification : currentlyNotifying) {
+//			notification.setNotified(true);
+//		 }
+//		currentlyNotifying.clear();
+//	}
+//
+//	private void collectNotifications() {
+//		for (ITaskListNotificationProvider provider : notificationProviders) {
+//			currentlyNotifying.addAll(provider.getNotifications());
+//		}		
+//	}
 
 	public void startNotification(long initialStartupTime) {
 		openJob.setSystem(runSystem);
@@ -157,9 +153,9 @@ public class TaskListNotificationManager {
 	public void stopNotification() {
 		openJob.cancel();
 		closeJob.cancel();
-		if(popup != null) {
-			popup.close();
-		}
+//		if(popup != null) {
+//			popup.close();
+//		}
 	}
 
 	public void addNotificationProvider(ITaskListNotificationProvider notification_provider) {

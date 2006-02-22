@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.tasklist.ui;
 
-import org.eclipse.ui.dialogs.PatternFilter;
+import org.eclipse.ui.internal.dialogs.PatternFilter;
 
 /**
  * @author Mik Kersten

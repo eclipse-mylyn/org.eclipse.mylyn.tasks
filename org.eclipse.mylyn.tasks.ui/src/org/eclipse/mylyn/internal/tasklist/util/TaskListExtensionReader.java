@@ -156,9 +156,12 @@ public class TaskListExtensionReader {
 				
 				String iconPath = element.getAttribute(ATTR_BRANDING_ICON);
 				if (iconPath != null) {
-					
-					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getContributor().getName(),
+
+					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getNamespace(),
 							iconPath);
+
+//					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getContributor().getName(),
+//							iconPath);
 					if (descriptor != null) {
 						MylarTaskListPlugin.getDefault().getBrandingIcons().put((AbstractRepositoryClient) repository, TaskListImages.getImage(descriptor));
 					}

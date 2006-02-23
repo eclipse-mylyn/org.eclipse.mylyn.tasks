@@ -24,7 +24,7 @@ import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.ui.IDynamicSubMenuContributor;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskEditorFactory;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
-import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryClient;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.ITaskListExternalizer;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -151,19 +151,18 @@ public class TaskListExtensionReader {
 		try {
 			Object type = element.getAttribute(ELMNT_TYPE);
 			Object repository = element.createExecutableExtension(ATTR_CLASS);
-			if (repository instanceof AbstractRepositoryClient && type != null) {
-				MylarTaskListPlugin.getRepositoryManager().addRepositoryClient((AbstractRepositoryClient) repository);
+			if (repository instanceof AbstractRepositoryConnector && type != null) {
+				MylarTaskListPlugin.getRepositoryManager().addRepositoryClient((AbstractRepositoryConnector) repository);
 				
 				String iconPath = element.getAttribute(ATTR_BRANDING_ICON);
 				if (iconPath != null) {
-
-					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getNamespace(),
-							iconPath);
-
+					
 //					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getContributor().getName(),
 //							iconPath);
+					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getNamespace(),
+							iconPath);
 					if (descriptor != null) {
-						MylarTaskListPlugin.getDefault().getBrandingIcons().put((AbstractRepositoryClient) repository, TaskListImages.getImage(descriptor));
+						MylarTaskListPlugin.getDefault().getBrandingIcons().put((AbstractRepositoryConnector) repository, TaskListImages.getImage(descriptor));
 					}
 				}
 			

@@ -13,7 +13,7 @@ package org.eclipse.mylar.internal.tasklist.ui.wizards;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.Wizard;
-import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryClient;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.ui.INewWizard;
@@ -32,9 +32,9 @@ public class EditRepositoryWizard extends Wizard implements INewWizard {
 		super();
 		oldRepository = repository;
 		// super.setForcePreviousAndNextButtons(true);
-		AbstractRepositoryClient client = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+		AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
 				repository.getKind());
-		abstractRepositorySettingsPage = client.getSettingsPage();
+		abstractRepositorySettingsPage = connector.getSettingsPage();
 		abstractRepositorySettingsPage.setRepository(repository);
 		abstractRepositorySettingsPage.setWizard(this);
 	}

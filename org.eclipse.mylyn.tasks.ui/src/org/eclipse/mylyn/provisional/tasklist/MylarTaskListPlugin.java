@@ -66,7 +66,7 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 
 	private static TaskRepositoryManager taskRepositoryManager;
 
-	private TaskListSaveManager taskListSaveManager = new TaskListSaveManager();
+	private TaskListSaveManager taskListSaveManager;
 	
 	private TaskListRefreshManager taskListRefreshManager;
 	
@@ -94,7 +94,7 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 	
 	private boolean initialized = false;
 	
-	private Map<AbstractRepositoryClient, Image> brandingIcons = new HashMap<AbstractRepositoryClient, Image>();
+	private Map<AbstractRepositoryConnector, Image> brandingIcons = new HashMap<AbstractRepositoryConnector, Image>();
 	
 	public enum TaskListSaveMode {
 		ONE_HOUR, THREE_HOURS, DAY;
@@ -284,14 +284,12 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 					taskRepositoryManager.readRepositories();
 
 					taskListManager.addListener(CONTEXT_TASK_ACTIVITY_LISTENER);
-					taskListManager.addListener(taskListSaveManager);
-
 					taskListManager.readExistingOrCreateNewList();
 					initialized = true;
 					migrateHandlesToRepositorySupport();
 
 					if (getPrefs().getBoolean(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP)) {
-						for (AbstractRepositoryClient repositoryClient : taskRepositoryManager.getRepositoryClients()) {
+						for (AbstractRepositoryConnector repositoryClient : taskRepositoryManager.getRepositoryClients()) {
 							repositoryClient.synchronize();
 						}
 					}
@@ -304,6 +302,9 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 					
 					taskListRefreshManager = new TaskListRefreshManager();
 					taskListRefreshManager.startRefreshJob();	
+					
+					taskListSaveManager = new TaskListSaveManager();
+					taskListManager.addListener(taskListSaveManager); 
 					
 					MylarPlugin.getDefault().getPluginPreferences().addPropertyChangeListener(PREFERENCE_LISTENER);					
 					getPrefs().addPropertyChangeListener(taskListRefreshManager);
@@ -575,14 +576,14 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		return taskRepositoryManager;
 	}
 
-	public Map<AbstractRepositoryClient, Image> getBrandingIcons() {
+	public Map<AbstractRepositoryConnector, Image> getBrandingIcons() {
 		return brandingIcons;
 	}
 
 	public boolean isInitialized() {
 		return initialized;
 	}
-}
+} 
 
 // /**
 // * Sets the directory containing the task list file to use.

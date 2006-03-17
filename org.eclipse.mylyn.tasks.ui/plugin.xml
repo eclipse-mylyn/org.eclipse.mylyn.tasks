@@ -26,9 +26,16 @@
             class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskPlannerWizard"
             icon="icons/eview16/task-list.gif"
             id="org.eclipse.mylar.tasklist.report.ui.planningGameWizard"
-            name="Mylar Task Planner (Experimental)">
+            name="Task Activity Report (Experimental)">
       </wizard>
+      <wizard
+            category="org.eclipse.mylar.wizards"
+            class="org.eclipse.mylar.internal.tasklist.ui.wizards.NewQueryWizard"
+            icon="icons/etool16/query-new.gif"
+            id="org.eclipse.mylar.tasklist.wizard.new.query"
+            name="New Repository Query"/>
 	</extension>
+
   <extension
         point="org.eclipse.ui.importWizards">
      <wizard
@@ -54,7 +61,6 @@
       </wizard>
     </extension> 
 
-
    <extension point="org.eclipse.ui.decorators">
       <decorator
             class="org.eclipse.mylar.internal.tasklist.ui.RepositoryTaskDecorator"
@@ -63,15 +69,15 @@
             lightweight="true"
             state="true">
          <description>
-			Mylar JIRA Task Decorator
+			Mylar Repository Task Decorator
 		 </description>
          <enablement>
             <objectClass name="org.eclipse.mylar.provisional.tasklist.ITaskListElement"/>
          </enablement>
       </decorator>
    </extension>
-   
-
+	
+  
    <extension
          point="org.eclipse.ui.views">
       <view
@@ -80,7 +86,7 @@
          class="org.eclipse.mylar.internal.tasklist.ui.views.TaskListView"
          icon="icons/eview16/task-list.gif"
          id="org.eclipse.mylar.tasks.ui.views.TaskListView"
-         name="Mylar Tasks"/> 
+         name="Task List"/> 
       <view
             id="org.eclipse.mylar.tasklist.repositories"
             allowMultiple="false"
@@ -89,9 +95,35 @@
             icon="icons/eview16/repositories.gif"
             name="Task Repositories">
       </view>
+      <view
+            allowMultiple="false"
+            category="org.eclipse.mylar"
+            class="org.eclipse.mylar.internal.tasklist.ui.views.TaskActivityView"
+            icon="icons/eview16/task-activity.gif"
+            id="org.eclipse.mylar.tasklist.activity"
+            name="Task Activity (Experimental)"/>
   	</extension>
-	
-    <extension point="org.eclipse.ui.perspectiveExtensions">
+
+  	<extension
+        point="org.eclipse.ui.editors">
+     <editor
+           icon="icons/etool16/task.gif"
+           class="org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor"
+           name="Task Viewer"
+           id="org.eclipse.mylar.tasklist.ui.taskEditor"/>
+	    <editor
+           icon="icons/etool16/task.gif"
+           class="org.eclipse.mylar.internal.tasklist.ui.editors.CategoryEditor"
+           name="Category Editor"
+           id="org.eclipse.mylar.tasklist.ui.catEditor"/>
+    <editor
+           icon="icons/eview16/task-list.gif"
+           class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskPlannerEditorPart"
+           name="Mylar Task Planner"
+           id="org.eclipse.mylar.tasklist.ui.planner.editor"/>                      
+  </extension>
+  
+      <extension point="org.eclipse.ui.perspectiveExtensions">
           <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
                <view id="org.eclipse.mylar.tasks.ui.views.TaskListView"
@@ -130,25 +162,6 @@
         <viewShortcut id="org.eclipse.mylar.tasklist.repositories"/>
      </perspectiveExtension>
 	</extension>
-
-  	<extension
-        point="org.eclipse.ui.editors">
-     <editor
-           icon="icons/etool16/task.gif"
-           class="org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor"
-           name="Task Viewer"
-           id="org.eclipse.mylar.tasklist.ui.taskEditor"/>
-	    <editor
-           icon="icons/etool16/task.gif"
-           class="org.eclipse.mylar.internal.tasklist.ui.editors.CategoryEditor"
-           name="Category Editor"
-           id="org.eclipse.mylar.tasklist.ui.catEditor"/>
-    <editor
-           icon="icons/eview16/task-list.gif"
-           class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskPlannerEditorPart"
-           name="Mylar Task Planner"
-           id="org.eclipse.mylar.tasklist.ui.planner.editor"/>                      
-  </extension>
   
    <extension point="org.eclipse.ui.viewActions"> 
 		<viewContribution 
@@ -229,7 +242,7 @@
                     <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractQueryHit"/>
 					<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery"/>
                		<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask"/>
-                 <objectClass name="org.eclipse.mylar.provisional.tasklist.ITaskContainer"/>
+                 <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer"/>
                </or>
             </enablement>
          </action>
@@ -270,6 +283,32 @@
             	value="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
       </key>
   </extension>
+  
+   <extension
+         point="org.eclipse.ui.themes">
+      <themeElementCategory
+           id="org.eclipse.mylar.tasklist.ui.presentation"
+           label="Mylar"/>
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasklist.ui.colors.background.category"
+           isEditable="true"
+           label="Task List Category Background"
+           value="234,233,237"> 
+         <description>
+            Background color of Task List categories and queries.
+         </description>
+     </colorDefinition>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            class="org.eclipse.mylar.internal.tasklist.ui.PlanningPerspectiveFactory"
+            icon="icons/eview16/task-activity.gif"
+            id="org.eclipse.mylar.tasklist.ui.perspectives.planning"
+            name="Planning"/>
+   </extension>
+  
 </plugin>
 
 

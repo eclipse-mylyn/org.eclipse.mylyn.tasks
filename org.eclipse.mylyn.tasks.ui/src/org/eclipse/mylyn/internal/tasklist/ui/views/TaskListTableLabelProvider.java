@@ -19,13 +19,19 @@ import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ITableColorProvider;
 import org.eclipse.jface.viewers.ITableFontProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.mylar.internal.tasklist.ui.TaskListColorsAndFonts;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
+import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
-import org.eclipse.mylar.provisional.tasklist.Task;
+import org.eclipse.mylar.provisional.tasklist.TaskArchive;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask.RepositoryTaskSyncState;
+import org.eclipse.mylar.provisional.tasklist.Task.PriorityLevel;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
@@ -36,45 +42,25 @@ import org.eclipse.swt.graphics.Image;
 public class TaskListTableLabelProvider extends DecoratingLabelProvider implements ITableLabelProvider,
 		ITableColorProvider, ITableFontProvider {
 	
-	private Color parentBackgroundColor;
+	private Color categoryBackgroundColor;
 		
 	public TaskListTableLabelProvider(ILabelProvider provider, ILabelDecorator decorator, Color parentBacground) {
 		super(provider, decorator);
-		this.parentBackgroundColor = parentBacground;
-	}
-	
-	public Image getImageForPriority(Task.PriorityLevel priorityLevel) {
-		switch (priorityLevel) {
-		case P1: 
-			return TaskListImages.getImage(TaskListImages.TASK_ACTIVE);
-		case P2:
-			return TaskListImages.getImage(TaskListImages.NAVIGATE_NEXT);
-		case P3:
-			return TaskListImages.getImage(TaskListImages.NAVIGATE_PREVIOUS);
-		case P4:
-			return TaskListImages.getImage(TaskListImages.GO_UP);
-		case P5:
-			return TaskListImages.getImage(TaskListImages.GO_INTO);
-		default:
-			return TaskListImages.getImage(TaskListImages.OVERLAY_INCOMMING);
-		}
+		this.categoryBackgroundColor = parentBacground;
 	}
 	
 	public String getColumnText(Object obj, int columnIndex) {
 		if (obj instanceof ITaskListElement) {
-			ITaskListElement element = (ITaskListElement) obj;
 			switch (columnIndex) {
 			case 0:
 				return null;
 			case 1:
 				return null;
 			case 2:
-				if (element instanceof ITaskContainer || element instanceof AbstractRepositoryQuery) {
-					return null;
-				} else {
-					return element.getPriority();
-				}
+				return null;
 			case 3:
+				return null;
+			case 4:
 				return super.getText(obj);
 			}
 		}
@@ -86,7 +72,7 @@ public class TaskListTableLabelProvider extends DecoratingLabelProvider implemen
 			return null;
 		}
 		if (columnIndex == 0) {
-			if (element instanceof ITaskContainer) {
+			if (element instanceof AbstractTaskContainer) {
 				return super.getImage(element);
 			} else {
 				ITask task = TaskElementLabelProvider.getCorrespondingTask((ITaskListElement)element);
@@ -105,15 +91,43 @@ public class TaskListTableLabelProvider extends DecoratingLabelProvider implemen
 				}
 			}
 		} else if (columnIndex == 1) {
-			if (element instanceof ITaskContainer || element instanceof AbstractRepositoryQuery) {
+			if (element instanceof AbstractTaskContainer || element instanceof AbstractRepositoryQuery) {
 				return null;
 			}
-			return super.getImage(element);
-//		} else if (columnIndex == 2) {
-//			if (element instanceof ITaskListElement && !(element instanceof ITaskContainer)) {
-//				ITaskListElement taskElement = (ITaskListElement) element;
-//				return getImageForPriority(PriorityLevel.fromString(taskElement.getPriority()));
-//			}
+			return super.getImage(element); 
+		} else if (columnIndex == 2) {
+			if (element instanceof ITaskListElement && !(element instanceof AbstractTaskContainer)) {
+				ITaskListElement taskElement = (ITaskListElement) element;
+				return TaskListUiUtil.getImageForPriority(PriorityLevel.fromString(taskElement.getPriority()));
+			}
+		} else if (columnIndex == 3) {
+			AbstractRepositoryTask repositoryTask = null;
+			if (element instanceof AbstractQueryHit) {
+				repositoryTask = ((AbstractQueryHit)element).getCorrespondingTask();
+			} else if (element instanceof AbstractRepositoryTask) {
+				repositoryTask = (AbstractRepositoryTask)element;
+			}
+			if (repositoryTask != null) {
+				if (!repositoryTask.hasServerContext()) {
+					if (repositoryTask.getSyncState() == RepositoryTaskSyncState.OUTGOING) {
+						return TaskListImages.getImage(TaskListImages.STATUS_NORMAL_OUTGOING);
+					} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING) {
+						return TaskListImages.getImage(TaskListImages.STATUS_NORMAL_INCOMING);
+					} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
+						return TaskListImages.getImage(TaskListImages.STATUS_NORMAL_CONFLICT);
+					}
+				} else {
+					if (repositoryTask.getSyncState() == RepositoryTaskSyncState.OUTGOING) {
+						return TaskListImages.getImage(TaskListImages.STATUS_CONTEXT_OUTGOING);
+					} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING) {
+						return TaskListImages.getImage(TaskListImages.STATUS_CONTEXT_INCOMING);
+					} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
+						return TaskListImages.getImage(TaskListImages.STATUS_CONTEXT_CONFLICT);
+					}
+				}
+			} else if (element instanceof AbstractQueryHit){
+				return TaskListImages.getImage(TaskListImages.STATUS_NORMAL_INCOMING);
+			} 
 		}
 		return null;
 	}
@@ -127,17 +141,21 @@ public class TaskListTableLabelProvider extends DecoratingLabelProvider implemen
 	}
 
 	public Color getBackground(Object element, int columnIndex) {
-		if (element instanceof ITaskContainer) {
-			ITaskContainer category = (ITaskContainer) element;
-			if (category.isArchive()) {
-				return TaskListImages.BACKGROUND_ARCHIVE;
+		if (element instanceof AbstractTaskContainer) {
+			AbstractTaskContainer category = (AbstractTaskContainer) element;
+			if (category instanceof TaskArchive) {
+				return TaskListColorsAndFonts.BACKGROUND_ARCHIVE;
 			} else {
-				return parentBackgroundColor;
+				return categoryBackgroundColor;
 			}
 		} else if (element instanceof AbstractRepositoryQuery) {
-			return parentBackgroundColor;
+			return categoryBackgroundColor;
 		}
-		
+
 		return super.getBackground(element);
+	}
+	
+	public void setCategoryBackgroundColor(Color parentBackgroundColor) {
+		this.categoryBackgroundColor = parentBackgroundColor;
 	}
 }

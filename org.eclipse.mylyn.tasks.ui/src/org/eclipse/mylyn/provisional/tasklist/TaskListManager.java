@@ -15,28 +15,92 @@ package org.eclipse.mylar.provisional.tasklist;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.eclipse.mylar.internal.core.MylarContextManager;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.TimerThread;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.util.TaskActivityTimer;
 import org.eclipse.mylar.internal.tasklist.util.TaskListWriter;
+import org.eclipse.mylar.provisional.core.IMylarContext;
+import org.eclipse.mylar.provisional.core.IMylarContextListener;
+import org.eclipse.mylar.provisional.core.IMylarElement;
+import org.eclipse.mylar.provisional.core.InteractionEvent;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
 
 /**
+ * TODO: clean-up
+ * 
  * @author Mik Kersten
  */
 public class TaskListManager {
 
+	private static final int NUM_WEEKS_PREVIOUS = -1;
+
+	private static final int NUM_WEEKS_NEXT = 1;
+
+	private static final int NUM_WEEKS_FUTURE_START = 2;
+
+	private static final int NUM_WEEKS_FUTURE_END = 8;
+
+	private static final int NUM_WEEKS_PAST_START = -8;
+
+	private static final int NUM_WEEKS_PAST_END = -2;
+
 	public static final String ARCHIVE_CATEGORY_DESCRIPTION = "Archive";
+
+	private static final String DESCRIPTION_THIS_WEEK = "This Week";
+
+	private static final String DESCRIPTION_PREVIOUS_WEEK = "Previous Week";
+
+	private static final String DESCRIPTION_NEXT_WEEK = "Next Week";
+
+	private static final String DESCRIPTION_FUTURE = "Future";
+
+	private static final String DESCRIPTION_PAST = "Past";
+
+	public static final String[] ESTIMATE_TIMES = new String[] { "0 Hours", "1 Hours", "2 Hours", "3 Hours", "4 Hours",
+			"5 Hours", "6 Hours", "7 Hours", "8 Hours", "9 Hours", "10 Hours" };
+
+	private DateRangeContainer activityThisWeek;
+
+	private DateRangeContainer activityNextWeek;
+
+	private DateRangeContainer activityPreviousWeek;
+
+	private DateRangeContainer activityFuture;
+
+	private DateRangeContainer activityPast;
+
+	private boolean isInactive;
+
+	private long startInactive;
+
+	private long totalInactive;
+
+	private ArrayList<DateRangeContainer> dateRangeContainers = new ArrayList<DateRangeContainer>();
+
+	private Set<ITask> tasksWithReminders = new HashSet<ITask>();
+
+	private ITask currentTask = null;
+
+	private String currentHandle = "";
+
+	private Calendar currentTaskStart = null;
+
+	private Calendar currentTaskEnd = null;
 
 	private Map<ITask, TaskActivityTimer> timerMap = new HashMap<ITask, TaskActivityTimer>();
 
-	private List<ITaskActivityListener> listeners = new ArrayList<ITaskActivityListener>();
+	private List<ITaskActivityListener> activityListeners = new ArrayList<ITaskActivityListener>();
 
 	private TaskListWriter taskListWriter;
 
@@ -46,57 +110,317 @@ public class TaskListManager {
 
 	private boolean taskListInitialized = false;
 
-	private int nextTaskId;
+	private boolean taskActivityHistoryInitialized = false;
+
+	private int nextLocalTaskId;
 
 	private int timerSleepInterval = TimerThread.DEFAULT_SLEEP_INTERVAL;
+
+	private final IMylarContextListener CONTEXT_LISTENER = new IMylarContextListener() {
+
+		public void contextActivated(IMylarContext context) {
+			parseTaskActivityInteractionHistory();
+		}
+
+		public void contextDeactivated(IMylarContext context) {
+
+		}
+
+		public void interestChanged(IMylarElement element) {
+			// String taskHandle = element.getHandleIdentifier();
+			List<InteractionEvent> events = MylarPlugin.getContextManager().getActivityHistoryMetaContext()
+					.getInteractionHistory();
+			InteractionEvent event = events.get(events.size() - 1);
+			parseInteractionEvent(event);
+		}
+
+		public void presentationSettingsChanging(UpdateKind kind) {
+			// ignore
+		}
+
+		public void presentationSettingsChanged(UpdateKind kind) {
+			// ignore
+		}
+
+		public void interestChanged(List<IMylarElement> elements) {
+			// ignore
+		}
+
+		public void nodeDeleted(IMylarElement element) {
+			// ignore
+		}
+
+		public void landmarkAdded(IMylarElement element) {
+			// ignore
+		}
+
+		public void landmarkRemoved(IMylarElement element) {
+			// ignore
+		}
+
+		public void edgesChanged(IMylarElement element) {
+			// ignore
+		}
+	};
 
 	public TaskListManager(TaskListWriter taskListWriter, File file, int startId) {
 		this.taskListFile = file;
 		this.taskListWriter = taskListWriter;
-		this.nextTaskId = startId;
+		this.nextLocalTaskId = startId;
+
+		setupCalendarRanges();
+		MylarPlugin.getContextManager().addActivityMetaContextListener(CONTEXT_LISTENER);
 	}
 
-	public TaskList createNewTaskList() {
-		taskList = new TaskList();
+	public void dispose() {
+		MylarPlugin.getContextManager().removeActivityMetaContextListener(CONTEXT_LISTENER);
+	}
+
+	public TaskList resetTaskList() {
+		resetActivity();
+		taskList.reset();
 		taskListInitialized = true;
 		return taskList;
 	}
 
-	/**
-	 * Exposed for unit testing
-	 * 
-	 * @return unmodifiable collection of ITaskActivityListeners
-	 */
-	public List<ITaskActivityListener> getListeners() {
-		return Collections.unmodifiableList(listeners);
+	private void resetActivity() {
+		dateRangeContainers.clear();
+		setupCalendarRanges();
+	}
+
+	private void parseTaskActivityInteractionHistory() {
+		if (!MylarTaskListPlugin.getTaskListManager().isTaskListInitialized()) {
+			return;
+		}
+		List<InteractionEvent> events = MylarPlugin.getContextManager().getActivityHistoryMetaContext()
+				.getInteractionHistory();
+		for (InteractionEvent event : events) {
+			parseInteractionEvent(event);
+		}
+		taskActivityHistoryInitialized = true;
+	}
+
+	private void parseFutureReminders() {
+		activityFuture.clear();
+		activityNextWeek.clear();
+		GregorianCalendar tempCalendar = new GregorianCalendar();
+		for (ITask task : tasksWithReminders) {
+			if (task.getReminderDate() != null) {
+				tempCalendar.setTime(task.getReminderDate());
+				if (activityNextWeek.includes(tempCalendar)) {
+					activityNextWeek.addTask(new DateRangeActivityDelegate(activityNextWeek, task, tempCalendar,
+							tempCalendar));
+				} else if (activityFuture.includes(tempCalendar)) {
+					activityFuture.addTask(new DateRangeActivityDelegate(activityFuture, task, tempCalendar,
+							tempCalendar));
+				} else if (activityThisWeek.includes(tempCalendar)) {
+					activityThisWeek.addTask(new DateRangeActivityDelegate(activityThisWeek, task, tempCalendar,
+							tempCalendar));
+				}
+			}
+		}
+	}
+
+	/** public for testing * */
+	public void parseInteractionEvent(InteractionEvent event) {
+		if (event.getDelta().equals(MylarContextManager.ACTIVITY_ACTIVATED)) {
+			if (!event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE)) {
+				if (isInactive) {
+					isInactive = false;
+					totalInactive = 0;
+					startInactive = 0;
+				}
+				currentTask = MylarTaskListPlugin.getTaskListManager().getTaskList()
+						.getTask(event.getStructureHandle());
+				if (currentTask != null) {
+					GregorianCalendar calendar = new GregorianCalendar();
+					calendar.setTime(event.getDate());
+					currentTaskStart = calendar;
+					currentHandle = event.getStructureHandle();
+				}
+			} else if (event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE) && isInactive) {
+				isInactive = false;
+				totalInactive = event.getDate().getTime() - startInactive;
+			}
+		} else if (event.getDelta().equals(MylarContextManager.ACTIVITY_DEACTIVATED)) {
+			if (!event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE)
+					&& currentHandle.equals(event.getStructureHandle())) {
+				GregorianCalendar calendarEnd = new GregorianCalendar();
+				calendarEnd.setTime(event.getDate());
+				calendarEnd.getTime();
+				currentTaskEnd = calendarEnd;
+				if (isInactive) {
+					isInactive = false;
+					totalInactive = event.getDate().getTime() - startInactive;
+				}
+				for (DateRangeContainer week : dateRangeContainers) {
+					if (week.includes(currentTaskStart)) {
+						if (currentTask != null) {
+							week.addTask(new DateRangeActivityDelegate(week, currentTask, currentTaskStart,
+									currentTaskEnd, totalInactive));
+							if (taskActivityHistoryInitialized) {
+								for (ITaskActivityListener listener : activityListeners) {
+									listener.activityChanged(week);
+								}
+							}
+						}
+					}
+				}
+				currentTask = null;
+				currentHandle = "";
+				totalInactive = 0;
+				startInactive = 0;
+			} else if (event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE) && !isInactive) {
+				isInactive = true;
+				startInactive = event.getDate().getTime();
+			}
+		}
+	}
+
+	/** public for testing * */
+	public DateRangeContainer getActivityThisWeek() {
+		return activityThisWeek;
+	}
+
+	/** public for testing * */
+	public DateRangeContainer getActivityPast() {
+		return activityPast;
+	}
+
+	/** public for testing * */
+	public DateRangeContainer getActivityFuture() {
+		return activityFuture;
+	}
+
+	/** public for testing * */
+	public DateRangeContainer getActivityNextWeek() {
+		return activityNextWeek;
+	}
+
+	/** public for testing * */
+	public DateRangeContainer getActivityPrevious() {
+		return activityPreviousWeek;
+	}
+
+	private void setupCalendarRanges() {
+
+		GregorianCalendar currentBegin = new GregorianCalendar();
+		Date startTime = new Date();
+		currentBegin.setTime(startTime);
+		snapToStartOfWeek(currentBegin);
+		GregorianCalendar currentEnd = new GregorianCalendar();
+		snapToEndOfWeek(currentEnd);
+		activityThisWeek = new DateRangeContainer(currentBegin, currentEnd, DESCRIPTION_THIS_WEEK, taskList);
+		dateRangeContainers.add(activityThisWeek);
+
+		GregorianCalendar previousStart = new GregorianCalendar();
+		previousStart.setTime(new Date());
+		previousStart.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_PREVIOUS);
+		snapToStartOfWeek(previousStart);
+		GregorianCalendar previousEnd = new GregorianCalendar();
+		previousEnd.setTime(new Date());
+		previousEnd.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_PREVIOUS);
+		snapToEndOfWeek(previousEnd);
+		activityPreviousWeek = new DateRangeContainer(previousStart.getTime(), previousEnd.getTime(),
+				DESCRIPTION_PREVIOUS_WEEK, taskList);
+		dateRangeContainers.add(activityPreviousWeek);
+
+		GregorianCalendar nextStart = new GregorianCalendar();
+		nextStart.setTime(new Date());
+		nextStart.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_NEXT);
+		snapToStartOfWeek(nextStart);
+		GregorianCalendar nextEnd = new GregorianCalendar();
+		nextEnd.setTime(new Date());
+		nextEnd.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_NEXT);
+		snapToEndOfWeek(nextEnd);
+		activityNextWeek = new DateRangeContainer(nextStart.getTime(), nextEnd.getTime(), DESCRIPTION_NEXT_WEEK,
+				taskList);
+		dateRangeContainers.add(activityNextWeek);
+
+		GregorianCalendar futureStart = new GregorianCalendar();
+		futureStart.setTime(new Date());
+		futureStart.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_FUTURE_START);
+		snapToStartOfWeek(futureStart);
+		GregorianCalendar futureEnd = new GregorianCalendar();
+		futureEnd.setTime(new Date());
+		futureEnd.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_FUTURE_END);
+		snapToEndOfWeek(futureEnd);
+		activityFuture = new DateRangeContainer(futureStart.getTime(), futureEnd.getTime(), DESCRIPTION_FUTURE,
+				taskList);
+		dateRangeContainers.add(activityFuture);
+
+		GregorianCalendar pastStart = new GregorianCalendar();
+		pastStart.setTime(new Date());
+		pastStart.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_PAST_START);
+		snapToStartOfWeek(pastStart);
+		GregorianCalendar pastEnd = new GregorianCalendar();
+		pastEnd.setTime(new Date());
+		pastEnd.add(Calendar.WEEK_OF_YEAR, NUM_WEEKS_PAST_END);
+		snapToEndOfWeek(pastEnd);
+		activityPast = new DateRangeContainer(pastStart.getTime(), pastEnd.getTime(), DESCRIPTION_PAST, taskList);
+		dateRangeContainers.add(activityPast);
+	}
+
+	private void snapToStartOfWeek(GregorianCalendar cal) {
+		cal.getTime();
+		cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		cal.getTime();
+	}
+
+	private void snapToEndOfWeek(GregorianCalendar cal) {
+		cal.getTime();
+		cal.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
+		cal.set(Calendar.HOUR_OF_DAY, cal.getMaximum(Calendar.HOUR_OF_DAY));
+		cal.set(Calendar.MINUTE, cal.getMaximum(Calendar.MINUTE));
+		cal.set(Calendar.SECOND, cal.getMaximum(Calendar.SECOND));
+		cal.set(Calendar.MILLISECOND, cal.getMaximum(Calendar.MILLISECOND));
+		cal.getTime();
+	}
+
+	public Object[] getDateRanges() {
+		// parseFutureReminders();
+		return dateRangeContainers.toArray();
 	}
 
 	public String genUniqueTaskHandle() {
-		return TaskRepositoryManager.PREFIX_LOCAL + nextTaskId++;
+		return TaskRepositoryManager.PREFIX_LOCAL + nextLocalTaskId++;
 	}
 
 	public boolean readExistingOrCreateNewList() {
 		try {
 			if (taskListFile.exists()) {
-				taskList = new TaskList();
+				// taskList = new TaskList();
 				taskListWriter.readTaskList(taskList, taskListFile);
 				int maxHandle = taskList.findLargestTaskHandle();
-				if (maxHandle >= nextTaskId) {
-					nextTaskId = maxHandle + 1;
+				if (maxHandle >= nextLocalTaskId) {
+					nextLocalTaskId = maxHandle + 1;
 				}
 			} else {
-				createNewTaskList();
+				resetTaskList();
 			}
+
+			for (ITask task : taskList.getAllTasks()) {
+				if (task.getReminderDate() != null)
+					tasksWithReminders.add(task);
+			}
+			resetActivity();
+			parseFutureReminders();
 			taskListInitialized = true;
-			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
+			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
 				listener.tasklistRead();
 			}
+
 			// only activate the first task to avoid confusion of mutliple
 			// active tasks on startup
 			List<ITask> activeTasks = taskList.getActiveTasks();
 			if (activeTasks.size() > 0) {
 				activateTask(activeTasks.get(0));
 			}
+			parseTaskActivityInteractionHistory();
 		} catch (Exception e) {
 			MylarStatusHandler.log(e, "Could not read task list");
 			return false;
@@ -112,7 +436,8 @@ public class TaskListManager {
 			if (taskListInitialized) {
 				if (!taskList.isEmpty()) {
 					taskListWriter.writeTaskList(taskList, taskListFile);
-					MylarPlugin.getDefault().getPreferenceStore().setValue(TaskListPreferenceConstants.TASK_ID, nextTaskId);
+					MylarPlugin.getDefault().getPreferenceStore().setValue(TaskListPreferenceConstants.TASK_ID,
+							nextLocalTaskId);
 				}
 			} else {
 				MylarStatusHandler.log("task list save attempted before initialization", this);
@@ -126,158 +451,56 @@ public class TaskListManager {
 		return taskList;
 	}
 
-	public void setTaskList(TaskList taskList) {
-		this.taskList = taskList;
+	public void addActivityListener(ITaskActivityListener listener) {
+		activityListeners.add(listener);
 	}
 
-	public void moveToRoot(ITask task) {
-		if (task.getCategory() instanceof TaskCategory) {
-			((TaskCategory) task.getCategory()).removeTask(task);
-		} 
-//		task.setCategory(null);
-//		if (!taskList.getRootTasks().contains(task))
-		taskList.internalAddRootTask(task);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
+	public void removeActivityListener(ITaskActivityListener listener) {
+		activityListeners.remove(listener);
 	}
 
-	public void moveToCategory(TaskCategory category, ITask task) {
-		if(category.equals(taskList.getRootCategory())) {
-			moveToRoot(task);
-		} else {
-			taskList.removeFromRoot(task);	
-		}		
-		if (task.getCategory() instanceof TaskCategory) {
-			((TaskCategory) task.getCategory()).removeTask(task);
-		}
-		if (!category.getChildren().contains(task)) {
-			category.addTask(task);
-		}
-		task.setCategory(category);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void addCategory(ITaskContainer cat) {
-		taskList.addCategory(cat);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void removeFromCategory(TaskCategory category, ITask task) {
-		if (!category.isArchive()) {
-			category.removeTask(task);
-			task.setCategory(null);
-		}
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void removeFromRoot(ITask task) {
-		taskList.removeFromRoot(task);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void addQuery(AbstractRepositoryQuery cat) {
-		taskList.addQuery(cat);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void deleteTask(ITask task) {
-		TaskActivityTimer taskTimer = timerMap.remove(task);
-		if (taskTimer != null)
-			taskTimer.stopTimer();
-		taskList.setActive(task, false);
-		taskList.deleteTask(task);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void deleteCategory(ITaskContainer cat) {
-		taskList.deleteCategory(cat);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void deleteQuery(AbstractRepositoryQuery query) {
-		taskList.deleteQuery(query);
-		for (ITaskActivityListener listener : listeners)
-			listener.taskListModified();
-	}
-
-	public void addListener(ITaskActivityListener listener) {
-		listeners.add(listener);
-	}
-
-	public void removeListener(ITaskActivityListener listener) {
-		listeners.remove(listener);
-	}
-
-	/**
-	 * Deactivates previously active tasks if not in multiple active mode.
-	 * 
-	 * @param task
-	 */
 	public void activateTask(ITask task) {
 		if (!MylarTaskListPlugin.getDefault().isMultipleActiveTasksMode()) {
 			for (ITask activeTask : new ArrayList<ITask>(taskList.getActiveTasks())) {
 				deactivateTask(activeTask);
 			}
 		}
-		taskList.setActive(task, true);
-		int timeout = MylarPlugin.getContextManager().getInactivityTimeout();
-		TaskActivityTimer activityTimer = new TaskActivityTimer(task, timeout, timerSleepInterval);
-		activityTimer.startTimer();
-		timerMap.put(task, activityTimer);
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.taskActivated(task);
+
+		try {
+			int timeout = MylarPlugin.getContextManager().getInactivityTimeout();
+			TaskActivityTimer activityTimer = new TaskActivityTimer(task, timeout, timerSleepInterval);
+			activityTimer.startTimer();
+			timerMap.put(task, activityTimer);
+			taskList.setActive(task, true);
+			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
+				listener.taskActivated(task);
+			}
+		} catch (Throwable t) {
+			MylarStatusHandler.fail(t, "could not activate task", false);
 		}
 	}
 
 	public void deactivateTask(ITask task) {
 		TaskActivityTimer taskTimer = timerMap.remove(task);
-		if (taskTimer != null)
+		if (taskTimer != null) {
 			taskTimer.stopTimer();
-		taskList.setActive(task, false);
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.taskDeactivated(task);
+		}
+		if (task.isActive()) {
+			taskList.setActive(task, false);
+			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
+				try {
+					listener.taskDeactivated(task);
+				} catch (Throwable t) {
+					MylarStatusHandler.fail(t, "notification failed for: " + listener, false);
+				}
+			}
 		}
 	}
 
-	/**
-	 * TODO: refactor into task deltas?
-	 */
-	public void notifyLocalInfoChanged(ITask task) {
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.localInfoChanged(task);
-		}
-	}
-	
-	public void notifyRepositoryInfoChanged(ITask task) {
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.repositoryInfoChanged(task);
-		}
+	public void setTaskListFile(File file) {
+		this.taskListFile = file;
 	}
 
-	public void notifyListUpdated() {
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.taskListModified();
-		}
-	}
-
-	public void setTaskListFile(File f) {
-		this.taskListFile = f;
-	}
-
-	public ITask getTaskForHandle(String handle, boolean lookInArchives) {
-		if (handle == null)
-			return null;
-		return taskList.getTaskForHandle(handle, lookInArchives);
-	}
-
-	
 	public boolean isTaskListInitialized() {
 		return taskListInitialized;
 	}
@@ -297,17 +520,34 @@ public class TaskListManager {
 		return timerMap;
 	}
 
-	public void markComplete(ITask task, boolean complete) {
-		task.setCompleted(complete);
-		for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(listeners)) {
-			listener.localInfoChanged(task); // to ensure comleted filter notices
-		}
-	}
-
 	/**
 	 * For testing
 	 */
 	public void setTimerSleepInterval(int timerSleepInterval) {
 		this.timerSleepInterval = timerSleepInterval;
+	}
+
+	public boolean isActiveThisWeek(ITask task) {
+		for (ITask activityDelegateTask : activityThisWeek.getChildren()) {
+			if (activityDelegateTask.getHandleIdentifier().equals(task.getHandleIdentifier())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * TODO: Need to migrate to use of this method for setting of reminders
+	 */
+	public void setReminder(ITask task, Date reminderDate) {
+		task.setReminderDate(reminderDate);
+		task.setReminded(false);
+		if (reminderDate == null) {
+			tasksWithReminders.remove(task);
+		} else {
+			tasksWithReminders.add(task);
+		}
+		parseFutureReminders();
+		taskList.notifyLocalInfoChanged(task);
 	}
 }

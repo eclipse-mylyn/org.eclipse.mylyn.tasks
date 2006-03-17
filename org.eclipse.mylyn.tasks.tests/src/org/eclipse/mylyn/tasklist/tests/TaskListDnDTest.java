@@ -23,7 +23,7 @@ import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskListManager;
 
 /**
- * @author Robert Elves
+ * @author Rob Elves
  * @author Mik Kersten
  */
 public class TaskListDnDTest extends TestCase {
@@ -35,7 +35,7 @@ public class TaskListDnDTest extends TestCase {
 	@Override
 	protected void setUp() throws Exception {
 		manager = MylarTaskListPlugin.getTaskListManager();
-		manager.createNewTaskList();
+		manager.resetTaskList();
 
 		TreeViewer viewer = TaskListView.getDefault().getViewer();
 		assertNotNull(viewer);
@@ -45,7 +45,7 @@ public class TaskListDnDTest extends TestCase {
 	@Override
 	protected void tearDown() throws Exception {
 		super.tearDown();
-		manager.createNewTaskList();
+		manager.resetTaskList();
 		MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskListAndContexts();
 	}
 

@@ -16,11 +16,10 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-
 /**
  * @author Mik Kersten
  */
-public abstract class AbstractRepositoryQuery implements ITaskContainer {
+public abstract class AbstractRepositoryQuery extends AbstractTaskContainer {
 
 	protected String repositoryUrl;
 
@@ -32,16 +31,14 @@ public abstract class AbstractRepositoryQuery implements ITaskContainer {
 
 	protected Date lastRefresh;
 
-	protected String description = "";
-
-	private String handle = "";
+	private boolean currentlySynchronizing = false;
 
 	public abstract String getRepositoryKind();
-
-	public String getDescription() {
-		return description;
+	
+	public AbstractRepositoryQuery(String description, TaskList taskList) {
+		super(description, taskList);
 	}
-
+	
 	public String getQueryUrl() {
 		return queryUrl;
 	}
@@ -74,7 +71,7 @@ public abstract class AbstractRepositoryQuery implements ITaskContainer {
 	}
 	
 	public void addHit(AbstractQueryHit hit) {
-		ITask correspondingTask = MylarTaskListPlugin.getTaskListManager().getTaskList().getTaskFromArchive(hit.getHandleIdentifier());
+		ITask correspondingTask = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(hit.getHandleIdentifier());
 		if (correspondingTask instanceof AbstractRepositoryTask) {
 			hit.setCorrespondingTask((AbstractRepositoryTask) correspondingTask);
 		}
@@ -103,7 +100,7 @@ public abstract class AbstractRepositoryQuery implements ITaskContainer {
 	}
 
 	public boolean isLocal() {
-		return true;
+		return false;
 	}
 
 	public boolean isCompleted() {
@@ -116,18 +113,6 @@ public abstract class AbstractRepositoryQuery implements ITaskContainer {
 
 	public void setMaxHits(int maxHits) {
 		this.maxHits = maxHits;
-	}
-
-	public String getHandleIdentifier() {
-		return handle;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
-	public void setHandleIdentifier(String id) {
-		this.handle = id;
 	}
 
 	public String getRepositoryUrl() {
@@ -144,5 +129,18 @@ public abstract class AbstractRepositoryQuery implements ITaskContainer {
 
 	public void setLastRefresh(Date lastRefresh) {
 		this.lastRefresh = lastRefresh;
+	}
+
+	public boolean isSynchronizing() {
+		return currentlySynchronizing;
+	}
+
+	public void setCurrentlySynchronizing(boolean currentlySynchronizing) {
+		this.currentlySynchronizing = currentlySynchronizing;
+	}
+	
+	@Override
+	final void add(ITask task) {
+		// ignore, can not add tasks to a query
 	}
 }

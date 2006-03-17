@@ -14,21 +14,24 @@ package org.eclipse.mylar.internal.tasklist.ui.editors;
 import java.io.File;
 import java.text.DateFormat;
 import java.util.Calendar;
-import java.util.List;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.actions.TaskEditorCopyAction;
 import org.eclipse.mylar.internal.tasklist.ui.views.DatePicker;
+import org.eclipse.mylar.internal.tasklist.ui.views.RetrieveTitleFromUrlJob;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskActivityListener;
+import org.eclipse.mylar.provisional.tasklist.ITaskListChangeListener;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.Task;
-import org.eclipse.mylar.provisional.tasklist.Task.TaskStatus;
+import org.eclipse.mylar.provisional.tasklist.Task.PriorityLevel;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.events.KeyEvent;
@@ -76,9 +79,17 @@ import org.eclipse.ui.part.EditorPart;
  */
 public class TaskInfoEditor extends EditorPart {
 
+	private static final String LABEL_INCOMPLETE = "Incomplete";
+
+	private static final String LABEL_COMPLETE = "Complete";
+
+	private static final String LABEL_PLAN = "Personal Planning";
+
 	private static final String NO_TIME_ELAPSED = "0 seconds";
 
-	private static final String DESCRIPTION_OVERVIEW = "Task Summary";
+	private static final String LABEL_OVERVIEW = "Task Info";
+
+	private static final String LABEL_NOTES = "Notes";
 
 	private DatePicker datePicker;
 
@@ -118,74 +129,82 @@ public class TaskInfoEditor extends EditorPart {
 
 	private Spinner estimated;
 
+	private Button getDescButton;
+
 	private boolean isDirty = false;
 
 	private MylarTaskEditor parentEditor = null;
 
-	private ITaskActivityListener TASK_LIST_LISTENER = new ITaskActivityListener() {
-		public void taskActivated(ITask activeTask) {
-			// if (task != null && !browse.isDisposed()
-			// &&
-			// activeTask.getHandleIdentifier().equals(task.getHandleIdentifier()))
-			// {
-			// browse.setEnabled(false);
-			// }
-		}
-
-		public void tasksActivated(List<ITask> tasks) {
-			for (ITask t : tasks) {
-				taskActivated(t);
-			}
-		}
-
-		public void taskDeactivated(ITask deactiveTask) {
-			// if (task != null && !browse.isDisposed()
-			// &&
-			// deactiveTask.getHandleIdentifier().equals(task.getHandleIdentifier()))
-			// {
-			// browse.setEnabled(true);
-			// }
-		}
-
-		public void tasklistRead() {
-			// ignore
-		}
+	private ITaskListChangeListener TASK_LIST_LISTENER = new ITaskListChangeListener() {
 
 		public void localInfoChanged(final ITask updateTask) {
 			if (updateTask != null && updateTask.getHandleIdentifier().equals(task.getHandleIdentifier())) {
 				if (PlatformUI.getWorkbench() != null && !PlatformUI.getWorkbench().getDisplay().isDisposed()) {
 					PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 						public void run() {
+							if (description == null)
+								return;
 							if (!description.isDisposed()) {
 								description.setText(updateTask.getDescription());
 								// TaskInfoEditor.this.setPartName(updateTask.getDescription(true));
 								parentEditor.changeTitle();
 							}
 							if (!priorityCombo.isDisposed()) {
-								int selectionIndex = priorityCombo.indexOf(updateTask.getPriority());
-								priorityCombo.select(selectionIndex);
+								PriorityLevel level = PriorityLevel.fromString(updateTask.getPriority());
+								if (level != null) {
+									int prioritySelectionIndex = priorityCombo.indexOf(level.getDescription());
+									priorityCombo.select(prioritySelectionIndex);
+								}
+								// int selectionIndex =
+								// priorityCombo.indexOf(updateTask.getPriority());
+								// priorityCombo.select(selectionIndex);
 							}
 							if (!statusCombo.isDisposed()) {
-								int selectionIndex = statusCombo.indexOf(updateTask.getStatus().toString());
-								statusCombo.select(selectionIndex);
+								if (task.isCompleted()) {
+									statusCombo.select(0);
+								} else {
+									statusCombo.select(1);
+								}
+								// statusCombo.indexOf(updateTask.getStatus().toString());
+								// statusCombo.select(selectionIndex);
 							}
-							if (updateTask.isLocal() && !endDate.isDisposed()) {
+							if (!(updateTask instanceof AbstractRepositoryTask) && !endDate.isDisposed()) {
 								endDate.setText(getTaskDateString(updateTask));
 							}
 						}
 					});
-				}				
+				}
 			}
 		}
 
 		public void repositoryInfoChanged(ITask task) {
-			localInfoChanged(task);	
+			localInfoChanged(task);
 		}
-		
-		public void taskListModified() {
-			// TODO Auto-generated method stub
 
+		public void taskMoved(ITask task, AbstractTaskContainer fromContainer, AbstractTaskContainer toContainer) {
+			// ignore
 		}
+
+		public void taskDeleted(ITask task) {
+			// ignore
+		}
+
+		public void containerAdded(AbstractTaskContainer container) {
+			// ignore
+		}
+
+		public void containerDeleted(AbstractTaskContainer container) {
+			// ignore
+		}
+
+		public void taskAdded(ITask task) {
+			// ignore
+		}
+
+		public void containerInfoChanged(AbstractTaskContainer container) {
+			// ignore
+		}
+
 	};
 
 	public TaskInfoEditor() {
@@ -215,23 +234,40 @@ public class TaskInfoEditor extends EditorPart {
 		copyAction.setAccelerator(SWT.CTRL | 'c');
 
 		copyAction.setEnabled(false);
-		MylarTaskListPlugin.getTaskListManager().addListener(TASK_LIST_LISTENER);
+		MylarTaskListPlugin.getTaskListManager().getTaskList().addChangeListener(TASK_LIST_LISTENER);
 	}
 
 	@Override
 	public void doSave(IProgressMonitor monitor) {
-		String label = description.getText();
-		task.setDescription(label);
-		task.setUrl(issueReportURL.getText());
+		if (!(task instanceof AbstractRepositoryTask)) {
+			String label = description.getText();
+			// task.setDescription(label);
+			MylarTaskListPlugin.getTaskListManager().getTaskList().renameTask((Task) task, label);
+
+			// TODO: refactor mutation into TaskList?
+			task.setUrl(issueReportURL.getText());
+			String priorityDescription = priorityCombo.getItem(priorityCombo.getSelectionIndex());
+			PriorityLevel level = PriorityLevel.fromDescription(priorityDescription);
+			if (level != null) {
+				task.setPriority(level.toString());
+			}
+			if (statusCombo.getSelectionIndex() == 0) {
+				task.setCompleted(true);
+			} else {
+				task.setCompleted(false);
+			}
+		}
+
 		String note = notes.getText();
 		task.setNotes(note);
 		task.setEstimatedTimeHours(estimated.getSelection());
 		if (datePicker != null && datePicker.getDate() != null) {
-			task.setReminderDate(datePicker.getDate().getTime());
+			MylarTaskListPlugin.getTaskListManager().setReminder(task, datePicker.getDate().getTime());
+			// task.setReminderDate(datePicker.getDate().getTime());
 		} else {
 			task.setReminderDate(null);
 		}
-		task.setPriority(priorityCombo.getItem(priorityCombo.getSelectionIndex()));
+		MylarTaskListPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
 
 		// Method not implemented yet
 		// task.setStatus(statusCombo.getItem(statusCombo.getSelectionIndex()));
@@ -239,8 +275,7 @@ public class TaskInfoEditor extends EditorPart {
 		// MylarTaskListPlugin.getTaskListManager().setStatus(task,
 		// statusCombo.getItem(statusCombo.getSelectionIndex()));
 
-//		refreshTaskListView(task);
-		MylarTaskListPlugin.getTaskListManager().notifyLocalInfoChanged(task);
+		// refreshTaskListView(task);
 
 		markDirty(false);
 	}
@@ -276,6 +311,12 @@ public class TaskInfoEditor extends EditorPart {
 	public void createPartControl(Composite parent) {
 		FormToolkit toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createScrolledForm(parent);
+		String trucatedDescription = task.getDescription();
+		int maxLength = 50;
+		if (trucatedDescription.length() > maxLength) {
+			trucatedDescription = trucatedDescription.substring(0, maxLength) + "...";
+		}
+		form.setText(trucatedDescription);
 
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());
@@ -310,7 +351,9 @@ public class TaskInfoEditor extends EditorPart {
 		}
 
 		try {
-			createSummarySection(parent, toolkit);
+			if (!(task instanceof AbstractRepositoryTask)) {
+				createSummarySection(parent, toolkit);
+			}
 			createPlanningSection(parent, toolkit);
 			createDocumentationSection(parent, toolkit);
 			// // createRelatedLinksSection(parent, toolkit);
@@ -322,13 +365,13 @@ public class TaskInfoEditor extends EditorPart {
 	}
 
 	private void createSummarySection(Composite parent, FormToolkit toolkit) {
-		Section section = toolkit.createSection(parent, ExpandableComposite.TITLE_BAR | Section.DESCRIPTION
-				| Section.TWISTIE);
-		section.setText(DESCRIPTION_OVERVIEW);
+		Section section = toolkit.createSection(parent, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+		section.setText(LABEL_OVERVIEW);
 		section.setExpanded(true);
-		if (!task.isLocal()) {
-			section.setDescription("To modify these fields use the repository editor.");
-		}
+		// if (task instanceof AbstractRepositoryTask) {
+		// section.setDescription("To modify these fields use the repository
+		// editor.");
+		// }
 
 		section.setLayout(new GridLayout());
 		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
@@ -357,7 +400,7 @@ public class TaskInfoEditor extends EditorPart {
 		description.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		toolkit.paintBordersFor(container);
 
-		if (!task.isLocal()) {
+		if (task instanceof AbstractRepositoryTask) {
 			description.setEnabled(false);
 		} else {
 			description.addKeyListener(new KeyListener() {
@@ -377,10 +420,19 @@ public class TaskInfoEditor extends EditorPart {
 
 		Label urlLabel = toolkit.createLabel(container, "Web Link:");
 		urlLabel.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
-		issueReportURL = toolkit.createText(container, task.getUrl(), SWT.NONE);
-		issueReportURL.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		if (!task.isLocal()) {
+		Composite urlComposite = toolkit.createComposite(container);
+		GridLayout urlLayout = new GridLayout(2, false);
+		urlLayout.marginWidth = 1;
+		urlComposite.setLayout(urlLayout);
+		GridData urlGridData = new GridData(GridData.FILL_HORIZONTAL);
+		urlComposite.setLayoutData(urlGridData);
+
+		issueReportURL = toolkit.createText(urlComposite, task.getUrl(), SWT.NONE);
+		GridData gridLayout = new GridData(GridData.FILL_HORIZONTAL);
+		issueReportURL.setLayoutData(gridLayout);
+
+		if (task instanceof AbstractRepositoryTask) {
 			issueReportURL.setEditable(false);
 		} else {
 			issueReportURL.addModifyListener(new ModifyListener() {
@@ -389,6 +441,30 @@ public class TaskInfoEditor extends EditorPart {
 				}
 			});
 		}
+
+		getDescButton = toolkit.createButton(urlComposite, "Get Description", SWT.PUSH);
+		getDescButton.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
+		toolkit.paintBordersFor(urlComposite);
+		setButtonStatus();
+
+		issueReportURL.addKeyListener(new KeyListener() {
+			public void keyPressed(KeyEvent e) {
+				setButtonStatus();
+			}
+
+			public void keyReleased(KeyEvent e) {
+				setButtonStatus();
+			}
+		});
+
+		getDescButton.addSelectionListener(new SelectionListener() {
+			public void widgetSelected(SelectionEvent e) {
+				retrieveTaskDescription(issueReportURL.getText());
+			}
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+		});
 
 		Label label = toolkit.createLabel(container, "Status:");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
@@ -399,14 +475,17 @@ public class TaskInfoEditor extends EditorPart {
 		priorityCombo = new Combo(statusComposite, SWT.READ_ONLY);
 
 		// Populate the combo box with priority levels
-		for (String priorityLevel : TaskListView.PRIORITY_LEVELS) {
+		for (String priorityLevel : TaskListView.PRIORITY_LEVEL_DESCRIPTIONS) {
 			priorityCombo.add(priorityLevel);
 		}
 
-		int prioritySelectionIndex = priorityCombo.indexOf(task.getPriority());
-		priorityCombo.select(prioritySelectionIndex);
+		PriorityLevel level = PriorityLevel.fromString(task.getPriority());
+		if (level != null) {
+			int prioritySelectionIndex = priorityCombo.indexOf(level.getDescription());
+			priorityCombo.select(prioritySelectionIndex);
+		}
 
-		if (!task.isLocal()) {
+		if (task instanceof AbstractRepositoryTask) {
 			priorityCombo.setEnabled(false);
 		} else {
 			priorityCombo.addSelectionListener(new SelectionListener() {
@@ -425,20 +504,25 @@ public class TaskInfoEditor extends EditorPart {
 
 		statusCombo = new Combo(statusComposite, SWT.READ_ONLY);
 
-		for (TaskStatus status : Task.TaskStatus.values()) {
-			statusCombo.add(status.toString());
+		statusCombo.add(LABEL_COMPLETE);
+		statusCombo.add(LABEL_INCOMPLETE);
+		if (task.isCompleted()) {
+			statusCombo.select(0);
+		} else {
+			statusCombo.select(1);
 		}
-
-		int selectionIndex = statusCombo.indexOf(task.getStatus().toString());
-		statusCombo.select(selectionIndex);
-		if (!task.isLocal()) {
+		if (task instanceof AbstractRepositoryTask) {
 			statusCombo.setEnabled(false);
 		} else {
 			statusCombo.addSelectionListener(new SelectionListener() {
 
 				public void widgetSelected(SelectionEvent e) {
+					if (statusCombo.getSelectionIndex() == 0) {
+						task.setCompleted(true);
+					} else {
+						task.setCompleted(false);
+					}
 					TaskInfoEditor.this.markDirty(true);
-
 				}
 
 				public void widgetDefaultSelected(SelectionEvent e) {
@@ -447,13 +531,55 @@ public class TaskInfoEditor extends EditorPart {
 				}
 			});
 		}
-		statusCombo.setEnabled(false);
+		// statusCombo.setEnabled(false);
 
+	}
+
+	/**
+	 * Attempts to set the task pageTitle to the title from the specified url
+	 */
+	protected void retrieveTaskDescription(final String url) {
+
+		try {
+			RetrieveTitleFromUrlJob job = new RetrieveTitleFromUrlJob(issueReportURL.getText()) {
+
+				@Override
+				protected void setTitle(final String pageTitle) {
+					description.setText(pageTitle);
+					TaskInfoEditor.this.markDirty(true);
+				}
+
+			};
+			job.schedule();
+
+		} catch (RuntimeException e) {
+			MylarStatusHandler.fail(e, "could not open task web page", false);
+		}
+	}
+
+	/**
+	 * Sets the Get Description button enabled or not depending on whether there
+	 * is a URL specified
+	 */
+	protected void setButtonStatus() {
+		String url = issueReportURL.getText();
+
+		if (url.length() > 10 && (url.startsWith("http://") || url.startsWith("https://"))) {
+			String defaultPrefix = MylarPlugin.getDefault().getPreferenceStore().getString(
+					TaskListPreferenceConstants.DEFAULT_URL_PREFIX);
+			if (url.equals(defaultPrefix)) {
+				getDescButton.setEnabled(false);
+			} else {
+				getDescButton.setEnabled(true);
+			}
+		} else {
+			getDescButton.setEnabled(false);
+		}
 	}
 
 	private void createDocumentationSection(Composite parent, FormToolkit toolkit) {
 		Section section = toolkit.createSection(parent, ExpandableComposite.TITLE_BAR);
-		section.setText("Documentation");
+		section.setText(LABEL_NOTES);
 		section.setExpanded(true);
 		section.setLayout(new GridLayout());
 		section.setLayoutData(new GridData(GridData.FILL_BOTH));
@@ -486,7 +612,7 @@ public class TaskInfoEditor extends EditorPart {
 	private void createPlanningSection(Composite parent, FormToolkit toolkit) {
 
 		Section section = toolkit.createSection(parent, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
-		section.setText("Planning");
+		section.setText(LABEL_PLAN);
 		section.setLayout(new GridLayout());
 		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		section.setExpanded(true);
@@ -534,7 +660,7 @@ public class TaskInfoEditor extends EditorPart {
 		});
 		datePicker.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 
-		removeReminder = toolkit.createButton(sectionClient, "Clear", SWT.PUSH | SWT.CENTER);		
+		removeReminder = toolkit.createButton(sectionClient, "Clear", SWT.PUSH | SWT.CENTER);
 		removeReminder.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -550,7 +676,7 @@ public class TaskInfoEditor extends EditorPart {
 		dummyLabelDataLayout.horizontalSpan = 1;
 		dummyLabelDataLayout.widthHint = 30;
 		dummy.setLayoutData(dummyLabelDataLayout);
-		
+
 		// Creation date
 		label = toolkit.createLabel(sectionClient, "Creation date:");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
@@ -569,7 +695,6 @@ public class TaskInfoEditor extends EditorPart {
 		creationDate.setEditable(false);
 		creationDate.setEnabled(true);
 
-		
 		// Estimated time
 
 		label = toolkit.createLabel(sectionClient, "Estimated time:");
@@ -595,7 +720,6 @@ public class TaskInfoEditor extends EditorPart {
 		label = toolkit.createLabel(sectionClient, "hours ");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
-
 		// 1 Blank column
 		Label blankLabel2 = toolkit.createLabel(sectionClient, "");
 		GridData blankLabl2Layout = new GridData(GridData.HORIZONTAL_ALIGN_CENTER);
@@ -616,7 +740,6 @@ public class TaskInfoEditor extends EditorPart {
 		endDateDataLayout.widthHint = 120;
 		endDate.setLayoutData(endDateDataLayout);
 
-		
 		endDate.setEditable(false);
 		endDate.setEnabled(true);
 		toolkit.paintBordersFor(sectionClient);
@@ -625,7 +748,7 @@ public class TaskInfoEditor extends EditorPart {
 
 		label = toolkit.createLabel(sectionClient, "Elapsed time:");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
-		
+
 		Composite elapsedComposite = toolkit.createComposite(sectionClient);
 		GridLayout elapsedLayout = new GridLayout();
 		elapsedLayout.numColumns = 2;
@@ -635,8 +758,6 @@ public class TaskInfoEditor extends EditorPart {
 		GridData elapsedCompositeGridData = new GridData();
 		elapsedCompositeGridData.horizontalSpan = 5;
 		elapsedComposite.setLayoutData(elapsedCompositeGridData);
-		
-
 
 		String elapsedTimeString = NO_TIME_ELAPSED;
 		try {
@@ -783,7 +904,7 @@ public class TaskInfoEditor extends EditorPart {
 
 	@Override
 	public void dispose() {
-		MylarTaskListPlugin.getTaskListManager().removeListener(TASK_LIST_LISTENER);
+		MylarTaskListPlugin.getTaskListManager().getTaskList().removeChangeListener(TASK_LIST_LISTENER);
 	}
 
 	@Override

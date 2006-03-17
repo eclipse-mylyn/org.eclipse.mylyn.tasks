@@ -16,6 +16,9 @@ import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
 import org.eclipse.swt.SWT;
 
+/**
+ * @author Mik Kersten
+ */
 public class RenameAction extends Action {
 
 	public static final String ID = "org.eclipse.mylar.tasklist.actions.rename";
@@ -35,7 +38,7 @@ public class RenameAction extends Action {
 		if (selectedObject instanceof ITaskListElement) {
 			ITaskListElement element = (ITaskListElement) selectedObject;
 			view.setInRenameAction(true);
-			view.getViewer().editElement(element, 3);
+			view.getViewer().editElement(element, 4);
 			view.setInRenameAction(false);
 		}
 	}

@@ -22,12 +22,12 @@ public class WorkOfflineAction extends Action {
 		setId(ID);
 		setText("Work Offline");
 		setToolTipText("Work Offline");
-		setChecked(MylarTaskListPlugin.getPrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE));
+		setChecked(MylarTaskListPlugin.getMylarCorePrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE));
 	}
 
 	@Override
 	public void run() {
-		boolean on = !MylarTaskListPlugin.getPrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE);
-		MylarTaskListPlugin.getPrefs().setValue(TaskListPreferenceConstants.WORK_OFFLINE, on);
+		boolean on = !MylarTaskListPlugin.getMylarCorePrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE);
+		MylarTaskListPlugin.getMylarCorePrefs().setValue(TaskListPreferenceConstants.WORK_OFFLINE, on);
 	}
 }

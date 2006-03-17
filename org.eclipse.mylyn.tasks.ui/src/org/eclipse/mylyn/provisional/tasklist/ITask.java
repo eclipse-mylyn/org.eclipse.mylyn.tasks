@@ -14,10 +14,7 @@
 package org.eclipse.mylar.provisional.tasklist;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Set;
-
-import org.eclipse.mylar.provisional.tasklist.Task.TaskStatus;
 
 /**
  * @author Mik Kersten
@@ -25,8 +22,6 @@ import org.eclipse.mylar.provisional.tasklist.Task.TaskStatus;
 public interface ITask extends ITaskListElement {
 
 	public abstract String getHandleIdentifier();
-
-	public String getRepositoryKind();
 
 	public abstract ITask getParent();
 
@@ -36,27 +31,15 @@ public interface ITask extends ITaskListElement {
 
 	public abstract void setActive(boolean active);
 
+//	abstract void setDescription(String description);
+	
 	public String getKind();
 
 	public void setKind(String kind);
 	
-	public abstract void addPlan(String plan);
-
-	public List<String> getPlans();
-	
 	public abstract boolean isCompleted();
 
-	public abstract TaskStatus getStatus();
-
 	public abstract void setCompleted(boolean completed);
-
-	public abstract List<String> getRelatedLinks();
-
-	public abstract void setRelatedLinks(List<String> relatedLinks);
-
-	public abstract void addLink(String url);
-
-	public abstract void removeLink(String url);
 
 	public abstract boolean hasValidUrl();
 
@@ -69,8 +52,7 @@ public interface ITask extends ITaskListElement {
 	public abstract void setNotes(String notes);
 
 	/**
-	 * @param time
-	 *            in milliseconds
+	 * @param time in milliseconds
 	 */
 	public abstract void setElapsedTime(long elapsed);
 
@@ -89,12 +71,12 @@ public interface ITask extends ITaskListElement {
 
 	public abstract void setPriority(String priority);
 
-	public abstract void setCategory(ITaskContainer category);
+	public abstract void setContainer(AbstractTaskContainer category);
 
 	/**
 	 * @return null if root task
 	 */
-	public abstract ITaskContainer getCategory();
+	public abstract AbstractTaskContainer getContainer();
 
 	public abstract long getElapsedTime();
 

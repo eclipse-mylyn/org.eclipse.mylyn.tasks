@@ -118,8 +118,8 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 	// return category instanceof TaskCategory;
 	// }
 
-	public Element createCategoryElement(ITaskContainer category, Document doc, Element parent) {
-		if (category.isArchive())
+	public Element createCategoryElement(AbstractTaskContainer category, Document doc, Element parent) {
+		if (category instanceof TaskArchive)
 			return parent;
 		Element node = doc.createElement(getCategoryTagName());
 		node.setAttribute(KEY_NAME, category.getDescription());
@@ -150,15 +150,18 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		Element node = doc.createElement(getTaskTagName());
 		node.setAttribute(KEY_LABEL, task.getDescription());
 		node.setAttribute(KEY_HANDLE, task.getHandleIdentifier());
-		if (task.getCategory() != null) {
+		
+		if (task.getContainer() != null) {
 //			if (task.getCategory().getHandleIdentifier().equals(TaskList.LABEL_ARCHIVE)) {				
 //				node.setAttribute(KEY_CATEGORY, VAL_ARCHIVE);
 //			} else 
-			if (task.getCategory().getHandleIdentifier().equals(TaskList.LABEL_ROOT)) {				
+			if (task.getContainer().getHandleIdentifier().equals(TaskList.LABEL_ROOT)) {				
 				node.setAttribute(KEY_CATEGORY, VAL_ROOT);
 			} else {
-				node.setAttribute(KEY_CATEGORY, task.getCategory().getHandleIdentifier());
+				node.setAttribute(KEY_CATEGORY, task.getContainer().getHandleIdentifier());
 			}
+		} else {
+			// TODO: if/when subtasks are supported this should be handled
 		}
 //		else if (task instanceof AbstractRepositoryTask && !task.getCategory().equals(TaskList.LABEL_ROOT)) {
 //			node.setAttribute(KEY_CATEGORY, VAL_ARCHIVE); 
@@ -195,18 +198,18 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		} else {
 			node.setAttribute(KEY_REMINDED, VAL_FALSE);
 		}
-		List<String> rl = task.getRelatedLinks();
-		int i = 0;
-		for (String link : rl) {
-			node.setAttribute(KEY_LINK + i, link);
-			i++;
-		}
-		List<String> plans = task.getPlans();
-		int currPlan = 0;
-		for (String plan : plans) {
-			node.setAttribute(KEY_PLAN + currPlan, plan);
-			currPlan++;
-		}
+//		List<String> rl = task.getRelatedLinks();
+//		int i = 0;
+//		for (String link : rl) {
+//			node.setAttribute(KEY_LINK + i, link);
+//			i++;
+//		}
+//		List<String> plans = task.getPlans();
+//		int currPlan = 0;
+//		for (String plan : plans) {
+//			node.setAttribute(KEY_PLAN + currPlan, plan);
+//			currPlan++;
+//		}
 
 		for (ITask t : task.getChildren()) {
 			createTaskElement(t, doc, node);
@@ -231,13 +234,13 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		boolean hasCaughtException = false;
 		Element element = (Element) node;
 
-		TaskCategory category;
+		AbstractTaskContainer category;
 		if (element.hasAttribute(KEY_NAME)) {
-			category = new TaskCategory(element.getAttribute(KEY_NAME));
+			category = new TaskCategory(element.getAttribute(KEY_NAME), taskList);
 			taskList.internalAddCategory(category);
 		} else {
 			// LEGACY: registry categories did not have names
-			category = taskList.getArchiveCategory();
+			category = taskList.getArchiveContainer();
 		}
 
 		NodeList list = node.getChildNodes();
@@ -259,7 +262,7 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 					}
 				}
 				if (!read && canReadTask(child)) {
-					category.internalAddTask(readTask(child, taskList, category, null));
+					category.add(readTask(child, taskList, category, null));
 				}
 			} catch (TaskExternalizationException e) {
 				hasCaughtException = true;
@@ -273,7 +276,7 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		return node.getNodeName().equals(getTaskTagName());
 	}
 
-	public ITask readTask(Node node, TaskList taskList, TaskCategory category, ITask parent)
+	public ITask readTask(Node node, TaskList taskList, AbstractTaskContainer category, ITask parent)
 			throws TaskExternalizationException {
 		Element element = (Element) node;
 		String handle;
@@ -295,41 +298,52 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 	}
 
 	protected void readTaskInfo(ITask task, TaskList taskList, Element element, ITask parent,
-			TaskCategory legacyCategory) throws TaskExternalizationException {
+			AbstractTaskContainer legacyCategory) throws TaskExternalizationException {
 		
 		String categoryHandle = null;
 		if (element.hasAttribute(KEY_CATEGORY)) {
 			categoryHandle = element.getAttribute(KEY_CATEGORY);
-			TaskCategory category = null;
+			AbstractTaskContainer category = null;
 			if (categoryHandle != null) {
-				category = taskList.getCategoryForHandle(categoryHandle);
+				category = taskList.getContainerForHandle(categoryHandle);
 			} 
 			
 			if (category != null) {
-				if (category.equals(taskList.getArchiveCategory())) {
-					taskList.addTaskToArchive(task);
-				} else if (category.equals(VAL_ROOT)) {
+				if (category.equals(VAL_ROOT)) {
 					taskList.internalAddRootTask(task);
 				} else {
-					task.setCategory(category);
-					category.addTask(task);
+					taskList.internalAddTask(task, category);
 				}
+//				if (category.equals(taskList.getArchiveContainer())) {
+//					taskList.internalAddTask(task, category);
+//				} else if (category.equals(VAL_ROOT)) {
+//					taskList.internalAddRootTask(task);
+//				} else {
+//					task.setCategory(category);
+//					category.add(task);
+//				}
 			} else if (parent == null) {
+//				taskList.internalAddTask(task, taskList.getArchiveContainer());
 				taskList.internalAddRootTask(task); 
 			}
-		} else if (legacyCategory != null && !legacyCategory.isArchive()) { //&& !legacyCategory.getHandleIdentifier().equals(TaskList.LABEL_ARCHIVE)) {
-			task.setCategory(legacyCategory);
-			legacyCategory.addTask(task);
+		} else if (legacyCategory != null && !(legacyCategory instanceof TaskArchive)) { //&& !legacyCategory.getHandleIdentifier().equals(TaskList.LABEL_ARCHIVE)) {
+			task.setContainer(legacyCategory);
+			legacyCategory.add(task);
 		} else if (legacyCategory == null && parent == null) { 
 			if (task instanceof AbstractRepositoryTask) {
-				taskList.addTaskToArchive(task);
+				taskList.internalAddTask(task, taskList.getArchiveContainer());
+//				taskList.(task);
+//				taskList.internalAddTask(task);
 			} else {
 				taskList.internalAddRootTask(task);
 			}
 		} else if (parent != null) {
 			task.setParent(parent);
+		} else {
+			taskList.internalAddTask(task, taskList.getArchiveContainer());
 		} 
-		taskList.addTaskToArchive(task);
+//		taskList.internalAddTask(task, taskList.getArchiveContainer());
+//		taskList.internalAddTask(task);
 		
 	
 		if (element.hasAttribute(KEY_PRIORITY)) {
@@ -411,16 +425,16 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		} else {
 			task.setReminded(false);
 		}
-		int i = 0;
-		while (element.hasAttribute(KEY_LINK + i)) {
-			task.getRelatedLinks().add(element.getAttribute(KEY_LINK + i));
-			i++;
-		}
-		int ii = 0;
-		while (element.hasAttribute(KEY_PLAN + ii)) {
-			task.getPlans().add(element.getAttribute(KEY_PLAN + i));
-			ii++;
-		}
+//		int i = 0;
+//		while (element.hasAttribute(KEY_LINK + i)) {
+//			task.getRelatedLinks().add(element.getAttribute(KEY_LINK + i));
+//			i++;
+//		}
+//		int ii = 0;
+//		while (element.hasAttribute(KEY_PLAN + ii)) {
+//			task.getPlans().add(element.getAttribute(KEY_PLAN + i));
+//			ii++;
+//		}
 
 		NodeList list = element.getChildNodes();
 		for (int j = 0; j < list.getLength(); j++) {

@@ -19,16 +19,19 @@ import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.mylar.internal.tasklist.ui.AbstractTaskFilter;
+import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.Task;
-import org.eclipse.mylar.provisional.tasklist.TaskCategory;
+import org.eclipse.mylar.provisional.tasklist.TaskArchive;
 import org.eclipse.swt.widgets.Text;
 
 /**
+ * TODO: move to viewer filter architecture?
+ * 
  * @author Mik Kersten
  */
 public class TaskListContentProvider implements IStructuredContentProvider, ITreeContentProvider {
@@ -73,7 +76,7 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 			if (((ITask) child).getParent() != null) {
 				return ((ITask) child).getParent();
 			} else {
-				return ((ITask) child).getCategory();
+				return ((ITask) child).getContainer();
 			}
 		}
 		return null;
@@ -84,16 +87,16 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 	}
 
 	public boolean hasChildren(Object parent) {
-		if (parent instanceof TaskCategory) {
-			ITaskContainer cat = (ITaskContainer) parent;
+		if (parent instanceof AbstractRepositoryQuery) {
+			AbstractRepositoryQuery t = (AbstractRepositoryQuery) parent;
+			return t.getHits() != null && t.getHits().size() > 0;
+		} else if (parent instanceof AbstractTaskContainer) {
+			AbstractTaskContainer cat = (AbstractTaskContainer) parent;
 			return cat.getChildren() != null && cat.getChildren().size() > 0;
 		} else if (parent instanceof Task) {
 			Task t = (Task) parent;
 			return t.getChildren() != null && t.getChildren().size() > 0;
-		} else if (parent instanceof AbstractRepositoryQuery) {
-			AbstractRepositoryQuery t = (AbstractRepositoryQuery) parent;
-			return t.getHits() != null && t.getHits().size() > 0;
-		}
+		} 
 		return false;
 	}
 
@@ -102,17 +105,16 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 		if (containsNoFilterText(filterText)) {
 			List<ITaskListElement> filteredRoots = new ArrayList<ITaskListElement>();
 			for (ITaskListElement element : roots) {
-//			for (int i = 0; i < list.size(); i++) {
 				if (element instanceof ITask) {
 					if (!filter(element)) {
 						filteredRoots.add(element);
 					}
-				} else if (element instanceof TaskCategory) {
-					if (selectCategory((TaskCategory)element)) {
-						filteredRoots.add(element);
-					}
 				} else if (element instanceof AbstractRepositoryQuery) {
 					if (selectQuery((AbstractRepositoryQuery)element)) {
+						filteredRoots.add(element);
+					}
+				} else if (element instanceof AbstractTaskContainer) { 
+					if (selectContainer((AbstractTaskContainer)element)) {
 						filteredRoots.add(element);
 					}
 				}
@@ -140,40 +142,51 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 				return true;
 			}
 		}
-//		for (int i = 0; i < list.size(); i++) {
-//			if (!filter(list.get(i))) {
-//				return true;
-//			}
-//		}
 		return false;
 	}
 
-	private boolean selectCategory(ITaskContainer cat) {
-		if (cat.isArchive()) {
-			for (ITask task : cat.getChildren()) {
-				if (contentTaskFilter.shouldAlwaysShow(task)) {
-					ITask t = MylarTaskListPlugin.getTaskListManager().getTaskForHandle(task.getHandleIdentifier(),
-							false);
-					if (t == null)
-						return true;
-				}
-			}
+	private boolean selectContainer(AbstractTaskContainer container) {
+		if (filter(container) && !shouldAlwaysShow(container)) {
 			return false;
 		}
-		Set<? extends ITaskListElement> list = cat.getChildren();
-		if (list.size() == 0) {
+//		if (container instanceof TaskArchive) {
+//			for (ITask task : container.getChildren()) {
+//				if (contentTaskFilter.shouldAlwaysShow(task)) {
+//					// TODO: archive logic?
+//					ITask t = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(task.getHandleIdentifier());
+//					if (t == null) {
+//						return true;
+//					}
+//				}
+//			}
+//			return false;
+//		}
+		
+		Set<ITask> children = container.getChildren();
+		if (children.size() == 0) {
 			return true;
 		}
-		for (ITaskListElement element : list) {
+		for (ITaskListElement element : children) {
 			if (!filter(element)) {
 				return true;
 			}
 		}
-//		for (int i = 0; i < list.size(); i++) {
-//			if (!filter(list.get(i))) {
-//				return true;
-//			}
-//		}
+		return false;
+	}
+
+	private boolean shouldAlwaysShow(AbstractTaskContainer container) {
+		for (ITask task : container.getChildren()) {
+			if (contentTaskFilter.shouldAlwaysShow(task)) {
+				if (container instanceof TaskArchive) {
+					Set<AbstractQueryHit> existingHits = MylarTaskListPlugin.getTaskListManager().getTaskList().getQueryHitsForHandle(task.getHandleIdentifier());
+					if (existingHits.isEmpty()) {
+						return true;							
+					}
+				} else {
+					return true;
+				}
+			}
+		} 
 		return false;
 	}
 
@@ -181,29 +194,31 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 		if (containsNoFilterText(((Text) this.view.getFilteredTree().getFilterControl()).getText())
 				|| ((Text) this.view.getFilteredTree().getFilterControl()).getText().startsWith(TaskListView.FILTER_LABEL)) {
 			List<Object> children = new ArrayList<Object>();
-			if (parent instanceof TaskCategory) { 
-				if (((ITaskContainer) parent).isArchive()) {
-					for (ITask task : ((ITaskContainer) parent).getChildren()) {
-						if (contentTaskFilter.shouldAlwaysShow(task)) {
-							ITask t = MylarTaskListPlugin.getTaskListManager().getTaskForHandle(
-									task.getHandleIdentifier(), false);
-							if (t == null)
-								children.add(task);
-						}
+			if (parent instanceof AbstractTaskContainer && ((AbstractTaskContainer)parent).isLocal()) { 
+				if (filter(parent)) {
+					if (((AbstractTaskContainer)parent) instanceof TaskArchive) {
+						for (ITask task : ((AbstractTaskContainer) parent).getChildren()) { 
+							if (contentTaskFilter.shouldAlwaysShow(task)) {
+								// TODO: archive logic?
+								Set<AbstractQueryHit> existingHits = MylarTaskListPlugin.getTaskListManager().getTaskList().getQueryHitsForHandle(task.getHandleIdentifier());
+								if (existingHits.isEmpty()) {
+									children.add(task);								
+								} 
+	//							ITask t = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(
+	//									task.getHandleIdentifier());
+	//							if (t == null)
+	//								children.add(task);
+							}
+						} 
+						return children;
 					}
-					return children;
 				}
-				Set<? extends ITaskListElement> list = ((ITaskContainer) parent).getChildren();
+				Set<? extends ITaskListElement> list = ((AbstractTaskContainer) parent).getChildren();
 				for (ITaskListElement element : list) {
 					if (!filter(element)) {
 						children.add(element);
 					}
 				}
-//				for (int i = 0; i < list.size(); i++) {
-//					if (!filter(list.get(i))) {
-//						children.add(list.get(i));
-//					}
-//				}
 				return children;
 			} else if (parent instanceof AbstractRepositoryQuery) {
 				Set<? extends ITaskListElement> list = ((AbstractRepositoryQuery) parent).getHits();
@@ -212,11 +227,6 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 						children.add(element);
 					}
 				}
-//				for (int i = 0; i < list.size(); i++) {
-//					if (!filter(list.get(i))) {
-//						children.add(list.get(i));
-//					}
-//				}
 				return children;
 			} else if (parent instanceof Task) {
 				Set<ITask> subTasks = ((Task) parent).getChildren();
@@ -229,12 +239,13 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 			}
 		} else {
 			List<Object> children = new ArrayList<Object>();
-			if (parent instanceof TaskCategory) {
-				children.addAll(((ITaskContainer) parent).getChildren());
-				return children;
-			} else if (parent instanceof AbstractRepositoryQuery) {
+			if (parent instanceof AbstractRepositoryQuery) {
 				children.addAll(((AbstractRepositoryQuery) parent).getHits());
 				return children;
+			} else if (parent instanceof AbstractTaskContainer) {
+				children.addAll(((AbstractTaskContainer) parent).getChildren());
+				return children;
+
 			} else if (parent instanceof Task) {
 				children.addAll(((Task) parent).getChildren());
 				return children;
@@ -244,7 +255,7 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 	}
 
 	private boolean filter(Object obj) {
-		for (AbstractTaskFilter filter : this.view.filters) {
+		for (AbstractTaskFilter filter : this.view.getFilters()) {
 			if (!filter.select(obj)) {
 				return true;
 			}

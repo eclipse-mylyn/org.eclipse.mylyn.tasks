@@ -23,6 +23,7 @@ import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskEditorFactory;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.swt.SWT;
@@ -46,7 +47,7 @@ import org.eclipse.ui.part.MultiPageSelectionProvider;
  */
 public class MylarTaskEditor extends MultiPageEditorPart {
 
-	private static final String TASK_INFO_PAGE_LABEL = "Task Info";
+	private static final String TASK_INFO_PAGE_LABEL = "Planning";
 
 	private static final String ISSUE_WEB_PAGE_LABEL = "Browser";
 
@@ -139,7 +140,7 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 			}
 			setActivePage(selectedIndex);
 			
-			if (!task.isLocal()) {
+			if (task instanceof AbstractRepositoryTask) {
 				 setTitleImage(TaskListImages.getImage(TaskListImages.TASK_REPOSITORY));
 			} else if (hasValidUrl()){
 				 setTitleImage(TaskListImages.getImage(TaskListImages.TASK_WEB));
@@ -185,9 +186,9 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 			setPageText(index, ISSUE_WEB_PAGE_LABEL);
 			webBrowser.setUrl(task.getUrl());
 
-			boolean openWithBrowser = MylarTaskListPlugin.getPrefs().getBoolean(
+			boolean openWithBrowser = MylarTaskListPlugin.getMylarCorePrefs().getBoolean(
 					TaskListPreferenceConstants.REPORT_OPEN_INTERNAL);
-			if (task.isLocal() || openWithBrowser) {
+			if (!(task instanceof AbstractRepositoryTask) || openWithBrowser) {
 				setActivePage(index);
 			}
 			return index;

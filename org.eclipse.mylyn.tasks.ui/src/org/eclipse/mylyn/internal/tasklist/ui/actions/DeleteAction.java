@@ -53,13 +53,14 @@ public class DeleteAction extends Action {
 				}
 				if (task == null) {
 					MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-							"Mylar Tasks", "No task data to delte.");
+							"Mylar Tasks", "No task data to delete.");
 					return;
 				}
+
 				if (task.isActive()) {
-					MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-							"Mylar Tasks", "Task must be deactivated in order to delete.");
-					return;
+					MylarTaskListPlugin.getTaskListManager().deactivateTask(task);
+					TaskListView.getDefault().refreshAndFocus();
+					TaskListUiUtil.closeEditorInActivePage(task);					
 				}
 
 				String message = genDeleteConfirmationMessage(task);
@@ -69,14 +70,15 @@ public class DeleteAction extends Action {
 					return;
 				}
 
-				MylarTaskListPlugin.getTaskListManager().deleteTask(task);
+				MylarTaskListPlugin.getTaskListManager().deactivateTask(task);
+				MylarTaskListPlugin.getTaskListManager().getTaskList().deleteTask(task);
 				MylarPlugin.getContextManager().contextDeleted(task.getHandleIdentifier());
 				TaskListUiUtil.closeEditorInActivePage(task);
 			} else if (selectedObject instanceof AbstractRepositoryQuery) {
 				boolean deleteConfirmed = MessageDialog.openQuestion(PlatformUI.getWorkbench().getActiveWorkbenchWindow()
 						.getShell(), "Confirm delete", "Delete the selected query? Task data will not be deleted.");
 				if (deleteConfirmed) {
-					MylarTaskListPlugin.getTaskListManager().deleteQuery((AbstractRepositoryQuery) selectedObject);
+					MylarTaskListPlugin.getTaskListManager().getTaskList().deleteQuery((AbstractRepositoryQuery) selectedObject);
 				}
 			} else if (selectedObject instanceof TaskCategory) {
 				boolean deleteConfirmed = MessageDialog.openQuestion(PlatformUI.getWorkbench().getActiveWorkbenchWindow()
@@ -89,7 +91,7 @@ public class DeleteAction extends Action {
 					MylarPlugin.getContextManager().contextDeleted(task.getHandleIdentifier());
 					TaskListUiUtil.closeEditorInActivePage(task);
 				}
-				MylarTaskListPlugin.getTaskListManager().deleteCategory(cat);
+				MylarTaskListPlugin.getTaskListManager().getTaskList().deleteCategory(cat);
 			} else {
 				MessageDialog.openError(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), "Delete failed",
 						"Nothing selected.");

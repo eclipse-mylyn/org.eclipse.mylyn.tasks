@@ -11,9 +11,6 @@
 
 package org.eclipse.mylar.internal.tasklist.ui.wizards;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
@@ -41,17 +38,19 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 	protected static final String URL_PREFIX_HTTPS = "https://";
 
 	protected static final String URL_PREFIX_HTTP = "http://";
-
+	
 	protected StringFieldEditor serverUrlEditor;
 
 	protected StringFieldEditor userNameEditor;
 
+	private String serverVersion = TaskRepository.NO_VERSION_SPECIFIED;
+	
 	protected RepositoryStringFieldEditor passwordEditor;
 
 	protected TaskRepository repository;
-	
+		
 	private Button validateServerButton;
-
+	
 	public AbstractRepositorySettingsPage(String title, String description) {
 		super(title);
 		super.setTitle(title);
@@ -80,14 +79,20 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 
 		userNameEditor = new StringFieldEditor("", LABEL_USER, StringFieldEditor.UNLIMITED, container);
 		passwordEditor = new RepositoryStringFieldEditor("", LABEL_PASSWORD, StringFieldEditor.UNLIMITED, container);
-		passwordEditor.getTextControl().setEchoChar('*');
-
-		if (repository != null) {
-			serverUrlEditor.setStringValue(repository.getUrl().toExternalForm());
+		if (repository != null) {			
+			try {
+			serverUrlEditor.setStringValue(repository.getUrl());
 			userNameEditor.setStringValue(repository.getUserName());
 			passwordEditor.setStringValue(repository.getPassword());
+			} catch (Throwable t) {
+				MylarStatusHandler.fail(t, "could not set field value for: " + repository, false);
+			}
 		}
-
+		// bug 131656: must set echo char after setting value on Mac
+		passwordEditor.getTextControl().setEchoChar('*');
+		
+		createAdditionalControls(container);
+		
 		validateServerButton = new Button(container, SWT.PUSH);
 		validateServerButton.setText("Validate Settings");
 		validateServerButton.addMouseListener(new MouseListener() {
@@ -107,7 +112,7 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 			}
 		});
 		
-		createAdditionalControls(container);
+		
 		setControl(container);
 	}
 
@@ -115,13 +120,10 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 
 	protected abstract void validateSettings();
 	
-	public URL getServerUrl() {
-		try {
-			return new URL(serverUrlEditor.getStringValue());
-		} catch (MalformedURLException e) {
-			MylarStatusHandler.fail(e, "could not create url", true);
-			return null;
-		}
+	protected abstract boolean isValidUrl(String name);
+	
+	public String getServerUrl() {
+		return serverUrlEditor.getStringValue();
 	}
 
 	public String getUserName() {
@@ -130,19 +132,6 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 
 	public String getPassword() {
 		return passwordEditor.getStringValue();
-	}
-
-	private boolean isValidUrl(String name) {
-		if (name.startsWith(URL_PREFIX_HTTPS) || name.startsWith(URL_PREFIX_HTTP)) {
-			try {
-				new URL(name);
-			} catch (MalformedURLException e) {
-				return false;
-			}
-			return true;
-		} else {
-			return false;
-		}
 	}
 
 	public void init(IWorkbench workbench) {
@@ -182,7 +171,19 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 	public void setRepository(TaskRepository repository) {
 		this.repository = repository;
 	}
-
+	
+	public void setVersion(String previousVersion) {
+		if(previousVersion == null) {
+			serverVersion = TaskRepository.NO_VERSION_SPECIFIED;
+		} else {
+			serverVersion = previousVersion;
+		}		
+	}
+	
+	public String getVersion() {
+		return serverVersion;
+	}
+	
 	public TaskRepository getRepository() {
 		return repository;
 	}

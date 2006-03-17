@@ -38,7 +38,7 @@ public interface ITaskListExternalizer {
 	/**
 	 * @return the element that was created, null if failed
 	 */
-	public abstract Element createCategoryElement(ITaskContainer category, Document doc, Element parent);
+	public abstract Element createCategoryElement(AbstractTaskContainer category, Document doc, Element parent);
 
 	public abstract boolean canCreateElementFor(ITask task);
 
@@ -53,7 +53,7 @@ public interface ITaskListExternalizer {
 
 	public abstract boolean canReadTask(Node node);
 
-	public abstract ITask readTask(Node node, TaskList tlist, TaskCategory category, ITask parent)
+	public abstract ITask readTask(Node node, TaskList tlist, AbstractTaskContainer category, ITask parent)
 			throws TaskExternalizationException;
 
 	public abstract boolean canCreateElementFor(AbstractRepositoryQuery category);

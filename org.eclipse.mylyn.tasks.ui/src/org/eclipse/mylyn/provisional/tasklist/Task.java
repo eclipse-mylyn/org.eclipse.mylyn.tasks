@@ -13,10 +13,8 @@ package org.eclipse.mylar.provisional.tasklist;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
@@ -27,24 +25,6 @@ import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 public class Task implements ITask {
 
 	private static final String REPOSITORY_KIND_LOCAL = "local";
-
-	public enum TaskStatus {
-		NOT_STARTED, IN_PROGRESS, COMPLETED;
-
-		@Override
-		public String toString() {
-			switch (this) {
-			case NOT_STARTED:
-				return "Not Started";
-			case IN_PROGRESS:
-				return "In Progress";
-			case COMPLETED:
-				return "Completed";
-			default:
-				return "null";
-			}
-		}
-	}
 
 	public enum PriorityLevel {
 		P1, P2, P3, P4, P5;
@@ -63,7 +43,24 @@ public class Task implements ITask {
 			case P5:
 				return "P5";
 			default:
-				return "P5";
+				return "P3";
+			}
+		}
+
+		public String getDescription() {
+			switch (this) {
+			case P1:
+				return "Very High";
+			case P2:
+				return "High";
+			case P3:
+				return "Normal";
+			case P4:
+				return "Low";
+			case P5:
+				return "Very Low";
+			default:
+				return "";
 			}
 		}
 
@@ -80,8 +77,25 @@ public class Task implements ITask {
 				return P4;
 			if (string.equals("P5"))
 				return P5;
+			return P3;
+		}
+
+		public static PriorityLevel fromDescription(String string) {
+			if (string == null)
+				return null;
+			if (string.equals("Very High"))
+				return P1;
+			if (string.equals("High"))
+				return P2;
+			if (string.equals("Normal"))
+				return P3;
+			if (string.equals("Low"))
+				return P4;
+			if (string.equals("Very Low"))
+				return P5;
 			return null;
 		}
+
 	}
 
 	private boolean active = false;
@@ -102,13 +116,9 @@ public class Task implements ITask {
 
 	private boolean completed;
 
-	private List<String> links = new ArrayList<String>();
-
-	private List<String> plans = new ArrayList<String>();
-
 	private String url = "";
 
-	private ITaskContainer parentCategory = null;
+	private AbstractTaskContainer parentCategory = null;
 
 	private long timeActive = 0;
 
@@ -212,26 +222,6 @@ public class Task implements ITask {
 		this.priority = priority;
 	}
 
-	public List<String> getRelatedLinks() {
-		// TODO: removed check for null once xml updated.
-		if (links == null) {
-			links = new ArrayList<String>();
-		}
-		return links;
-	}
-
-	public void setRelatedLinks(List<String> relatedLinks) {
-		this.links = relatedLinks;
-	}
-
-	public void addLink(String link) {
-		links.add(link);
-	}
-
-	public void removeLink(String link) {
-		links.remove(link);
-	}
-
 	public void setUrl(String url) {
 		this.url = url;
 	}
@@ -284,11 +274,11 @@ public class Task implements ITask {
 		children.remove(t);
 	}
 
-	public void setCategory(ITaskContainer cat) {
+	public void setContainer(AbstractTaskContainer cat) {
 		this.parentCategory = cat;
 	}
 
-	public ITaskContainer getCategory() {
+	public AbstractTaskContainer getContainer() {
 		return parentCategory;
 	}
 
@@ -334,15 +324,6 @@ public class Task implements ITask {
 		this.description = description;
 	}
 
-	public void addPlan(String plan) {
-		if (plan != null && !plans.contains(plan))
-			plans.add(plan);
-	}
-
-	public List<String> getPlans() {
-		return plans;
-	}
-
 	public void setCompletionDate(Date completionDate) {
 		this.completionDate = completionDate;
 	}
@@ -373,19 +354,10 @@ public class Task implements ITask {
 		return false;
 	}
 
-	public TaskStatus getStatus() {
-		if (isCompleted()) {
-			return TaskStatus.COMPLETED;
-		} else {
-			return TaskStatus.NOT_STARTED;
-		}
-	}
-
 	public String getRepositoryKind() {
 		return REPOSITORY_KIND_LOCAL;
 	}
 
-	
 	public String getKind() {
 		return kind;
 	}

@@ -21,7 +21,6 @@ import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask.RepositoryTaskSyncState;
 
 /**
  * @author Mik Kersten
@@ -35,29 +34,32 @@ public class RepositoryTaskDecorator implements ILightweightLabelDecorator {
 			if (repositoryUrl != null) {
 				try {
 					URL url = new URL(repositoryUrl);
-					decoration.addSuffix("    [" + url.getHost() + "]");
+					decoration.addSuffix("   [" + url.getHost() + "]");
 				} catch (MalformedURLException e) {
-					decoration.addSuffix("    [ <unknown host> ]");
+					decoration.addSuffix("   [ <unknown host> ]");
 				}
 			} 
-		} else if (element instanceof AbstractRepositoryTask) {
-			AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask)element;			 
-			if (repositoryTask.getSyncState() == RepositoryTaskSyncState.OUTGOING) {
-				decoration.addOverlay(TaskListImages.OVERLAY_OUTGOING, IDecoration.TOP_RIGHT);
-			} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING) {
-				decoration.addOverlay(TaskListImages.OVERLAY_INCOMMING, IDecoration.TOP_RIGHT);
-			} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
-				decoration.addOverlay(TaskListImages.OVERLAY_CONFLICT, IDecoration.TOP_RIGHT);
+			if (query.isSynchronizing()) {
+				decoration.addOverlay(TaskListImages.OVERLAY_SYNCHRONIZING, IDecoration.TOP_LEFT);
+			}
+		} else if (element instanceof AbstractRepositoryTask) { 
+			decoration.addOverlay(TaskListImages.OVERLAY_REPOSITORY, IDecoration.BOTTOM_LEFT);
+			if (((AbstractRepositoryTask)element).isSynchronizing()) {
+				decoration.addOverlay(TaskListImages.OVERLAY_SYNCHRONIZING, IDecoration.TOP_LEFT);
 			}
 		} else if (element instanceof AbstractQueryHit) {
+			decoration.addOverlay(TaskListImages.OVERLAY_REPOSITORY, IDecoration.BOTTOM_LEFT);
 			ITask correspondingTask = ((AbstractQueryHit)element).getCorrespondingTask();
-			if (correspondingTask == null) {
-				decoration.addOverlay(TaskListImages.OVERLAY_INCOMMING, IDecoration.TOP_RIGHT);
-			} else {
-				decorate(correspondingTask, decoration);
+			if (correspondingTask instanceof AbstractRepositoryTask && ((AbstractRepositoryTask)correspondingTask).isSynchronizing()) {
+				decoration.addOverlay(TaskListImages.OVERLAY_SYNCHRONIZING, IDecoration.TOP_LEFT);
 			}
-		}
-	}
+		} else if (element instanceof ITask) {
+			String url = ((ITask)element).getUrl();
+			if (url != null && !url.trim().equals("") && !url.equals("http://")) {
+				decoration.addOverlay(TaskListImages.OVERLAY_WEB, IDecoration.BOTTOM_LEFT);
+			}
+		} 
+	} 
 
 	public void addListener(ILabelProviderListener listener) {
 		// ignore
@@ -69,8 +71,7 @@ public class RepositoryTaskDecorator implements ILightweightLabelDecorator {
 
 	}
 
-	public boolean isLabelProperty(Object element, String property) {
-		// ignore
+	public boolean isLabelProperty(Object element, String property) { 
 		return false;
 	}
 

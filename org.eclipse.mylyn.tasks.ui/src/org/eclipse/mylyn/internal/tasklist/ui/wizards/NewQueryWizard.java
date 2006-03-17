@@ -21,16 +21,19 @@ import org.eclipse.mylar.provisional.tasklist.TaskRepository;
  */
 public class NewQueryWizard extends MultiRepositoryAwareWizard {
 
+	private static final String TITLE = "New Repository Query";
+		
 	public NewQueryWizard() {
 		super(new SelectRepositoryPage() {
 
 			@Override
 			protected IWizard createWizard(TaskRepository taskRepository) {
-				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(
 						taskRepository.getKind());
 				return connector.getQueryWizard(taskRepository);
 			}
-
-		});
+		}, TITLE);
 	}
+	
+	
 }

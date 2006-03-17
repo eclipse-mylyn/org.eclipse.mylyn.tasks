@@ -11,8 +11,6 @@
 
 package org.eclipse.mylar.provisional.tasklist;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,16 +22,19 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.eclipse.mylar.internal.core.MylarContextManager;
-import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 
 /**
  * @author Mik Kersten
  */
 public class TaskRepositoryManager {
 
+	public static final String PROPERTY_VERSION = "version";
+
+	public static final String PROPERTY_DELIM = ":";
+
 	public static final String PREF_REPOSITORIES = "org.eclipse.mylar.tasklist.repositories.";
 
-	private Map<String, AbstractRepositoryConnector> repositoryClients = new HashMap<String, AbstractRepositoryConnector>();
+	private Map<String, AbstractRepositoryConnector> repositoryConnectors = new HashMap<String, AbstractRepositoryConnector>();
 
 	private Map<String, Set<TaskRepository>> repositoryMap = new HashMap<String, Set<TaskRepository>>();
 
@@ -51,22 +52,22 @@ public class TaskRepositoryManager {
 
 	private static final String PREF_STORE_DELIM = ", ";
 
-	public Collection<AbstractRepositoryConnector> getRepositoryClients() {
-		return Collections.unmodifiableCollection(repositoryClients.values());
+	public Collection<AbstractRepositoryConnector> getRepositoryConnectors() {
+		return Collections.unmodifiableCollection(repositoryConnectors.values());
 	}
 
-	public AbstractRepositoryConnector getRepositoryClient(String kind) {
-		return repositoryClients.get(kind);
+	public AbstractRepositoryConnector getRepositoryConnector(String kind) {
+		return repositoryConnectors.get(kind);
 	}
 
-	public void addRepositoryClient(AbstractRepositoryConnector repositoryClient) {
-		if (!repositoryClients.values().contains(repositoryClient)) {
-			repositoryClients.put(repositoryClient.getRepositoryType(), repositoryClient);
+	public void addRepositoryConnector(AbstractRepositoryConnector repositoryConnector) {
+		if (!repositoryConnectors.values().contains(repositoryConnector)) {
+			repositoryConnectors.put(repositoryConnector.getRepositoryType(), repositoryConnector);
 		}
 	}
 
-	public void removeRepositoryClient(AbstractRepositoryConnector repositoryClient) {
-		repositoryClients.remove(repositoryClient);
+	public void removeRepositoryConnector(AbstractRepositoryConnector repositoryConnector) {
+		repositoryConnectors.remove(repositoryConnector);
 	}
 
 	public void addRepository(TaskRepository repository) {
@@ -84,6 +85,7 @@ public class TaskRepositoryManager {
 	public void removeRepository(TaskRepository repository) {
 		Set<TaskRepository> repositories = repositoryMap.get(repository.getKind());
 		if (repositories != null) {
+			repository.flushAuthenticationCredentials();
 			repositories.remove(repository);
 		}
 		saveRepositories();
@@ -100,7 +102,7 @@ public class TaskRepositoryManager {
 	public TaskRepository getRepository(String kind, String urlString) {
 		if (repositoryMap.containsKey(kind)) {
 			for (TaskRepository repository : repositoryMap.get(kind)) {
-				if (repository.getUrl().toExternalForm().equals(urlString)) {
+				if (repository.getUrl().equals(urlString)) {
 					return repository;
 				}
 			}
@@ -118,9 +120,9 @@ public class TaskRepositoryManager {
 
 	public List<TaskRepository> getAllRepositories() {
 		List<TaskRepository> repositories = new ArrayList<TaskRepository>();
-		for (AbstractRepositoryConnector repositoryClient : repositoryClients.values()) {
-			if (repositoryMap.containsKey(repositoryClient.getRepositoryType())) {
-				repositories.addAll(repositoryMap.get(repositoryClient.getRepositoryType()));
+		for (AbstractRepositoryConnector repositoryConnector : repositoryConnectors.values()) {
+			if (repositoryMap.containsKey(repositoryConnector.getRepositoryType())) {
+				repositories.addAll(repositoryMap.get(repositoryConnector.getRepositoryType()));
 			}
 		}
 		return repositories;
@@ -130,10 +132,10 @@ public class TaskRepositoryManager {
 		List<ITask> activeTasks = MylarTaskListPlugin.getTaskListManager().getTaskList().getActiveTasks();
 		if (activeTasks.size() == 1) {
 			ITask activeTask = activeTasks.get(0);
-			if (!activeTask.isLocal()) {
+			if (activeTask instanceof AbstractRepositoryTask) {
 				String repositoryUrl = AbstractRepositoryTask.getRepositoryUrl(activeTask.getHandleIdentifier());
 				for (TaskRepository repository : getRepositories(repositoryKind)) {
-					if (repository.getUrl().toExternalForm().equals(repositoryUrl)) {
+					if (repository.getUrl().equals(repositoryUrl)) {
 						return repository;
 					}
 				}
@@ -162,20 +164,18 @@ public class TaskRepositoryManager {
 	}
 
 	public Map<String, Set<TaskRepository>> readRepositories() {
-		for (AbstractRepositoryConnector repositoryClient : repositoryClients.values()) {
-			String read = MylarTaskListPlugin.getPrefs().getString(PREF_REPOSITORIES + repositoryClient.getRepositoryType());
+		for (AbstractRepositoryConnector repositoryConnector : repositoryConnectors.values()) {
+			String read = MylarTaskListPlugin.getMylarCorePrefs().getString(PREF_REPOSITORIES + repositoryConnector.getRepositoryType());
 			Set<TaskRepository> repositories = new HashSet<TaskRepository>();
 			if (read != null) {
 				StringTokenizer st = new StringTokenizer(read, PREF_STORE_DELIM);
 				while (st.hasMoreTokens()) {
 					String urlString = st.nextToken();
-					try {
-						URL url = new URL(urlString);
-						repositoryMap.put(repositoryClient.getRepositoryType(), repositories);
-						repositories.add(new TaskRepository(repositoryClient.getRepositoryType(), url));
-					} catch (MalformedURLException e) {
-						MylarStatusHandler.fail(e, "could not restore URL: " + urlString, false);
-					}
+
+					repositoryMap.put(repositoryConnector.getRepositoryType(), repositories);						
+					String prefIdVersion = urlString + PROPERTY_DELIM + PROPERTY_VERSION;
+					String version = MylarTaskListPlugin.getMylarCorePrefs().getString(prefIdVersion);
+					repositories.add(new TaskRepository(repositoryConnector.getRepositoryType(), urlString, version));
 				}
 			}
 		}
@@ -185,15 +185,23 @@ public class TaskRepositoryManager {
 		return repositoryMap;
 	}
 
+	public void setVersion(TaskRepository repository, String version) {
+		repository.setVersion(version);
+		saveRepositories();
+	}
+	
 	private void saveRepositories() {
-		for (AbstractRepositoryConnector repositoryClient : repositoryClients.values()) {
-			if (repositoryMap.containsKey(repositoryClient.getRepositoryType())) {
+		for (AbstractRepositoryConnector repositoryConnector : repositoryConnectors.values()) {
+			if (repositoryMap.containsKey(repositoryConnector.getRepositoryType())) {
 				String repositoriesToStore = "";
-				for (TaskRepository repository : repositoryMap.get(repositoryClient.getRepositoryType())) {
-					repositoriesToStore += repository.getUrl().toExternalForm() + PREF_STORE_DELIM;
+				for (TaskRepository repository : repositoryMap.get(repositoryConnector.getRepositoryType())) {
+					repositoriesToStore += repository.getUrl() + PREF_STORE_DELIM;
+
+					String prefIdVersion = repository.getUrl() + PROPERTY_DELIM + PROPERTY_VERSION;
+					MylarTaskListPlugin.getMylarCorePrefs().setValue(prefIdVersion, repository.getVersion());
 				}
-				String prefId = PREF_REPOSITORIES + repositoryClient.getRepositoryType();
-				MylarTaskListPlugin.getPrefs().setValue(prefId, repositoriesToStore);
+				String prefId = PREF_REPOSITORIES + repositoryConnector.getRepositoryType();
+				MylarTaskListPlugin.getMylarCorePrefs().setValue(prefId, repositoriesToStore);
 			} 
 		}
 
@@ -207,9 +215,9 @@ public class TaskRepositoryManager {
 	 */
 	public void clearRepositories() {
 		repositoryMap.clear();
-		for (AbstractRepositoryConnector repositoryClient : repositoryClients.values()) {
-			String prefId = PREF_REPOSITORIES + repositoryClient.getRepositoryType();
-			MylarTaskListPlugin.getPrefs().setValue(prefId, "");
+		for (AbstractRepositoryConnector repositoryConnector : repositoryConnectors.values()) {
+			String prefId = PREF_REPOSITORIES + repositoryConnector.getRepositoryType();
+			MylarTaskListPlugin.getMylarCorePrefs().setValue(prefId, "");
 		}
 	}
 }

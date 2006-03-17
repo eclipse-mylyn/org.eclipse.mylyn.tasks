@@ -22,8 +22,10 @@ import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.DateRangeActivityDelegate;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskCategory;
 
@@ -47,57 +49,61 @@ public class OpenTaskListElementAction extends Action {
 	public void run() {
 		ISelection selection = viewer.getSelection();
 		Object element = ((IStructuredSelection) selection).getFirstElement();
-		if (element instanceof ITask || element instanceof AbstractQueryHit) {
+		if (element instanceof ITask || element instanceof AbstractQueryHit
+				|| element instanceof DateRangeActivityDelegate) {
 			final ITask task;
 			if (element instanceof AbstractQueryHit) {
 				task = ((AbstractQueryHit) element).getOrCreateCorrespondingTask();
+			} else if (element instanceof DateRangeActivityDelegate) {
+				task = ((DateRangeActivityDelegate) element).getCorrespondingTask();
 			} else {
 				task = (ITask) element;
 			}
-			
-			//element instanceof IQueryHit;
+
 			boolean forceUpdate = false;
+			if (task instanceof AbstractRepositoryTask) {
+				final AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager()
+						.getRepositoryConnector(((AbstractRepositoryTask) task).getRepositoryKind());
+				if (connector != null) {
+					Job refreshJob = connector.synchronize((AbstractRepositoryTask) task, forceUpdate,
+							new IJobChangeListener() {
 
-			final AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
-					task.getRepositoryKind());
-			if (!task.isLocal() && connector != null) {
-				Job refreshJob = connector.synchronize(task, forceUpdate, new IJobChangeListener() {
+								public void done(IJobChangeEvent event) {
+									TaskListUiUtil.openEditor(task);
+								}
 
-					public void done(IJobChangeEvent event) {
+								public void aboutToRun(IJobChangeEvent event) {
+									// ignore
+								}
+
+								public void awake(IJobChangeEvent event) {
+									// ignore
+								}
+
+								public void running(IJobChangeEvent event) {
+									// ignore
+								}
+
+								public void scheduled(IJobChangeEvent event) {
+									// ignore
+								}
+
+								public void sleeping(IJobChangeEvent event) {
+									// ignore
+								}
+							});
+					if (refreshJob == null) {
 						TaskListUiUtil.openEditor(task);
 					}
-
-					public void aboutToRun(IJobChangeEvent event) {
-						// ignore
-					}
-
-					public void awake(IJobChangeEvent event) {
-						// ignore
-					}
-
-					public void running(IJobChangeEvent event) {
-						// ignore
-					}
-
-					public void scheduled(IJobChangeEvent event) {
-						// ignore
-					}
-
-					public void sleeping(IJobChangeEvent event) {
-						// ignore
-					}
-				}); 
-				if (refreshJob == null) {
-					TaskListUiUtil.openEditor(task);
-				} 
+				}
 			} else {
 				TaskListUiUtil.openEditor(task);
 			}
 		} else if (element instanceof TaskCategory) {
-			TaskListUiUtil.openEditor((ITaskContainer) element);
+			TaskListUiUtil.openEditor((AbstractTaskContainer) element);
 		} else if (element instanceof AbstractRepositoryQuery) {
 			AbstractRepositoryQuery query = (AbstractRepositoryQuery) element;
-			AbstractRepositoryConnector client = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+			AbstractRepositoryConnector client = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(
 					query.getRepositoryKind());
 			client.openEditQueryDialog(query);
 		}

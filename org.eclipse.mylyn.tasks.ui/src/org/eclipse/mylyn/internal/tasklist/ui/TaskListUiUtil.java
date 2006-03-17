@@ -20,8 +20,10 @@ import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.editors.CategoryEditorInput;
 import org.eclipse.mylar.internal.tasklist.ui.editors.TaskEditorInput;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
+import org.eclipse.mylar.provisional.tasklist.Task;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart; 
@@ -36,6 +38,29 @@ import org.eclipse.ui.internal.browser.WorkbenchBrowserSupport;
  */
 public class TaskListUiUtil {
 
+	/**
+	 * TODO: move
+	 */
+	public static Image getImageForPriority(Task.PriorityLevel priorityLevel) {
+		if (priorityLevel == null) {
+			return null;
+		}
+		switch (priorityLevel) {
+		case P1: 
+			return TaskListImages.getImage(TaskListImages.PRIORITY_1);
+		case P2:
+			return TaskListImages.getImage(TaskListImages.PRIORITY_2);
+		case P3:
+			return TaskListImages.getImage(TaskListImages.PRIORITY_3);
+		case P4:
+			return TaskListImages.getImage(TaskListImages.PRIORITY_4);
+		case P5:
+			return TaskListImages.getImage(TaskListImages.PRIORITY_5);
+		default:
+			return null;
+		}
+	}
+	
 	public static void closeEditorInActivePage(ITask task) {
 		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		if (page == null) {
@@ -81,7 +106,7 @@ public class TaskListUiUtil {
 		return null;
 	}
 
-	public static void openEditor(ITaskContainer category) {
+	public static void openEditor(AbstractTaskContainer category) {
 		final IEditorInput input = new CategoryEditorInput(category);
 		PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 			public void run() {

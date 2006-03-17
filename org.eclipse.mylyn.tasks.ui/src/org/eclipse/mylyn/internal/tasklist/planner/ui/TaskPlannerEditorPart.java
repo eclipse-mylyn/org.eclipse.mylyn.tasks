@@ -51,10 +51,11 @@ import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskCategory;
+import org.eclipse.mylar.provisional.tasklist.TaskListManager;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.DND;
@@ -125,8 +126,8 @@ public class TaskPlannerEditorPart extends EditorPart {
 
 	private int[] planColumnWidths = new int[] { 20, 30, 340, 90, 90, 100 };
 
-	private static final String[] ESTIMATE_TIMES = new String[] { "0 Hours", "1 Hours", "2 Hours", "3 Hours",
-			"4 Hours", "5 Hours", "6 Hours", "7 Hours", "8 Hours", "9 Hours", "10 Hours" };
+//	private static final String[] ESTIMATE_TIMES = new String[] { "0 Hours", "1 Hours", "2 Hours", "3 Hours",
+//			"4 Hours", "5 Hours", "6 Hours", "7 Hours", "8 Hours", "9 Hours", "10 Hours" };
 
 	private static final String LABEL_ESTIMATED = "Total estimated: ";
 
@@ -213,7 +214,7 @@ public class TaskPlannerEditorPart extends EditorPart {
 		final TableViewer activityViewer = createTableSection(sashForm, toolkit, label, activityColumnNames,
 				activityColumnWidths, activitySortConstants);
 		activityViewer.setContentProvider(activityContentProvider);
-		activityViewer.setLabelProvider(new TaskActivityLabelProvider());
+		activityViewer.setLabelProvider(new TaskPlannerLabelProvider());
 		setSorters(activityColumnNames, activitySortConstants, activityViewer.getTable(), activityViewer, false);
 		activityViewer.setInput(editorInput);
 
@@ -241,7 +242,7 @@ public class TaskPlannerEditorPart extends EditorPart {
 				planColumnNames, planColumnWidths, planSortConstants);
 		planViewer.setContentProvider(planContentProvider);
 		planViewer.setLabelProvider(new TaskPlanLabelProvider());
-		createPlanCellEditorListener(planViewer.getTable(), planViewer, planContentProvider);
+		createPlanCellEditorListener(planViewer.getTable(), planViewer);
 		planViewer.setCellModifier(new PlannedTasksCellModifier(planViewer));
 		initDrop(planViewer, planContentProvider);
 		setSorters(planColumnNames, planSortConstants, planViewer.getTable(), planViewer, true);
@@ -356,10 +357,9 @@ public class TaskPlannerEditorPart extends EditorPart {
 		
 	}
 
-	private void createPlanCellEditorListener(final Table planTable, final TableViewer planTableViewer,
-			final PlannedTasksContentProvider contentProvider) {
+	private void createPlanCellEditorListener(final Table planTable, final TableViewer planTableViewer) {
 		CellEditor[] editors = new CellEditor[planColumnNames.length + 1];
-		final ComboBoxCellEditor estimateEditor = new ComboBoxCellEditor(planTable, ESTIMATE_TIMES, SWT.READ_ONLY);
+		final ComboBoxCellEditor estimateEditor = new ComboBoxCellEditor(planTable, TaskListManager.ESTIMATE_TIMES, SWT.READ_ONLY);
 		final ReminderCellEditor reminderEditor = new ReminderCellEditor(planTable);
 		editors[0] = null; // not used
 		editors[1] = null;// not used
@@ -612,7 +612,7 @@ public class TaskPlannerEditorPart extends EditorPart {
 							return null;
 						}
 					} else if (columnIndex == 4) {
-						return new Integer(Arrays.asList(ESTIMATE_TIMES).indexOf(
+						return new Integer(Arrays.asList(TaskListManager.ESTIMATE_TIMES).indexOf(
 								((ITask) element).getEstimateTimeHours()));
 					}
 
@@ -636,10 +636,10 @@ public class TaskPlannerEditorPart extends EditorPart {
 	}
 
 	private void addPlannedTasksToCategory(PlannedTasksContentProvider contentProvider) {
-		List<ITaskContainer> categories = MylarTaskListPlugin.getTaskListManager().getTaskList().getUserCategories();
+		List<AbstractTaskContainer> categories = MylarTaskListPlugin.getTaskListManager().getTaskList().getUserCategories();
 		String[] categoryNames = new String[categories.size()];
 		int i = 0;
-		for (ITaskContainer category : categories) {
+		for (AbstractTaskContainer category : categories) {
 			categoryNames[i++] = category.getDescription();
 		}
 		if (categories.size() > 0) {
@@ -648,8 +648,8 @@ public class TaskPlannerEditorPart extends EditorPart {
 			int confirm = dialog.open();
 			if (confirm == ComboSelectionDialog.OK) {
 				String selected = dialog.getSelectedString();
-				ITaskContainer destinationCategory = null;
-				for (ITaskContainer category : categories) {
+				AbstractTaskContainer destinationCategory = null;
+				for (AbstractTaskContainer category : categories) {
 					if (category.getDescription().equals(selected)) {
 						destinationCategory = category;
 						break; // will go to the first one
@@ -659,7 +659,7 @@ public class TaskPlannerEditorPart extends EditorPart {
 					TaskCategory taskCategory = (TaskCategory) destinationCategory;
 					for (ITask task : editorInput.getPlannedTasks()) {
 						if (!taskCategory.getChildren().contains(task)) {
-							MylarTaskListPlugin.getTaskListManager().moveToCategory(taskCategory, task);
+							MylarTaskListPlugin.getTaskListManager().getTaskList().moveToContainer(taskCategory, task);
 						}
 					}
 					if (TaskListView.getDefault() != null) {
@@ -690,6 +690,9 @@ public class TaskPlannerEditorPart extends EditorPart {
 			dialog.setFilterExtensions(new String[] { "*.html", "*.*" });
 
 			String filename = dialog.open();
+			
+			if(filename == null || filename.equals("")) return;
+			
 			if (!filename.endsWith(".html"))
 				filename += ".html";
 			outputFile = new File(filename);

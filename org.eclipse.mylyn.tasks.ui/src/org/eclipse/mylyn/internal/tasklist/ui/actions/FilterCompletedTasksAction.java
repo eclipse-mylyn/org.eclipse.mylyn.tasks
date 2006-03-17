@@ -12,36 +12,39 @@
 package org.eclipse.mylar.internal.tasklist.ui.actions;
 
 import org.eclipse.jface.action.Action;
+import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 
 /**
- * @author Mik Kersten and Ken Sueda
+ * @author Mik Kersten
  */
 public class FilterCompletedTasksAction extends Action {
 
 	public static final String ID = "org.eclipse.mylar.tasklist.actions.filter.completed";
+	
+	private static final String LABEL = "Filter Completed Tasks";
 
 	private final TaskListView view;
 
 	public FilterCompletedTasksAction(TaskListView view) {
 		this.view = view;
-		setText("Filter Completed Tasks");
-		setToolTipText("Filter Completed Tasks");
+		setText(LABEL);
+		setToolTipText(LABEL);
 		setId(ID);
 		setImageDescriptor(TaskListImages.FILTER_COMPLETE);
-		setChecked(MylarTaskListPlugin.getDefault().isFilterCompleteMode());
+		setChecked(MylarTaskListPlugin.getMylarCorePrefs().contains(TaskListPreferenceConstants.FILTER_COMPLETE_MODE));
 	}
 
 	@Override
 	public void run() {
-		MylarTaskListPlugin.getDefault().setFilterCompleteMode(isChecked());
+		MylarTaskListPlugin.getMylarCorePrefs().setValue(TaskListPreferenceConstants.FILTER_COMPLETE_MODE, isChecked());
 		if (isChecked()) {
 			view.addFilter(view.getCompleteFilter());
 		} else {
 			view.removeFilter(view.getCompleteFilter());
 		}
-		this.view.refreshAndFocus();
+		this.view.getViewer().refresh();
 	}
 }

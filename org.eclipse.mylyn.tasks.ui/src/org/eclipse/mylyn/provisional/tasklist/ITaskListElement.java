@@ -20,7 +20,7 @@ public interface ITaskListElement {
 
 	public abstract String getDescription();
 
-	public abstract void setDescription(String description);
+//	public abstract void setDescription(String description);
 
 	public abstract String getHandleIdentifier();
 
@@ -29,7 +29,7 @@ public interface ITaskListElement {
 	/**
 	 * TODO: refactor to use repository kinds?
 	 */
-	public abstract boolean isLocal();
+//	public abstract boolean isLocal();
 
 }
 

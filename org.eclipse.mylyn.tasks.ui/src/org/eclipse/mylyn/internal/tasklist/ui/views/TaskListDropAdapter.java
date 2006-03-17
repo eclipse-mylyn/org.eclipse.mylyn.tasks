@@ -34,7 +34,7 @@ import org.eclipse.swt.dnd.TransferData;
 
 /**
  * @author Mik Kersten
- * @author Robert Elves (added URL based task creation support)
+ * @author Rob Elves (added URL based task creation support)
  */
 public class TaskListDropAdapter extends ViewerDropAdapter {
 
@@ -70,17 +70,17 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 
 		for (ITask task : tasksToMove) {
 			if (currentTarget instanceof TaskCategory) {
-				MylarTaskListPlugin.getTaskListManager().moveToCategory((TaskCategory) currentTarget, task);
+				MylarTaskListPlugin.getTaskListManager().getTaskList().moveToContainer((TaskCategory) currentTarget, task);
 			} else if (currentTarget instanceof ITask) {
 				ITask targetTask = (ITask) currentTarget;
-				if (targetTask.getCategory() == null) {
-					MylarTaskListPlugin.getTaskListManager().moveToRoot(task);
+				if (targetTask.getContainer() == null) {
+					MylarTaskListPlugin.getTaskListManager().getTaskList().moveToRoot(task);
 				} else {
-					MylarTaskListPlugin.getTaskListManager().moveToCategory((TaskCategory) targetTask.getCategory(),
+					MylarTaskListPlugin.getTaskListManager().getTaskList().moveToContainer((TaskCategory) targetTask.getContainer(),
 							task);
 				}
 			} else if (currentTarget == null) {
-				MylarTaskListPlugin.getTaskListManager().moveToRoot(newTask);
+				MylarTaskListPlugin.getTaskListManager().getTaskList().moveToRoot(newTask);
 			}
 		}
 
@@ -184,7 +184,7 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 				@Override
 				protected void setTitle(final String pageTitle) {
 					newTask.setDescription(pageTitle);
-					MylarTaskListPlugin.getTaskListManager().notifyLocalInfoChanged(newTask);
+					MylarTaskListPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(newTask);
 				}
 			};
 			job.schedule();

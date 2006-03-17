@@ -16,14 +16,21 @@ import java.util.Date;
 import org.eclipse.mylar.internal.core.MylarContextManager;
 
 /**
- * @author Mik Kersten and Robert Elves
+ * @author Mik Kersten
+ * @author Rob Elves
  */
 public abstract class AbstractRepositoryTask extends Task {
 
 	/** The last time this task's bug report was downloaded from the server. */
 	protected Date lastRefresh;
 	
-	protected boolean currentlyDownloading;
+	protected boolean currentlySynchronizing;
+	
+	/**
+	 * Value is <code>true</code> if the bug report has saved changes that
+	 * need synchronizing with the repository.
+	 */
+	protected boolean isDirty;
 
 	public enum RepositoryTaskSyncState {
 		OUTGOING, SYNCHRONIZED, INCOMING, CONFLICT
@@ -37,10 +44,14 @@ public abstract class AbstractRepositoryTask extends Task {
 		super(handle, label, newTask);
 	}
 
+	public abstract String getRepositoryKind();
+	
 	/**
 	 * @return	true	if the task can be queried and manipulated without connecting to the server
 	 */
 	public abstract boolean isPersistentInWorkspace();
+	
+	public abstract boolean isDownloaded();
 	
 	public Date getLastRefresh() {
 		return lastRefresh;
@@ -84,12 +95,12 @@ public abstract class AbstractRepositoryTask extends Task {
 		return timeDifference;
 	}
 
-	public boolean isCurrentlyDownloading() {
-		return currentlyDownloading;
+	public boolean isSynchronizing() {
+		return currentlySynchronizing;
 	}
 
 	public void setCurrentlyDownloading(boolean currentlyDownloading) {
-		this.currentlyDownloading = currentlyDownloading;
+		this.currentlySynchronizing = currentlyDownloading;
 	}
 
 	public static String getTaskId(String taskHandle) {
@@ -111,7 +122,7 @@ public abstract class AbstractRepositoryTask extends Task {
 			String repositoryKind = TaskRepositoryManager.PREFIX_REPOSITORY_OLD.toLowerCase();
 			TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getDefaultRepository(repositoryKind);
 			if (repository != null) {
-				url = repository.getUrl().toExternalForm();
+				url = repository.getUrl();
 			}
 		}
 		return url;
@@ -140,5 +151,17 @@ public abstract class AbstractRepositoryTask extends Task {
 
 	public static String getHandle(String repositoryUrl, int taskId) {
 		return AbstractRepositoryTask.getHandle(repositoryUrl, "" + taskId);
+	}
+
+	public boolean isDirty() {
+		return isDirty;
+	}
+
+	public void setDirty(boolean isDirty) {
+		this.isDirty = isDirty;
+	}
+
+	public boolean hasServerContext() {
+		return false;
 	}
 }

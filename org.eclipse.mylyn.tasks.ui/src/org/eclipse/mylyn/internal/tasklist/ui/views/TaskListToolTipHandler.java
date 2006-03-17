@@ -14,13 +14,18 @@
 
 package org.eclipse.mylar.internal.tasklist.ui.views;
 
+import java.net.URL;
 import java.util.Date;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
+import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
+import org.eclipse.mylar.provisional.tasklist.Task;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
@@ -105,9 +110,17 @@ public class TaskListToolTipHandler {
 
 	protected String getToolTipText(Object object) {
 		ITaskListElement element = getTaskListElement(object);
+		String tooltip = "";
+		String priority = "";
 		if (element instanceof AbstractRepositoryQuery) {
 			AbstractRepositoryQuery query = (AbstractRepositoryQuery) element;
-			String tooltip = "";
+			try {
+				tooltip += new URL(query.getRepositoryUrl()).getHost();
+				tooltip += "\n---------------\n";
+			} catch (Exception e) {
+				// ignore
+			}
+			tooltip += formatLastRefreshTime(query.getLastRefresh()) + "\n";
 			if (query.getHits().size() == 1) {
 				tooltip += "1 hit";
 			} else {
@@ -116,25 +129,39 @@ public class TaskListToolTipHandler {
 			if (query.getMaxHits() != -1) {
 				tooltip += " (max set to: " + query.getMaxHits() + ")";
 			}
-			tooltip += formatLastRefreshTime(query.getLastRefresh());
 			return tooltip;
-		} else if (element instanceof AbstractRepositoryTask || element instanceof AbstractQueryHit) {
+		}
+		if (element instanceof ITask || element instanceof AbstractQueryHit) {
+			ITask task = null;
+			if (element instanceof ITask) {
+				task = (ITask) element;
+			} else {
+				task = ((AbstractQueryHit) element).getCorrespondingTask();
+			}
+			if (task != null) {
+				priority += "\nPriority: " + Task.PriorityLevel.fromString(task.getPriority()).getDescription();
+			}
+		}
+
+		if (element instanceof AbstractRepositoryTask || element instanceof AbstractQueryHit) {
 			AbstractRepositoryTask repositoryTask;
 			if (element instanceof AbstractQueryHit) {
-				repositoryTask = ((AbstractQueryHit)element).getCorrespondingTask();
+				repositoryTask = ((AbstractQueryHit) element).getCorrespondingTask();
 			} else {
 				repositoryTask = (AbstractRepositoryTask) element;
 			}
-			String toolTip = ((ITaskListElement)element).getDescription();
+			tooltip += ((ITaskListElement) element).getDescription();
+			tooltip += priority;
 			if (repositoryTask != null) {
 				Date lastRefresh = repositoryTask.getLastRefresh();
 				if (lastRefresh != null) {
-					toolTip += formatLastRefreshTime(repositoryTask.getLastRefresh());
+					tooltip += "\n" + formatLastRefreshTime(repositoryTask.getLastRefresh());
 				}
 			}
-			return toolTip;	
+			return tooltip;
 		} else if (element != null) {
-			return ((ITaskListElement) element).getDescription();
+			tooltip += ((ITaskListElement) element).getDescription();
+			return tooltip + priority;
 		} else if (object instanceof Control) {
 			return (String) ((Control) object).getData("TIP_TEXT");
 		}
@@ -142,7 +169,7 @@ public class TaskListToolTipHandler {
 	}
 
 	private String formatLastRefreshTime(Date lastRefresh) {
-		String toolTip = "\n---------------\n" + "Last synchronized: ";
+		String toolTip = "Last synchronized: ";
 		Date timeNow = new Date();
 		if (lastRefresh == null)
 			lastRefresh = new Date();
@@ -162,8 +189,30 @@ public class TaskListToolTipHandler {
 	}
 
 	protected Image getToolTipImage(Object object) {
+		ITaskListElement element = getTaskListElement(object);
 		if (object instanceof Control) {
 			return (Image) ((Control) object).getData("TIP_IMAGE");
+		} else if (element instanceof AbstractRepositoryQuery) {
+			AbstractRepositoryQuery query = (AbstractRepositoryQuery) element;
+			AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(
+					query.getRepositoryKind());
+			if (connector != null) {
+				return MylarTaskListPlugin.getDefault().getBrandingIcons().get(connector);
+			}
+		} else if (element instanceof AbstractRepositoryTask || element instanceof AbstractQueryHit) {
+			AbstractRepositoryTask repositoryTask;
+			if (element instanceof AbstractQueryHit) {
+				repositoryTask = ((AbstractQueryHit) element).getCorrespondingTask();
+			} else {
+				repositoryTask = (AbstractRepositoryTask) element;
+			}
+			if (repositoryTask != null) {
+				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager()
+						.getRepositoryConnector(repositoryTask.getRepositoryKind());
+				if (connector != null) {
+					return MylarTaskListPlugin.getDefault().getBrandingIcons().get(connector);
+				}
+			}
 		}
 		return null;
 	}
@@ -201,7 +250,9 @@ public class TaskListToolTipHandler {
 
 			@Override
 			public void mouseExit(MouseEvent e) {
-				if (tipShell != null && tipShell.isVisible()) {
+				// TODO: can these conditions be simplified?  see bug 131776
+				if (tipShell != null && !tipShell.isDisposed() && tipShell.getDisplay() != null
+						&& !tipShell.getDisplay().isDisposed() && tipShell.isVisible()) {
 					tipShell.setVisible(false);
 				}
 				tipWidget = null;
@@ -241,7 +292,7 @@ public class TaskListToolTipHandler {
 				if (tipShell.getShell() != null && tipShell.getShell().getParent() != null
 						&& Display.getCurrent().getActiveShell() != null
 						&& tipShell.getShell().getParent() != Display.getCurrent().getActiveShell()) {
-					tipShell.close();					
+					tipShell.close();
 					tipShell = createTipShell(Display.getCurrent().getActiveShell());
 				}
 
@@ -252,31 +303,6 @@ public class TaskListToolTipHandler {
 				tipShell.setVisible(true);
 			}
 		});
-		// /*
-		// * Trap F1 Help to pop up a custom help box
-		// */
-		// control.addHelpListener(new HelpListener() {
-		// public void helpRequested(HelpEvent event) {
-		// if (tipWidget == null)
-		// return;
-		// Object help = getToolTipHelp(tipWidget);
-		// if (help == null)
-		// return;
-		// if (help.getClass() != String.class) {
-		// return;
-		// }
-		// if (tipShell.isVisible()) {
-		// tipShell.setVisible(false);
-		// Shell helpShell = new Shell(parentShell, SWT.SHELL_TRIM);
-		// helpShell.setLayout(new FillLayout());
-		// Label label = new Label(helpShell, SWT.NONE);
-		// label.setText((String) help);
-		// helpShell.pack();
-		// setHoverLocation(helpShell, tipPosition);
-		// helpShell.open();
-		// }
-		// }
-		// });
 	}
 
 	/**
@@ -296,3 +322,29 @@ public class TaskListToolTipHandler {
 		shell.setBounds(shellBounds);
 	}
 }
+
+// /*
+// * Trap F1 Help to pop up a custom help box
+// */
+// control.addHelpListener(new HelpListener() {
+// public void helpRequested(HelpEvent event) {
+// if (tipWidget == null)
+// return;
+// Object help = getToolTipHelp(tipWidget);
+// if (help == null)
+// return;
+// if (help.getClass() != String.class) {
+// return;
+// }
+// if (tipShell.isVisible()) {
+// tipShell.setVisible(false);
+// Shell helpShell = new Shell(parentShell, SWT.SHELL_TRIM);
+// helpShell.setLayout(new FillLayout());
+// Label label = new Label(helpShell, SWT.NONE);
+// label.setText((String) help);
+// helpShell.pack();
+// setHoverLocation(helpShell, tipPosition);
+// helpShell.open();
+// }
+// }
+// });

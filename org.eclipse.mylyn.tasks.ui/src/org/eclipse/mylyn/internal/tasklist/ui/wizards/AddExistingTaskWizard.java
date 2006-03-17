@@ -22,12 +22,14 @@ import org.eclipse.mylar.provisional.tasklist.TaskRepository;
  */
 public class AddExistingTaskWizard extends MultiRepositoryAwareWizard {
 
+	private static final String TITLE = "Add Existing Repository Task";
+	
 	public AddExistingTaskWizard() {
 		super(new SelectRepositoryPage() {
 
 			@Override
 			protected IWizard createWizard(TaskRepository taskRepository) {
-				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(
 						taskRepository.getKind());
 				if (connector.canCreateTaskFromId()) {
 					return connector.getAddExistingTaskWizard(taskRepository);
@@ -35,6 +37,6 @@ public class AddExistingTaskWizard extends MultiRepositoryAwareWizard {
 					return null;
 				}
 			}
-		});
+		}, TITLE);
 	}
 }

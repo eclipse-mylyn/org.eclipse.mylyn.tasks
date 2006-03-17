@@ -31,16 +31,18 @@ import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.PlatformUI;
 
 /**
- * @author Mik Kersten and Ken Sueda
+ * @author Mik Kersten
  */
 public class NewRepositoryTaskAction extends Action implements IViewActionDelegate {
 
 	public static final String ID = "org.eclipse.mylar.tasklist.ui.repositories.actions.create";
 
+	private static final String TITLE = "New Repostiory Task";
+			
 	@Override
 	public void run() {
 
-		boolean offline = MylarTaskListPlugin.getPrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE);
+		boolean offline = MylarTaskListPlugin.getMylarCorePrefs().getBoolean(TaskListPreferenceConstants.WORK_OFFLINE);
 		if (offline) {
 			MessageDialog.openInformation(null, "Unable to create bug report",
 					"Unable to create a new bug report since you are currently offline");
@@ -49,13 +51,13 @@ public class NewRepositoryTaskAction extends Action implements IViewActionDelega
 		// TaskRepository repository =
 		// MylarTaskListPlugin.getRepositoryManager().getDefaultRepository(BugzillaPlugin.REPOSITORY_KIND);
 		List<String> connectorKinds = new ArrayList<String>();
-		for (AbstractRepositoryConnector client: MylarTaskListPlugin.getRepositoryManager().getRepositoryClients()) {
+		for (AbstractRepositoryConnector client: MylarTaskListPlugin.getRepositoryManager().getRepositoryConnectors()) {
 			if (client.canCreateTaskFromId()) {
 				connectorKinds.add(client.getRepositoryType());
-			}
+			} 
 		}
 		 
-		IWizard wizard = new MultiRepositoryAwareWizard(new NewRepositoryTaskPage(connectorKinds));
+		IWizard wizard = new MultiRepositoryAwareWizard(new NewRepositoryTaskPage(connectorKinds), TITLE);
 
 		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 		if (wizard != null && shell != null && !shell.isDisposed()) {
@@ -65,7 +67,7 @@ public class NewRepositoryTaskAction extends Action implements IViewActionDelega
 			dialog.open();
 
 		} else {
-			// TODO handle not good
+			// ignore
 		}
 	}
 

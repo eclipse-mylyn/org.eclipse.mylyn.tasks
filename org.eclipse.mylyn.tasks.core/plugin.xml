@@ -20,13 +20,11 @@
    </extension>
 -->
    
-   <!--
-   <extension 
-         point="org.eclipse.ui.workbench.texteditor.hyperlinkDetectors">
+   <extension
+         point="org.eclipse.mylar.java.javaEditorContributor">
       <hyperlinkDetector class="org.eclipse.mylar.internal.bugs.java.BugzillaHyperLinkDetector"/>
    </extension>   
-   -->
-   
+    
    	<extension point="org.eclipse.ui.popupMenus"> 
 		<objectContribution
             objectClass="org.eclipse.team.internal.ui.synchronize.ChangeSetDiffNode"

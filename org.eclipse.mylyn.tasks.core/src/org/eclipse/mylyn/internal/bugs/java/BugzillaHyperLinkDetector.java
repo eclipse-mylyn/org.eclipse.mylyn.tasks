@@ -31,13 +31,14 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Region;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.java.ui.editor.AbstractMylarHyperlinkDetector;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 /**
  * @author Shawn Minto
  */
-public class BugzillaHyperLinkDetector extends AbstractHyperlinkDetector {
+public class BugzillaHyperLinkDetector extends AbstractMylarHyperlinkDetector {
 
 	@SuppressWarnings("unchecked")
 	public IHyperlink[] detectHyperlinks(ITextViewer textViewer, IRegion region, boolean canShowMultipleHyperlinks) {

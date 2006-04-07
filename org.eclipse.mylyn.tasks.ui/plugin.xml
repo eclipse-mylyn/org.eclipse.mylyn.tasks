@@ -23,11 +23,17 @@
     <extension point="org.eclipse.ui.newWizards">
       <wizard
             category="org.eclipse.mylar.wizards"
-            class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskPlannerWizard"
+            class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskActivityWizard"
             icon="icons/eview16/task-list.gif"
             id="org.eclipse.mylar.tasklist.report.ui.planningGameWizard"
             name="Task Activity Report (Experimental)">
       </wizard>
+	  <wizard
+            category="org.eclipse.mylar.wizards"
+            class="org.eclipse.mylar.internal.tasklist.ui.wizards.NewRepositoryTaskWizard"
+            icon="icons/etool16/task-repository-new.gif"
+            id="org.eclipse.mylar.tasklist.wizard.new.query"
+            name="New Repository Task"/>
       <wizard
             category="org.eclipse.mylar.wizards"
             class="org.eclipse.mylar.internal.tasklist.ui.wizards.NewQueryWizard"
@@ -118,7 +124,7 @@
            id="org.eclipse.mylar.tasklist.ui.catEditor"/>
     <editor
            icon="icons/eview16/task-list.gif"
-           class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskPlannerEditorPart"
+           class="org.eclipse.mylar.internal.tasklist.planner.ui.TaskActivityEditorPart"
            name="Mylar Task Planner"
            id="org.eclipse.mylar.tasklist.ui.planner.editor"/>                      
   </extension>
@@ -255,11 +261,13 @@
          class="org.eclipse.mylar.internal.tasklist.ui.preferences.MylarTaskListPreferencePage"
          id="org.eclipse.mylar.tasklist.ui.preferences"
          category="org.eclipse.mylar.ui.preferences">
-      </page> 
+      </page>
+      <page
+            category="org.eclipse.mylar.ui.preferences"
+            class="org.eclipse.mylar.internal.tasklist.ui.preferences.MylarRepositoriesPreferencePage"
+            id="org.eclipse.mylar.tasklist.ui.preferences.repositories"
+            name="Task Repositories"/> 
    </extension>
-
-
-
 
 
 <!--
@@ -299,7 +307,21 @@
             Background color of Task List categories and queries.
          </description>
      </colorDefinition>
+         
+	<fontDefinition
+        categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+        defaultsTo="org.eclipse.jface.textfont"
+        id="org.eclipse.mylar.tasklist.ui.fonts.task.editor.comment"
+        isEditable="true"
+        label="Task Editor Comment">
+         <description>
+            Text font used for rendering comments.
+         </description>
+      </fontDefinition>
    </extension>
+   
+    
+
    <extension
          point="org.eclipse.ui.perspectives">
       <perspective
@@ -308,6 +330,24 @@
             id="org.eclipse.mylar.tasklist.ui.perspectives.planning"
             name="Planning"/>
    </extension>
+  
+     
+   <extension point="org.eclipse.mylar.tasklist.providers">    
+      <dynamicPopupMenu class="org.eclipse.mylar.internal.tasklist.ui.TaskReminderMenuContributor"/>
+   </extension>
+   <extension
+         point="org.eclipse.mylar.tasklist.editors">
+      <hyperlinkDetector class="org.eclipse.ui.internal.editors.text.URLHyperlinkDetector"/>
+   </extension>
+   
+    <!--<extension
+          point="org.eclipse.mylar.tasklist.editors">
+       <hyperlinkListener
+             class="org.eclipse.mylar.internal.tasklist.ui.TaskHyperlinkAdapter"
+             id="org.eclipse.mylar.tasklist.hyperlinkLister.task"
+             type="task"/>
+    </extension>-->
+
   
 </plugin>
 

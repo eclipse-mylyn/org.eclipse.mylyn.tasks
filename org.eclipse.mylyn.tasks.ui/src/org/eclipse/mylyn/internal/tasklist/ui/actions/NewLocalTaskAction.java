@@ -13,10 +13,9 @@ package org.eclipse.mylar.internal.tasklist.ui.actions;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
-import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
+import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskInputDialog;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
@@ -33,7 +32,7 @@ import org.eclipse.swt.widgets.Display;
  */
 public class NewLocalTaskAction extends Action {
 
-	private static final String NEW_TASK_DESCRIPTION = "New task";
+	public static final String DESCRIPTION_DEFAULT = "new task";
 
 	public static final String ID = "org.eclipse.mylar.tasklist.actions.create.task";
 
@@ -85,19 +84,8 @@ public class NewLocalTaskAction extends Action {
 	
 	@Override
 	public void run() {
-		// TaskInputDialog dialog = new
-		// TaskInputDialog(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell());
-		// int dialogResult = dialog.open();
-		// if (dialogResult == Window.OK) {
-		Task newTask = new Task(MylarTaskListPlugin.getTaskListManager().genUniqueTaskHandle(), NEW_TASK_DESCRIPTION, true);
-		// Task newTask = new
-		// Task(MylarTaskListPlugin.getTaskListManager().genUniqueTaskHandle(),
-		// dialog
-		// .getTaskname(), true);
-		// MylarTaskListPlugin.getTaskListManager().getTaskList().addTask(newTask);
-		// newTask.setPriority(dialog.getSelectedPriority());
-		// newTask.setReminderDate(dialog.getReminderDate());
-		 newTask.setUrl(getDefaultIssueURL());
+		Task newTask = new Task(MylarTaskListPlugin.getTaskListManager().genUniqueTaskHandle(), DESCRIPTION_DEFAULT, true);
+		newTask.setUrl(getDefaultIssueURL());
 
 		Object selectedObject = ((IStructuredSelection) view.getViewer().getSelection()).getFirstElement();
 
@@ -123,10 +111,15 @@ public class NewLocalTaskAction extends Action {
 			MylarTaskListPlugin.getTaskListManager().getTaskList().addTask(newTask,
 					MylarTaskListPlugin.getTaskListManager().getTaskList().getRootCategory());
 		}
-		TaskListUiUtil.openEditor(newTask);
+		TaskUiUtil.openEditor(newTask);
 		// newTask.openTaskInEditor(false);
 		view.getViewer().refresh();
-		view.getViewer().setSelection(new StructuredSelection(newTask));
+
+		
+		view.setInRenameAction(true);
+		view.getViewer().editElement(newTask, 4);
+		view.setInRenameAction(false);
+//		view.getViewer().setSelection(new StructuredSelection(newTask));
 		// }
 	}
 }

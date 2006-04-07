@@ -42,17 +42,16 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TextCellEditor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
-import org.eclipse.mylar.internal.core.dt.MylarWebRef;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
-import org.eclipse.mylar.internal.tasklist.ui.AbstractTaskFilter;
+import org.eclipse.mylar.internal.tasklist.ui.AbstractTaskListFilter;
 import org.eclipse.mylar.internal.tasklist.ui.IDynamicSubMenuContributor;
 import org.eclipse.mylar.internal.tasklist.ui.TaskArchiveFilter;
 import org.eclipse.mylar.internal.tasklist.ui.TaskCompletionFilter;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListColorsAndFonts;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListPatternFilter;
-import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
+import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.internal.tasklist.ui.TaskPriorityFilter;
 import org.eclipse.mylar.internal.tasklist.ui.actions.CollapseAllAction;
 import org.eclipse.mylar.internal.tasklist.ui.actions.CopyDescriptionAction;
@@ -214,7 +213,7 @@ public class TaskListView extends ViewPart {
 
 	private static TaskArchiveFilter FILTER_ARCHIVE = new TaskArchiveFilter();
 	
-	private List<AbstractTaskFilter> filters = new ArrayList<AbstractTaskFilter>();
+	private List<AbstractTaskListFilter> filters = new ArrayList<AbstractTaskListFilter>();
 
 	static final String FILTER_LABEL = "<filter>";
 
@@ -846,7 +845,7 @@ public class TaskListView extends ViewPart {
 
 		CellEditor[] editors = new CellEditor[columnNames.length];
 		TextCellEditor textEditor = new TextCellEditor(getViewer().getTree());
-		((Text) textEditor.getControl()).setOrientation(SWT.LEFT_TO_RIGHT);
+		((Text) textEditor.getControl()).setOrientation(SWT.LEFT_TO_RIGHT); 
 		editors[0] = new CheckboxCellEditor();
 		editors[1] = textEditor;
 		editors[2] = new ComboBoxCellEditor(getViewer().getTree(), PRIORITY_LEVEL_DESCRIPTIONS, SWT.READ_ONLY);
@@ -909,7 +908,6 @@ public class TaskListView extends ViewPart {
 		}
 	}
 
-	@MylarWebRef(name = "Drag and drop article", url = "http://www.eclipse.org/articles/Article-Workbench-DND/drag_drop.html")
 	private void initDragAndDrop(Composite parent) {
 		Transfer[] types = new Transfer[] { TextTransfer.getInstance(), PluginTransfer.getInstance() };
 
@@ -931,16 +929,16 @@ public class TaskListView extends ViewPart {
 	}
 
 	private void hookContextMenu() {
-		MenuManager menuMgr = new MenuManager("#PopupMenu");
-		menuMgr.setRemoveAllWhenShown(true);
-		menuMgr.addMenuListener(new IMenuListener() {
+		MenuManager menuManager = new MenuManager("#PopupMenu");
+		menuManager.setRemoveAllWhenShown(true);
+		menuManager.addMenuListener(new IMenuListener() {
 			public void menuAboutToShow(IMenuManager manager) {
 				TaskListView.this.fillContextMenu(manager);
 			}
 		});
-		Menu menu = menuMgr.createContextMenu(getViewer().getControl());
+		Menu menu = menuManager.createContextMenu(getViewer().getControl());
 		getViewer().getControl().setMenu(menu);
-		getSite().registerContextMenu(menuMgr, getViewer());
+		getSite().registerContextMenu(menuManager, getViewer());
 	}
 
 	private void contributeToActionBars() {
@@ -967,6 +965,7 @@ public class TaskListView extends ViewPart {
 //		manager.add(new Separator());
 		manager.add(filterOnPriority);
 		manager.add(new Separator("navigation"));
+//		manager.add(new Separator(SEPARATOR_CONTEXT));
 		manager.add(previousTaskAction);
 		manager.add(nextTaskAction);
 		manager.add(new Separator(SEPARATOR_CONTEXT));
@@ -1037,13 +1036,13 @@ public class TaskListView extends ViewPart {
 		manager.add(newLocalTaskAction);
 		manager.add(new Separator(SEPARATOR_REPORTS));
 
-		manager.add(new Separator(SEPARATOR_CONTEXT));
-		
 		for (IDynamicSubMenuContributor contributor : MylarTaskListPlugin.getDefault().getDynamicMenuContributers()) {
 			MenuManager subMenuManager = contributor.getSubMenuManager(this, (ITaskListElement) selectedObject);
 			if (subMenuManager != null)
 				addMenuManager(subMenuManager, manager, element);
 		}
+		
+		manager.add(new Separator(SEPARATOR_CONTEXT));
 
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
 	}
@@ -1253,12 +1252,13 @@ public class TaskListView extends ViewPart {
 		return FILTER_PRIORITY;
 	}
 
-	public void addFilter(AbstractTaskFilter filter) {
-		if (!filters.contains(filter))
+	public void addFilter(AbstractTaskListFilter filter) {
+		if (!filters.contains(filter)) {
 			filters.add(filter);
+		}
 	}
 
-	public void removeFilter(AbstractTaskFilter filter) {
+	public void removeFilter(AbstractTaskListFilter filter) {
 		filters.remove(filter);
 	}
 
@@ -1367,8 +1367,9 @@ public class TaskListView extends ViewPart {
 	}
 
 	public void selectedAndFocusTask(ITask task) {
-		if (task == null)
+		if (task == null || getViewer().getControl().isDisposed()) {
 			return;
+		}
 		getViewer().setSelection(new StructuredSelection(task));
 		// if no task exists, select the query hit if exists
 		AbstractQueryHit hit = null;
@@ -1388,7 +1389,8 @@ public class TaskListView extends ViewPart {
 
 	protected void refreshTask(ITask task) {
 		refresh(task);
-		if (task.getContainer() == null || task.getContainer() instanceof TaskArchive) {
+		AbstractTaskContainer rootCategory = MylarTaskListPlugin.getTaskListManager().getTaskList().getRootCategory();
+		if (task.getContainer() == null || task.getContainer() instanceof TaskArchive || task.getContainer().equals(rootCategory)) {
 			refresh(null);
 		} else {
 			refresh(task.getContainer());
@@ -1398,8 +1400,7 @@ public class TaskListView extends ViewPart {
 				task.getHandleIdentifier());
 		for (AbstractQueryHit hit : hits) {
 			refresh(hit);
-		}
-
+		} 
 	}
 
 	private void refresh(final ITaskListElement element) {
@@ -1410,7 +1411,7 @@ public class TaskListView extends ViewPart {
 						if (element == null) {
 							// getViewer().getControl().setRedraw(false);
 							// getViewer().refresh();
-							filteredTree.textChanged(0);
+							filteredTree.textChanged();
 							// getViewer().getControl().setRedraw(true);
 						} else {
 							// getViewer().getControl().setRedraw(false);
@@ -1426,12 +1427,12 @@ public class TaskListView extends ViewPart {
 	public Image[] getPirorityImages() {
 		Image[] images = new Image[Task.PriorityLevel.values().length];
 		for (int i = 0; i < Task.PriorityLevel.values().length; i++) {
-			images[i] = TaskListUiUtil.getImageForPriority(Task.PriorityLevel.values()[i]);
+			images[i] = TaskUiUtil.getImageForPriority(Task.PriorityLevel.values()[i]);
 		}
 		return images;
 	}
 
-	public List<AbstractTaskFilter> getFilters() {
+	public List<AbstractTaskListFilter> getFilters() {
 		return filters;
 	}
 	

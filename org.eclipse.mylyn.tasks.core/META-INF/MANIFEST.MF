@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Mylar Bugs Plug-in
 Bundle-SymbolicName: org.eclipse.mylar.bugs; singleton:=true
-Bundle-Version: 0.4.10.v20060329-2000
+Bundle-Version: 0.4.10.v20060407-1530
 Bundle-Activator: org.eclipse.mylar.internal.bugs.MylarBugsPlugin
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.ui,
@@ -25,7 +25,10 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.compare,
  org.eclipse.team.core,
  org.eclipse.team.cvs.core,
- org.eclipse.mylar.ide
+ org.eclipse.mylar.ide,
+ org.eclipse.ui.forms,
+ org.eclipse.jdt.debug.ui,
+ org.eclipse.debug.ui
 Eclipse-AutoStart: true 
 Export-Package: org.eclipse.mylar.internal.bugs,
  org.eclipse.mylar.internal.bugs.java,

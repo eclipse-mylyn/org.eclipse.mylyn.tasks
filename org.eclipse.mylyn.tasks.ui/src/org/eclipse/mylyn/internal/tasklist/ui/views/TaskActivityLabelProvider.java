@@ -23,7 +23,7 @@ import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListColorsAndFonts;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
-import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
+import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.provisional.tasklist.DateRangeActivityDelegate;
 import org.eclipse.mylar.provisional.tasklist.DateRangeContainer;
 import org.eclipse.mylar.provisional.tasklist.ITask;
@@ -62,7 +62,7 @@ public class TaskActivityLabelProvider extends DecoratingLabelProvider implement
 		} else if (columnIndex == 1) {
 			if (element instanceof DateRangeActivityDelegate) {
 				DateRangeActivityDelegate taskElement = (DateRangeActivityDelegate) element;
-				return TaskListUiUtil.getImageForPriority(PriorityLevel.fromString(taskElement.getPriority()));
+				return TaskUiUtil.getImageForPriority(PriorityLevel.fromString(taskElement.getPriority()));
 			}
 		}
 		return null;
@@ -86,7 +86,7 @@ public class TaskActivityLabelProvider extends DecoratingLabelProvider implement
 					return "";
 				}
 			case 6:
-				if (activityDelegate.getStart() > 0) {
+				if (activityDelegate.getStart() > 0 && activityDelegate.getDateRangeContainer().getElapsed(activityDelegate) > 0) {
 					return DateFormat.getDateInstance(DateFormat.MEDIUM).format(activityDelegate.getStart());
 				} else {
 					return "";

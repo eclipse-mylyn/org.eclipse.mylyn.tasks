@@ -65,11 +65,11 @@ public class TaskListToolTipHandler {
 	public TaskListToolTipHandler(Shell parentShell) {
 		if (parentShell != null) {
 			tipShell = createTipShell(parentShell);
-		}
+		} 
 	}
 
 	private Shell createTipShell(Shell parent) {
-		Shell tipShell = new Shell(parent, SWT.NONE);
+		Shell tipShell = new Shell(parent.getDisplay(), SWT.NO_FOCUS | SWT.ON_TOP | SWT.MODELESS);
 		GridLayout gridLayout = new GridLayout();
 		gridLayout.numColumns = 2;
 		gridLayout.marginWidth = 2;
@@ -239,7 +239,7 @@ public class TaskListToolTipHandler {
 
 			@Override
 			public void mouseDown(MouseEvent e) {
-				if (tipShell.isVisible())
+				if (tipShell != null && !tipShell.isDisposed() && tipShell.isVisible())
 					tipShell.setVisible(false);
 			}
 		});
@@ -274,7 +274,7 @@ public class TaskListToolTipHandler {
 					Tree w = (Tree) widget;
 					widget = w.getItem(widgetPosition);
 				}
-				if (widget == null) {
+				if (widget == null && !tipShell.isDisposed()) {
 					tipShell.setVisible(false);
 					tipWidget = null;
 					return;
@@ -289,7 +289,7 @@ public class TaskListToolTipHandler {
 					return;
 				}
 
-				if (tipShell.getShell() != null && tipShell.getShell().getParent() != null
+				if (!tipShell.isDisposed() && tipShell.getShell() != null && tipShell.getShell().getParent() != null
 						&& Display.getCurrent().getActiveShell() != null
 						&& tipShell.getShell().getParent() != Display.getCurrent().getActiveShell()) {
 					tipShell.close();

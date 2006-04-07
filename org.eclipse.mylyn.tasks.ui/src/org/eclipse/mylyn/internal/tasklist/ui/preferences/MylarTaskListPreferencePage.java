@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.tasklist.ui.preferences;
 
+import java.text.DateFormat;
+
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
@@ -28,6 +30,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
@@ -37,8 +40,29 @@ import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 /**
  * @author Mik Kersten
  * @author Ken Sueda
+ * @author Rob Elves
  */
 public class MylarTaskListPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
+
+	private static final String FOLDER_SELECTION_MESSAGE = "Specify the folder for tasks";
+
+	private static final String TITLE_FOLDER_SELECTION = "Folder Selection";
+
+	private static final String FORWARDSLASH = "/";
+
+	private static final String BACKSLASH_MULTI = "\\\\";
+
+	private static final int SPINNER_MAX_BACKUPS = 100;
+
+	private static final int SPINNER_MIN_BACKUPS = 1;
+
+	// private static final String LABEL_BACKUP_ERROR = "Backup Error";
+
+	private static final String GROUP_LABEL_BACKUP = "Backup";
+
+	private static final String LABEL_LAST_ARCHIVED_NEVER = "never";
+
+	private static final String LAST_BACKUP_ON_LABEL = "   Last backup: ";
 
 	private Text taskDirectoryText = null;
 
@@ -46,21 +70,19 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 
 	private Button browse = null;
 
-	// private Button copyExistingDataCheckbox = null;
-
-	private Button reportEditor = null;
-
-	private Button reportInternal = null;
-
-	private Button refreshQueries = null;
+	private Button backupNow = null;
 
 	private Button notificationEnabledButton = null;
 
-	private Text refreshScheduleTime = null;
+	private Button backupAutomaticallyButton;
 
-	private Button userRefreshOnly;
+	private Text backkupScheduleTimeText;
 
-	private Button enableBackgroundRefresh;
+	private Text backupFolderText;
+
+	private Label lastUpdate;
+
+	private Spinner maxFilesSpinner;
 
 	public MylarTaskListPreferencePage() {
 		super();
@@ -78,9 +100,9 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 				(IWorkbenchPreferenceContainer) getContainer(), null);
 
 		createCreationGroup(container);
+		// createTaskActivityGroup(container);
 		createNotificationsGroup(container);
-		createBugzillaReportOption(container);
-		createTaskRefreshScheduleGroup(container);
+		createTaskBackupScheduleGroup(container);
 		createTaskDirectoryControl(container);
 		updateRefreshGroupEnablements();
 		return container;
@@ -90,28 +112,10 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 		// TODO Auto-generated method stub
 	}
 
-	private void createBugzillaReportOption(Composite parent) {
-		Group container = new Group(parent, SWT.SHADOW_ETCHED_IN);
-		container.setLayout(new GridLayout(2, false));
-		container.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-		container.setText("Open Repository Tasks With");
-		reportEditor = new Button(container, SWT.RADIO);
-		reportEditor.setText("Editor if available (Recommended)");
-		reportEditor.setSelection(getPreferenceStore().getBoolean(TaskListPreferenceConstants.REPORT_OPEN_EDITOR));
-		reportInternal = new Button(container, SWT.RADIO);
-		reportInternal.setText("Internal browser");
-		reportInternal.setSelection(getPreferenceStore().getBoolean(TaskListPreferenceConstants.REPORT_OPEN_INTERNAL));
-		// reportExternal = new Button(container, SWT.RADIO);
-		// reportExternal.setText("External browser");
-		// reportExternal.setSelection(getPreferenceStore().getBoolean(MylarTaskListPlugin.REPORT_OPEN_EXTERNAL));
-		// reportExternal.setEnabled(false);
-	}
-
 	@Override
 	public boolean performOk() {
 		String taskDirectory = taskDirectoryText.getText();
-		taskDirectory = taskDirectory.replaceAll("\\\\", "/");
+		taskDirectory = taskDirectory.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
 		if (!taskDirectory.equals(MylarPlugin.getDefault().getDataDirectory())) {
 			// Order matters:
 			MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskListAndContexts();
@@ -121,44 +125,34 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 			MylarPlugin.getDefault().setDataDirectory(taskDirectory);
 		}
 
-		// getPreferenceStore().setValue(TaskListPreferenceConstants.COPY_TASK_DATA,
-		// copyExistingDataCheckbox.getSelection());
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPORT_OPEN_EDITOR, reportEditor.getSelection());
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPORT_OPEN_INTERNAL, reportInternal.getSelection());
-		// getPreferenceStore().setValue(MylarTaskListPlugin.REPORT_OPEN_EXTERNAL,
-		// reportExternal.getSelection());
 		getPreferenceStore().setValue(TaskListPreferenceConstants.DEFAULT_URL_PREFIX, taskURLPrefixText.getText());
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP,
-				refreshQueries.getSelection());
 
 		getPreferenceStore().setValue(TaskListPreferenceConstants.NOTIFICATIONS_ENABLED,
 				notificationEnabledButton.getSelection());
 
-		// Set refresh schedule preferences and start/stop as necessary
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED,
-				enableBackgroundRefresh.getSelection());
-		long miliseconds = 60000 * Long.parseLong(refreshScheduleTime.getText());
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS,
-				"" + miliseconds);
-
+		getPreferenceStore().setValue(TaskListPreferenceConstants.BACKUP_AUTOMATICALLY,
+				backupAutomaticallyButton.getSelection());
+		getPreferenceStore().setValue(TaskListPreferenceConstants.BACKUP_SCHEDULE, backkupScheduleTimeText.getText());
+		getPreferenceStore().setValue(TaskListPreferenceConstants.BACKUP_FOLDER, backupFolderText.getText());
+		getPreferenceStore().setValue(TaskListPreferenceConstants.BACKUP_MAXFILES, maxFilesSpinner.getSelection());
 		return true;
 	}
 
 	@Override
 	public boolean performCancel() {
-		// closeEditors.setSelection(getPreferenceStore().getBoolean(MylarPlugin.AUTO_MANAGE_EDITORS));
-		reportEditor.setSelection(getPreferenceStore().getBoolean(TaskListPreferenceConstants.REPORT_OPEN_EDITOR));
-		reportInternal.setSelection(getPreferenceStore().getBoolean(TaskListPreferenceConstants.REPORT_OPEN_INTERNAL));
-		// reportExternal.setSelection(getPreferenceStore().getBoolean(MylarTaskListPlugin.REPORT_OPEN_EXTERNAL));
-		refreshQueries.setSelection(getPreferenceStore().getBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
-		// saveCombo.setText(getPreferenceStore().getString(MylarTaskListPlugin.SAVE_TASKLIST_MODE));
 
-		enableBackgroundRefresh.setSelection(getPreferenceStore().getBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-		refreshScheduleTime.setText(getMinutesString());
+		taskDirectoryText.setText(MylarPlugin.getDefault().getDefaultDataDirectory());
+
+		taskURLPrefixText.setText(getPreferenceStore().getString(TaskListPreferenceConstants.DEFAULT_URL_PREFIX));
+
 		notificationEnabledButton.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.NOTIFICATIONS_ENABLED));
+
+		backupAutomaticallyButton.setSelection(getPreferenceStore().getBoolean(
+				TaskListPreferenceConstants.BACKUP_AUTOMATICALLY));
+		backkupScheduleTimeText.setText(getPreferenceStore().getString(TaskListPreferenceConstants.BACKUP_SCHEDULE));
+		backupFolderText.setText(getPreferenceStore().getString(TaskListPreferenceConstants.BACKUP_FOLDER));
+		maxFilesSpinner.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.BACKUP_MAXFILES));
 		return true;
 	}
 
@@ -166,42 +160,155 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 		super.performDefaults();
 
 		taskDirectoryText.setText(MylarPlugin.getDefault().getDefaultDataDirectory());
-		// copyExistingDataCheckbox.setSelection(getPreferenceStore().getDefaultBoolean(MylarTaskListPlugin.COPY_TASK_DATA));
-		reportEditor.setSelection(getPreferenceStore()
-				.getDefaultBoolean(TaskListPreferenceConstants.REPORT_OPEN_EDITOR));
-		reportInternal.setSelection(getPreferenceStore().getDefaultBoolean(
-				TaskListPreferenceConstants.REPORT_OPEN_INTERNAL));
-		// reportExternal.setSelection(getPreferenceStore().getDefaultBoolean(MylarTaskListPlugin.REPORT_OPEN_EXTERNAL));
+
 		taskURLPrefixText
 				.setText(getPreferenceStore().getDefaultString(TaskListPreferenceConstants.DEFAULT_URL_PREFIX));
 
-		refreshQueries.setSelection(getPreferenceStore().getDefaultBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
 		notificationEnabledButton.setSelection(getPreferenceStore().getDefaultBoolean(
 				TaskListPreferenceConstants.NOTIFICATIONS_ENABLED));
-		enableBackgroundRefresh.setSelection(getPreferenceStore().getDefaultBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-		userRefreshOnly.setSelection(!enableBackgroundRefresh.getSelection());
-		refreshScheduleTime.setText(getPreferenceStore().getDefaultString(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS));
+
+		backupAutomaticallyButton.setSelection(getPreferenceStore().getDefaultBoolean(
+				TaskListPreferenceConstants.BACKUP_AUTOMATICALLY));
+		backkupScheduleTimeText.setText(getPreferenceStore().getDefaultString(
+				TaskListPreferenceConstants.BACKUP_SCHEDULE));
+		backupFolderText.setText(getPreferenceStore().getDefaultString(TaskListPreferenceConstants.BACKUP_FOLDER));
+		maxFilesSpinner.setSelection(getPreferenceStore().getDefaultInt(TaskListPreferenceConstants.BACKUP_MAXFILES));
+		updateRefreshGroupEnablements();
+	}
+
+	private void createTaskBackupScheduleGroup(Composite container) {
+		Group group = new Group(container, SWT.SHADOW_ETCHED_IN);
+		group.setText(GROUP_LABEL_BACKUP);
+		group.setLayout(new GridLayout(3, false));
+		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+		Composite backupTop = new Composite(group, SWT.NONE);
+		backupTop.setLayout(new GridLayout(3, false));
+		GridData archiveData = new GridData();
+		archiveData.horizontalSpan = 3;
+		backupTop.setLayoutData(archiveData);
+
+		backupAutomaticallyButton = new Button(backupTop, SWT.CHECK);
+		backupAutomaticallyButton.setText("Automatically backup tasks every");
+		backupAutomaticallyButton.setSelection(getPreferenceStore().getBoolean(
+				TaskListPreferenceConstants.BACKUP_AUTOMATICALLY));
+		backupAutomaticallyButton.addSelectionListener(new SelectionListener() {
+			public void widgetSelected(SelectionEvent e) {
+				updateRefreshGroupEnablements();
+			}
+
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+		});
+
+		{
+			backkupScheduleTimeText = new Text(backupTop, SWT.BORDER | SWT.RIGHT);
+			final GridData gridData_1 = new GridData();
+			gridData_1.widthHint = 15;
+			backkupScheduleTimeText.setLayoutData(gridData_1);
+
+			backkupScheduleTimeText.setText(""
+					+ getPreferenceStore().getInt(TaskListPreferenceConstants.BACKUP_SCHEDULE));
+			backkupScheduleTimeText.addModifyListener(new ModifyListener() {
+				public void modifyText(ModifyEvent e) {
+					updateRefreshGroupEnablements();
+				}
+			});
+
+		}
+
+		Label label = new Label(backupTop, SWT.NONE);
+		label.setText("days");
+
+		label = new Label(group, SWT.LEFT);
+		label.setText("to");
+
+		String backupDirectory = getPreferenceStore().getString(TaskListPreferenceConstants.BACKUP_FOLDER);
+		backupDirectory = backupDirectory.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
+		backupFolderText = new Text(group, SWT.BORDER);
+
+		backupFolderText.setText(backupDirectory);
+		backupFolderText.setEditable(false);
+		backupFolderText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+		browse = new Button(group, SWT.TRAIL);
+		browse.setText("Browse...");
+		browse.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				DirectoryDialog dialog = new DirectoryDialog(getShell());
+				dialog.setText(TITLE_FOLDER_SELECTION);
+				dialog.setMessage("Specify the backup output folder");
+				String dir = backupFolderText.getText();
+				dir = dir.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
+				dialog.setFilterPath(dir);
+				dir = dialog.open();
+				if (dir == null || dir.equals(""))
+					return;
+				backupFolderText.setText(dir);
+				updateRefreshGroupEnablements();
+			}
+		});
+
+		Composite extrasComp = new Composite(group, SWT.NONE);
+		extrasComp.setLayout(new GridLayout(4, false));
+		GridData extrasGD = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
+		extrasGD.horizontalSpan = 3;
+		extrasComp.setLayoutData(extrasGD);
+
+		final Label maxFiles = new Label(extrasComp, SWT.NONE);
+		maxFiles.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+		maxFiles.setText("Max Backups");
+
+		maxFilesSpinner = new Spinner(extrasComp, SWT.NONE);
+		maxFilesSpinner.setIncrement(1);
+		maxFilesSpinner.setMinimum(SPINNER_MIN_BACKUPS);
+		maxFilesSpinner.setMaximum(SPINNER_MAX_BACKUPS);
+		maxFilesSpinner.setPageIncrement(1);
+		maxFilesSpinner.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.BACKUP_MAXFILES));
+//		maxFilesSpinner.setValues(getPreferenceStore().getInt(TaskListPreferenceConstants.BACKUP_MAXFILES),
+//				SPINNER_MIN_BACKUPS, SPINNER_MAX_BACKUPS, 0, 1, 1);
+ 
+		lastUpdate = new Label(extrasComp, SWT.NONE);
+		lastUpdate.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+		setLastBackup();
+
+		backupNow = new Button(extrasComp, SWT.NONE);
+		backupNow.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
+		backupNow.setText("Backup Now");
+		backupNow.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				// try {
+				getPreferenceStore().setValue(TaskListPreferenceConstants.BACKUP_FOLDER, backupFolderText.getText());
+				MylarTaskListPlugin.getDefault().getBackupManager().backupNow(true);
+				setLastBackup();
+				// } catch (InvocationTargetException ex) {
+				// MessageDialog.openError(getShell(), LABEL_BACKUP_ERROR,
+				// TaskListBackupManager.BACKUP_FAILURE_MESSAGE +
+				// ex.getCause().getMessage());
+				// } catch (IOException ex) {
+				// MessageDialog.openError(getShell(), LABEL_BACKUP_ERROR,
+				// TaskListBackupManager.BACKUP_FAILURE_MESSAGE +
+				// ex.getCause().getMessage());
+				// }
+			}
+		});
 
 	}
 
-	private String getMinutesString() {
-		long miliseconds = getPreferenceStore().getLong(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS);
-		long minutes = miliseconds / 60000;
-		return "" + minutes;
-	}
-
-	private Label createLabel(Composite parent, String text) {
-		Label label = new Label(parent, SWT.LEFT);
-		label.setText(text);
-		GridData data = new GridData();
-		data.horizontalSpan = 2;
-		data.horizontalAlignment = GridData.BEGINNING;
-		label.setLayoutData(data);
-		return label;
+	private void setLastBackup() {
+		long lastExported = getPreferenceStore().getLong(TaskListPreferenceConstants.BACKUP_LAST);
+		String dateText = "";
+		if (lastExported > 0) {
+			dateText = DateFormat.getDateInstance(DateFormat.MEDIUM).format(lastExported);
+		} else {
+			dateText = LABEL_LAST_ARCHIVED_NEVER;
+		}
+		lastUpdate.setText(LAST_BACKUP_ON_LABEL + dateText);
 	}
 
 	private void createTaskDirectoryControl(Composite parent) {
@@ -213,22 +320,23 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 		String taskDirectory = MylarPlugin.getDefault().getDataDirectory();
 		// String taskDirectory =
 		// getPreferenceStore().getString(MylarPlugin.PREF_DATA_DIR);
-		taskDirectory = taskDirectory.replaceAll("\\\\", "/");
+		taskDirectory = taskDirectory.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
 		taskDirectoryText = new Text(taskDirComposite, SWT.BORDER);
 		taskDirectoryText.setText(taskDirectory);
 		taskDirectoryText.setEditable(false);
 		taskDirectoryText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		browse = createButton(taskDirComposite, "Browse...");
+		browse = new Button(taskDirComposite, SWT.TRAIL);
+		browse.setText("Browse...");
 		browse.addSelectionListener(new SelectionAdapter() {
 
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				DirectoryDialog dialog = new DirectoryDialog(getShell());
-				dialog.setText("Folder Selection");
-				dialog.setMessage("Specify the folder for tasks");
+				dialog.setText(TITLE_FOLDER_SELECTION);
+				dialog.setMessage(FOLDER_SELECTION_MESSAGE);
 				String dir = taskDirectoryText.getText();
-				dir = dir.replaceAll("\\\\", "/");
+				dir = dir.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
 				dialog.setFilterPath(dir);
 
 				dir = dialog.open();
@@ -246,13 +354,52 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 
 	}
 
+	// private void createTaskActivityGroup(Composite parent) {
+	// Group group = new Group(parent, SWT.SHADOW_ETCHED_IN);
+	// group.setText("Work Schedule");
+	// group.setLayout(new GridLayout(2, false));
+	// group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+	//
+	// Label workLabel = new Label(group, SWT.NONE);
+	// workLabel.setText("Your week starts on");
+	// Combo workWeekBegin = new Combo(group, SWT.READ_ONLY);
+	// workWeekBegin.add("MONDAY");//, Calendar.MONDAY
+	// workWeekBegin.add("TUESDAY");//, Calendar.TUESDAY
+	// workWeekBegin.add("WEDNESDAY");//, Calendar.WEDNESDAY
+	// workWeekBegin.add("THURSDAY");//, Calendar.MONDAY
+	// workWeekBegin.add("FRIDAY");//, Calendar.TUESDAY
+	// workWeekBegin.add("SATURDAY");//, Calendar.WEDNESDAY
+	// workWeekBegin.add("SUNDAY");//, Calendar.WEDNESDAY
+	//		
+	// Label startHourLabel = new Label(group, SWT.NONE);
+	// startHourLabel.setText("Your day begins at (24hr)");
+	//		
+	// Spinner startHour = new Spinner(group, SWT.NULL | SWT.BORDER);
+	// startHour.setSelection(1);
+	// startHour.setDigits(0);
+	// startHour.setMaximum(24);
+	// startHour.setMinimum(0);
+	// startHour.setIncrement(1);
+	// // startHour.addModifyListener(new ModifyListener() {
+	// // public void modifyText(ModifyEvent e) {
+	// // // do something
+	// // }
+	// // });
+	// }
+
 	private void createCreationGroup(Composite parent) {
 		Group group = new Group(parent, SWT.SHADOW_ETCHED_IN);
 		group.setText("Task Creation");
 		group.setLayout(new GridLayout(1, false));
 		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		Label urlLabel = createLabel(group, "Web link prefix (e.g. https://bugs.eclipse.org/bugs/show_bug.cgi?id=)");
+		Label urlLabel = new Label(group, SWT.LEFT);
+		urlLabel.setText("Web link prefix (e.g. https://bugs.eclipse.org/bugs/show_bug.cgi?id=)");
+		GridData data = new GridData();
+		data.horizontalSpan = 2;
+		data.horizontalAlignment = GridData.BEGINNING;
+		urlLabel.setLayoutData(data);
+
 		urlLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
 
 		String taskURLPrefix = getPreferenceStore().getString(TaskListPreferenceConstants.DEFAULT_URL_PREFIX);
@@ -270,6 +417,15 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 		notificationEnabledButton.setText("Notifications enabled");
 		notificationEnabledButton.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.NOTIFICATIONS_ENABLED));
+
+		// final Label morningNotificationLabel = new Label(parent, SWT.NONE);
+		// morningNotificationLabel.setText("Start hour of Day (0-24):");
+		//
+		// morningNotificationHour = new Text(parent, SWT.BORDER | SWT.RIGHT);
+		// final GridData notificationGridData = new GridData();
+		// notificationGridData.widthHint = 35;
+		// morningNotificationHour.setLayoutData(notificationGridData);
+
 		// Label notificationEnabledLabel = createLabel(group, "Notifications
 		// enabled: ");
 		// notificationEnabledLabel.setLayoutData(new
@@ -283,115 +439,30 @@ public class MylarTaskListPreferencePage extends PreferencePage implements IWork
 		// GridData(GridData.FILL_HORIZONTAL));
 	}
 
-	// reference:
-	// org.eclipse.team.internal.ui.synchronize.ConfigureSynchronizeScheduleComposite
-	private void createTaskRefreshScheduleGroup(Composite parent) {
-		Group group = new Group(parent, SWT.SHADOW_ETCHED_IN);
-		group.setText("Repository Refresh");
-		group.setLayout(new GridLayout(1, false));
-		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-		{
-			userRefreshOnly = new Button(group, SWT.RADIO);
-			final GridData gridData = new GridData();
-			gridData.horizontalSpan = 2;
-			userRefreshOnly.setLayoutData(gridData);
-			userRefreshOnly.setText("Do not schedule background synchronization");
-			userRefreshOnly.setSelection(!getPreferenceStore().getBoolean(
-					TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-			userRefreshOnly.addSelectionListener(new SelectionListener() {
-				public void widgetSelected(SelectionEvent e) {
-					updateRefreshGroupEnablements();
-				}
-
-				public void widgetDefaultSelected(SelectionEvent e) {
-				}
-			});
-
-		}
-		{
-			enableBackgroundRefresh = new Button(group, SWT.RADIO);
-			final GridData gridData = new GridData();
-			gridData.horizontalSpan = 2;
-			enableBackgroundRefresh.setLayoutData(gridData);
-			enableBackgroundRefresh.setText("Use the following schedule (Experimental)");
-			enableBackgroundRefresh.setSelection(getPreferenceStore().getBoolean(
-					TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-			enableBackgroundRefresh.addSelectionListener(new SelectionListener() {
-				public void widgetSelected(SelectionEvent e) {
-					updateRefreshGroupEnablements();
-				}
-
-				public void widgetDefaultSelected(SelectionEvent e) {
-				}
-			});
-
-		}
-		final Composite composite = new Composite(group, SWT.NONE);
-		final GridData gridData = new GridData(GridData.FILL_HORIZONTAL | GridData.GRAB_VERTICAL
-				| GridData.VERTICAL_ALIGN_BEGINNING);
-		gridData.horizontalSpan = 2;
-		composite.setLayoutData(gridData);
-		final GridLayout gridLayout_1 = new GridLayout();
-		gridLayout_1.numColumns = 3;
-		composite.setLayout(gridLayout_1);
-		{
-			final Label label = new Label(composite, SWT.NONE);
-			label.setText("Every: ");
-		}
-		{
-			refreshScheduleTime = new Text(composite, SWT.BORDER | SWT.RIGHT);
-			final GridData gridData_1 = new GridData();
-			gridData_1.widthHint = 35;
-			refreshScheduleTime.setLayoutData(gridData_1);
-
-			refreshScheduleTime.setText(getMinutesString());
-			refreshScheduleTime.addModifyListener(new ModifyListener() {
-				public void modifyText(ModifyEvent e) {
-					updateRefreshGroupEnablements();
-				}
-			});
-
-		}
-		{
-			final Label label = new Label(composite, SWT.NONE);
-			label.setText("minutes");
-		}
-
-		refreshQueries = new Button(group, SWT.CHECK);
-		refreshQueries.setText("Automatically perform a repository refresh on startup");
-		refreshQueries.setSelection(getPreferenceStore().getBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
-
-	}
-
 	public void updateRefreshGroupEnablements() {
-		if (enableBackgroundRefresh.getSelection()) {
+		if (backupAutomaticallyButton.getSelection()) {
 			try {
-				long number = Long.parseLong(refreshScheduleTime.getText());
+				long number = Integer.parseInt(backkupScheduleTimeText.getText());
 				if (number <= 0) {
-					this.setErrorMessage("Refresh schedule time must be > 0");
+					this.setErrorMessage("Archive schedule time must be > 0");
+					this.setValid(false);
+				} else if (backupFolderText.getText() == "") {
+					this.setErrorMessage("Archive destination folder must be specified");
 					this.setValid(false);
 				} else {
 					this.setErrorMessage(null);
 					this.setValid(true);
 				}
 			} catch (NumberFormatException e) {
-				this.setErrorMessage("Refresh schedule time must be valid integer");
+				this.setErrorMessage("Archive schedule time must be valid integer");
 				this.setValid(false);
 			}
 		} else {
 			this.setValid(true);
 			this.setErrorMessage(null);
 		}
-		refreshScheduleTime.setEnabled(enableBackgroundRefresh.getSelection());
-		// hoursOrMinutes.setEnabled(enableBackgroundRefresh.getSelection());
+		backkupScheduleTimeText.setEnabled(backupAutomaticallyButton.getSelection());
+		backupNow.setEnabled(backupFolderText.getText() != "");
 	}
 
-	private Button createButton(Composite parent, String text) {
-		Button button = new Button(parent, SWT.TRAIL);
-		button.setText(text);
-		button.setVisible(true);
-		return button;
-	}
 }

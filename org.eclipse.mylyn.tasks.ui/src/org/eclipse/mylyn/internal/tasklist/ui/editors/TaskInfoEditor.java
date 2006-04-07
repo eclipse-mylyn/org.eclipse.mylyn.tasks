@@ -20,6 +20,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
+import org.eclipse.mylar.internal.tasklist.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasklist.ui.actions.TaskEditorCopyAction;
 import org.eclipse.mylar.internal.tasklist.ui.views.DatePicker;
 import org.eclipse.mylar.internal.tasklist.ui.views.RetrieveTitleFromUrlJob;
@@ -265,7 +266,8 @@ public class TaskInfoEditor extends EditorPart {
 			MylarTaskListPlugin.getTaskListManager().setReminder(task, datePicker.getDate().getTime());
 			// task.setReminderDate(datePicker.getDate().getTime());
 		} else {
-			task.setReminderDate(null);
+//			task.setReminderDate(null);
+			MylarTaskListPlugin.getTaskListManager().setReminder(task, null);
 		}
 		MylarTaskListPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
 
@@ -323,7 +325,11 @@ public class TaskInfoEditor extends EditorPart {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 		// Put the info onto the editor
 		createContent(editorComposite, toolkit);
-		form.setFocus();
+//		form.setFocus();
+		if (description != null && NewLocalTaskAction.DESCRIPTION_DEFAULT.equals(description.getText())) {
+			description.setSelection(0);
+			description.setFocus();
+		}
 	}
 
 	@Override
@@ -596,7 +602,8 @@ public class TaskInfoEditor extends EditorPart {
 		section.setClient(container);
 		container.setLayout(new GridLayout());
 
-		notes = toolkit.createText(container, task.getNotes(), SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+		notes = toolkit.createText(container, task.getNotes(), SWT.FLAT | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+		notes.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 
 		GridData notesDataLayout = new GridData(GridData.FILL_BOTH);
 		notes.setLayoutData(notesDataLayout);

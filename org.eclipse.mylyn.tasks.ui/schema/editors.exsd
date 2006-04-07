@@ -14,6 +14,7 @@
       <complexType>
          <sequence>
             <element ref="editorFactory" minOccurs="1" maxOccurs="unbounded"/>
+            <element ref="hyperlinkDetector"/>
          </sequence>
          <attribute name="point" type="string" use="required">
             <annotation>
@@ -58,6 +59,28 @@
                </documentation>
                <appInfo>
                   <meta.attribute kind="java"/>
+               </appInfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <element name="hyperlinkDetector">
+      <complexType>
+         <attribute name="id" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="class" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appInfo>
+                  <meta.attribute kind="java" basedOn="org.eclipse.jface.text.hyperlink.IHyperlinkDetector"/>
                </appInfo>
             </annotation>
          </attribute>

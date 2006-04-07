@@ -25,10 +25,12 @@ import java.util.Set;
 import org.eclipse.core.runtime.Preferences.IPropertyChangeListener;
 import org.eclipse.core.runtime.Preferences.PropertyChangeEvent;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.text.hyperlink.IHyperlinkDetector;
 import org.eclipse.mylar.internal.core.MylarPreferenceContstants;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.TaskListBackupManager;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
-import org.eclipse.mylar.internal.tasklist.TaskListRefreshManager;
+import org.eclipse.mylar.internal.tasklist.TaskListSynchronizationManager;
 import org.eclipse.mylar.internal.tasklist.ui.IDynamicSubMenuContributor;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskEditorFactory;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskHighlighter;
@@ -57,8 +59,22 @@ import org.osgi.framework.BundleContext;
  * TODO: this class is in serious need of refactoring
  */
 public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
+	
+	// TODO: move constants
+	
+	private static final int DELAY_QUERY_REFRESH_ON_STARTUP = 3000;
 
+	private static final String DEFAULT_BACKUP_FOLDER_NAME = "backup";
+
+	private static final char DEFAULT_PATH_SEPARATOR = '/';
+	
 	private static final int NOTIFICATION_DELAY = 5000;
+	
+	public static final String FILE_EXTENSION = ".xml";
+
+	public static final String DEFAULT_TASK_LIST_FILE = "tasklist" + FILE_EXTENSION;
+
+	public static final String TITLE_DIALOG = "Mylar Information";
 
 	public static final String PLUGIN_ID = "org.eclipse.mylar.tasklist";
 
@@ -72,19 +88,17 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 
 	private TaskListSaveManager taskListSaveManager;
 	
-	private TaskListRefreshManager taskListRefreshManager;
+	private TaskListSynchronizationManager taskListSynchronizationManager;
 	
 	private TaskListNotificationManager taskListNotificationManager;
 	
+	private TaskListBackupManager taskListBackupManager;
+	
 	private List<ITaskEditorFactory> taskEditors = new ArrayList<ITaskEditorFactory>();
-
+	
+	private ArrayList<IHyperlinkDetector> hyperlinkDetectors = new ArrayList<IHyperlinkDetector>();
+	
 	private TaskListWriter taskListWriter;
-
-	public static final String FILE_EXTENSION = ".xml";
-
-	public static final String DEFAULT_TASK_LIST_FILE = "tasklist" + FILE_EXTENSION;
-
-	public static final String TITLE_DIALOG = "Mylar Information";
 
 	private ResourceBundle resourceBundle;
 
@@ -150,7 +164,7 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 	private static ITaskActivityListener CONTEXT_TASK_ACTIVITY_LISTENER = new ITaskActivityListener() {
 
 		public void taskActivated(ITask task) {
-			MylarPlugin.getContextManager().contextActivated(task.getHandleIdentifier());
+			MylarPlugin.getContextManager().activateContext(task.getHandleIdentifier());
 		}
 
 		public void tasksActivated(List<ITask> tasks) {
@@ -160,7 +174,7 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		}
 
 		public void taskDeactivated(ITask task) {
-			MylarPlugin.getContextManager().contextDeactivated(task.getHandleIdentifier());
+			MylarPlugin.getContextManager().deactivateContext(task.getHandleIdentifier());
 		}
 
 		public void activityChanged(DateRangeContainer week) {
@@ -286,28 +300,33 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 					initialized = true;
 					migrateHandlesToRepositorySupport();
 
-					if (getMylarCorePrefs().getBoolean(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP)) {
-						for (AbstractRepositoryConnector repositoryClient : taskRepositoryManager.getRepositoryConnectors()) {
-							repositoryClient.synchronize();
-						}
-					}
-
 					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell().addShellListener(SHELL_LISTENER);
 					
 					taskListNotificationManager = new TaskListNotificationManager();
 					taskListNotificationManager.addNotificationProvider(NOTIFICATION_PROVIDER);
 					taskListNotificationManager.startNotification(NOTIFICATION_DELAY);	
 //					getMylarCorePrefs().addPropertyChangeListener(taskListNotificationManager);
-					taskListRefreshManager = new TaskListRefreshManager();
-					taskListRefreshManager.startRefreshJob();	
+					  
+					taskListBackupManager = new TaskListBackupManager();
+					getMylarCorePrefs().addPropertyChangeListener(taskListBackupManager);	
+					
+					taskListSynchronizationManager = new TaskListSynchronizationManager();
+					taskListSynchronizationManager.startSynchJob();	
 					
 					taskListSaveManager = new TaskListSaveManager();
 					taskListManager.getTaskList().addChangeListener(taskListSaveManager); 
 					
 					MylarPlugin.getDefault().getPluginPreferences().addPropertyChangeListener(PREFERENCE_LISTENER);					
-					getMylarCorePrefs().addPropertyChangeListener(taskListRefreshManager);
+					getMylarCorePrefs().addPropertyChangeListener(taskListSynchronizationManager);
 					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell().addDisposeListener(
 							taskListSaveManager);
+					
+					if (getMylarCorePrefs().getBoolean(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP)) {
+						taskListSynchronizationManager.synchNow(DELAY_QUERY_REFRESH_ON_STARTUP);
+//						taskListRefreshManager.getRefreshJob().schedule(DELAY_QUERY_REFRESH_ON_STARTUP);
+//						ScheduledTaskListRefreshJob refreshJob = new ScheduledTaskListRefreshJob(0, getTaskListManager());
+//						refreshJob.schedule(DELAY_QUERY_REFRESH_ON_STARTUP);
+					}
 				} catch (Exception e) {
 					MylarStatusHandler.fail(e, "Task List initialization failed", true);
 				}
@@ -327,22 +346,23 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		resourceBundle = null;
 		try {
 //			getMylarCorePrefs().removePropertyChangeListener(taskListNotificationManager);
+			getMylarCorePrefs().removePropertyChangeListener(taskListBackupManager);
 			taskListManager.getTaskList().removeChangeListener(taskListSaveManager);
 			taskListManager.dispose();
+			TaskListColorsAndFonts.dispose();
 			if (MylarPlugin.getDefault() != null) {
 				MylarPlugin.getDefault().getPluginPreferences().removePropertyChangeListener(PREFERENCE_LISTENER);
-			}
-			if (PlatformUI.getWorkbench() != null && PlatformUI.getWorkbench().getActiveWorkbenchWindow() != null && !PlatformUI.getWorkbench().isClosing()) {
+			} 
+			if (PlatformUI.getWorkbench() != null && !PlatformUI.getWorkbench().isClosing() && PlatformUI.getWorkbench().getActiveWorkbenchWindow() != null) {
 				PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell().removeShellListener(SHELL_LISTENER);
 				PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell().removeDisposeListener(
 						taskListSaveManager);
 			}
-			TaskListColorsAndFonts.dispose();
 		} catch (Exception e) {
-			MylarStatusHandler.fail(e, "Mylar Task List stop failed", false);
+			MylarStatusHandler.log(e, "Mylar Task List stop terminated abnormally");
 		}
 	}
-
+	
 	private void migrateHandlesToRepositorySupport() {
 		boolean migrated = false; 
 		getMylarCorePrefs().setDefault(TaskListPreferenceConstants.CONTEXTS_MIGRATED, false);
@@ -403,7 +423,14 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		
 		store.setDefault(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED, false);
 		store.setDefault(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS, ""+(30 * 60 * 1000));
-
+		
+		store.setDefault(TaskListPreferenceConstants.BACKUP_AUTOMATICALLY, true);
+		
+		store.setDefault(TaskListPreferenceConstants.BACKUP_FOLDER, MylarPlugin.getDefault().getDataDirectory()+DEFAULT_PATH_SEPARATOR+DEFAULT_BACKUP_FOLDER_NAME);
+		store.setDefault(TaskListPreferenceConstants.BACKUP_SCHEDULE, 5);
+		store.setDefault(TaskListPreferenceConstants.BACKUP_MAXFILES, 10);
+		store.setDefault(TaskListPreferenceConstants.BACKUP_LAST, 0f);
+		
 		store.setDefault(TaskListPreferenceConstants.FILTER_ARCHIVE_MODE, true);
 		store.setDefault(TaskListPreferenceConstants.MULTIPLE_ACTIVE_TASKS, false);
 		store.setValue(TaskListPreferenceConstants.MULTIPLE_ACTIVE_TASKS, false);
@@ -550,15 +577,25 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		this.highlighter = highlighter;
 	}
 
-	public List<ITaskEditorFactory> getTaskEditors() {
+	public List<ITaskEditorFactory> getTaskEditorFactories() {
 		return taskEditors;
 	}
 
+	// public Map<String, IHyperlinkListener> getTaskHyperlinkListeners() {
+	// return taskHyperlinkListeners;
+	// }
+
+	// public void addTaskHyperlinkListener(String type, IHyperlinkListener
+	// listener) {
+	// if (listener != null)
+	// this.taskHyperlinkListeners.put(type, listener);
+	//}
+	
 	public void addContextEditor(ITaskEditorFactory contextEditor) {
 		if (contextEditor != null)
 			this.taskEditors.add(contextEditor);
 	}
-
+	
 	public TaskListSaveManager getTaskListSaveManager() {
 		return taskListSaveManager;
 	}
@@ -578,6 +615,20 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 	public boolean isInitialized() {
 		return initialized;
 	}
+
+	public IHyperlinkDetector[] getTaskHyperlinkDetectors() {
+		return hyperlinkDetectors.toArray(new IHyperlinkDetector[1]);
+	}
+	
+	public void addTaskHyperlinkDetector(IHyperlinkDetector listener) {
+		if (listener != null)
+			this.hyperlinkDetectors.add(listener);
+	}
+	
+	public TaskListBackupManager getBackupManager() {
+		return taskListBackupManager;
+	}
+	
 } 
 
 // /**

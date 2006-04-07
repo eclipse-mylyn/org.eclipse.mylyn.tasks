@@ -13,6 +13,7 @@ package org.eclipse.mylar.internal.bugs.java;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
+import org.eclipse.mylar.internal.bugs.OpenBugzillaReportJob;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;

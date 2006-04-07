@@ -16,7 +16,7 @@ import org.eclipse.mylar.provisional.tasklist.ITask;
 /**
  * @author Mik Kersten
  */
-public class TaskCompletionFilter extends AbstractTaskFilter {
+public class TaskCompletionFilter extends AbstractTaskListFilter {
 
 	public boolean select(Object element) {
 		if (element instanceof ITask) {
@@ -34,7 +34,7 @@ public class TaskCompletionFilter extends AbstractTaskFilter {
 					return !hit.getCorrespondingTask().isCompleted();
 				}
 			} else {
-				return true;
+				return !hit.isCompleted(); 
 			}
 		}
 		return true;

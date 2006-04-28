@@ -1,0 +1,33 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Mylar Bugzilla Client Ui Plug-in
+Bundle-SymbolicName: org.eclipse.mylar.bugzilla.ui; singleton:=true
+Bundle-Version: 0.5.1
+Bundle-Activator: org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin
+Bundle-Vendor: Eclipse.org
+Bundle-Localization: plugin
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.resources,
+ org.eclipse.compare,
+ org.eclipse.search,
+ org.eclipse.ui.views,
+ org.eclipse.ui.ide,
+ org.eclipse.mylar.bugzilla.core,
+ org.eclipse.mylar.core,
+ org.eclipse.ui.forms,
+ org.eclipse.jface.text,
+ org.eclipse.mylar.tasklist,
+ org.eclipse.team.ui,
+ org.eclipse.team.cvs.ui,
+ org.eclipse.ui.editors,
+ org.eclipse.ui.workbench.texteditor
+Eclipse-AutoStart: true
+Export-Package: org.eclipse.mylar.internal.bugzilla.ui,
+ org.eclipse.mylar.internal.bugzilla.ui.actions,
+ org.eclipse.mylar.internal.bugzilla.ui.editor,
+ org.eclipse.mylar.internal.bugzilla.ui.search,
+ org.eclipse.mylar.internal.bugzilla.ui.tasklist,
+ org.eclipse.mylar.internal.bugzilla.ui.wizard
+Bundle-ClassPath: bugzilla-ui.jar
+Bundle-RequiredExecutionEnvironment: J2SE-1.5

@@ -43,6 +43,9 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.Widget;
+import org.eclipse.ui.IWindowListener;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 
 /**
  * @author Mik Kersten
@@ -65,12 +68,12 @@ public class TaskListToolTipHandler {
 	public TaskListToolTipHandler(Shell parentShell) {
 		if (parentShell != null) {
 			tipShell = createTipShell(parentShell);
-		} 
+		}
 	}
 
 	private Shell createTipShell(Shell parent) {
-		Shell tipShell = new Shell(parent.getDisplay(), SWT.NO_FOCUS | SWT.ON_TOP | SWT.MODELESS);
-		GridLayout gridLayout = new GridLayout();
+		Shell tipShell = new Shell(parent.getDisplay(), SWT.TOOL | SWT.NO_FOCUS | SWT.ON_TOP | SWT.MODELESS);
+		GridLayout gridLayout = new GridLayout(); 
 		gridLayout.numColumns = 2;
 		gridLayout.marginWidth = 2;
 		gridLayout.marginHeight = 2;
@@ -168,11 +171,10 @@ public class TaskListToolTipHandler {
 		return null;
 	}
 
-	private String formatLastRefreshTime(Date lastRefresh) {
+	private String formatLastRefreshTime(Date lastRefresh) {		
 		String toolTip = "Last synchronized: ";
+		if (lastRefresh == null) return toolTip += "unknown";		
 		Date timeNow = new Date();
-		if (lastRefresh == null)
-			lastRefresh = new Date();
 		long timeDifference = (timeNow.getTime() - lastRefresh.getTime()) / 60000;
 		long minutes = timeDifference % 60;
 		timeDifference /= 60;
@@ -231,6 +233,29 @@ public class TaskListToolTipHandler {
 	 */
 	public void activateHoverHelp(final Control control) {
 
+		PlatformUI.getWorkbench().addWindowListener(new IWindowListener() {
+
+			public void windowActivated(IWorkbenchWindow window) {
+				// ignore
+
+			}
+
+			public void windowClosed(IWorkbenchWindow window) {
+				// ignore
+
+			}
+
+			public void windowDeactivated(IWorkbenchWindow window) {
+				hideTooltip();
+
+			}
+
+			public void windowOpened(IWorkbenchWindow window) {
+				// ignore
+
+			}
+		});
+
 		/*
 		 * Get out of the way if we attempt to activate the control underneath
 		 * the tooltip
@@ -239,8 +264,7 @@ public class TaskListToolTipHandler {
 
 			@Override
 			public void mouseDown(MouseEvent e) {
-				if (tipShell != null && !tipShell.isDisposed() && tipShell.isVisible())
-					tipShell.setVisible(false);
+				hideTooltip();
 			}
 		});
 		/*
@@ -250,7 +274,7 @@ public class TaskListToolTipHandler {
 
 			@Override
 			public void mouseExit(MouseEvent e) {
-				// TODO: can these conditions be simplified?  see bug 131776
+				// TODO: can these conditions be simplified? see bug 131776
 				if (tipShell != null && !tipShell.isDisposed() && tipShell.getDisplay() != null
 						&& !tipShell.getDisplay().isDisposed() && tipShell.isVisible()) {
 					tipShell.setVisible(false);
@@ -320,6 +344,11 @@ public class TaskListToolTipHandler {
 		shellBounds.x = Math.max(Math.min(position.x, displayBounds.width - shellBounds.width), 0);
 		shellBounds.y = Math.max(Math.min(position.y + 10, displayBounds.height - shellBounds.height), 0);
 		shell.setBounds(shellBounds);
+	}
+
+	private void hideTooltip() {
+		if (tipShell != null && !tipShell.isDisposed() && tipShell.isVisible())
+			tipShell.setVisible(false);
 	}
 }
 

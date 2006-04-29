@@ -53,7 +53,7 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 
 	protected ITask task;
 
-	private TaskInfoEditor taskInfoEditor;
+	private TaskPlanningEditor taskPlanningEditor;
 
 	private Browser webBrowser;
 
@@ -64,7 +64,7 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 	private List<IEditorPart> editors = new ArrayList<IEditorPart>();
 
 	private IEditorPart contentOutlineProvider = null;
-		
+			
 	private static class TaskEditorSelectionProvider extends MultiPageSelectionProvider {
 		private ISelection globalSelection;
 
@@ -102,8 +102,8 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 		IWorkbenchPage activePage = window.getActivePage();
 		partListener = new TaskEditorListener();
 		activePage.addPartListener(partListener);
-		taskInfoEditor = new TaskInfoEditor();
-		taskInfoEditor.setParentEditor(this);
+		taskPlanningEditor = new TaskPlanningEditor();
+		taskPlanningEditor.setParentEditor(this);
 	}
 
 	@Override
@@ -133,8 +133,8 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 				}
 			}
 			if (hasValidUrl()) {
-				int browserIndex = createBrowserPage();
-				if (selectedIndex == 0) {
+				int browserIndex = createBrowserPage(); 
+				if (selectedIndex == 0 && !taskEditorInput.isNewTask()) {
 					selectedIndex = browserIndex;
 				}
 			}
@@ -166,11 +166,11 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 
 	private int createTaskSummaryPage() throws PartInitException {
 		try {
-			taskInfoEditor.createPartControl(getContainer());
-			taskInfoEditor.setParentEditor(this);
-			editors.add(taskInfoEditor);
+			taskPlanningEditor.createPartControl(getContainer());
+			taskPlanningEditor.setParentEditor(this);
+			editors.add(taskPlanningEditor);
 
-			int index = addPage(taskInfoEditor.getControl());
+			int index = addPage(taskPlanningEditor.getControl());
 			setPageText(index, TASK_INFO_PAGE_LABEL);
 			return index;
 		} catch (RuntimeException e) {
@@ -188,7 +188,8 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 
 			boolean openWithBrowser = MylarTaskListPlugin.getMylarCorePrefs().getBoolean(
 					TaskListPreferenceConstants.REPORT_OPEN_INTERNAL);
-			if (!(task instanceof AbstractRepositoryTask) || openWithBrowser) {
+//			if (!(task instanceof AbstractRepositoryTask) || openWithBrowser) {
+			if (openWithBrowser) {
 				setActivePage(index);
 			}
 			return index;
@@ -250,9 +251,10 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 		 * only one instance of the task data is stored for each editor opened.
 		 */
 		task = taskEditorInput.getTask();
+		
 		try {
-			taskInfoEditor.init(this.getEditorSite(), this.getEditorInput());
-			taskInfoEditor.setTask(task);
+			taskPlanningEditor.init(this.getEditorSite(), this.getEditorInput());
+			taskPlanningEditor.setTask(task);
 			// Set the title on the editor's tab
 			this.setPartName(taskEditorInput.getLabel());
 		} catch (Exception e) {
@@ -351,8 +353,8 @@ public class MylarTaskEditor extends MultiPageEditorPart {
 		for (IEditorPart part : editors) {
 			part.dispose();
 		}
-		if (taskInfoEditor != null)
-			taskInfoEditor.dispose();
+		if (taskPlanningEditor != null)
+			taskPlanningEditor.dispose();
 		if (webBrowser != null)
 			webBrowser.dispose();
 

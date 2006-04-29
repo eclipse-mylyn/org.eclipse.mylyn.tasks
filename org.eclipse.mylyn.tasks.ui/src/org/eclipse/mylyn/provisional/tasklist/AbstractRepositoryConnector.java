@@ -38,7 +38,7 @@ import org.eclipse.ui.PlatformUI;
  */
 public abstract class AbstractRepositoryConnector {
 	
-	public static final String MYLAR_CONTEXT_DESCRIPTION = "mylar/context/xml";
+	public static final String MYLAR_CONTEXT_DESCRIPTION = "mylar/context/zip";
 
 	private static final int MAX_REFRESH_JOBS = 5;
 
@@ -54,7 +54,22 @@ public abstract class AbstractRepositoryConnector {
 	
 	public abstract boolean attachContext(TaskRepository repository, AbstractRepositoryTask task, String longComment) throws IOException;
 	
+	/**
+	 * Implementors of this operations must perform it locally without going to the server
+	 * since it is used for frequent operations such as decoration.
+	 * 
+	 * @return	an emtpy set if no contexts
+	 */
 	public abstract Set<IRemoteContextDelegate> getAvailableContexts(TaskRepository repository, AbstractRepositoryTask task);
+	
+	public boolean hasRepositoryContext(TaskRepository repository, AbstractRepositoryTask task) {
+		if (repository == null || task == null) {
+			return false;
+		} else {
+			Set<IRemoteContextDelegate> remoteContexts = getAvailableContexts(repository, task);		
+			return (remoteContexts != null && remoteContexts.size() > 0);
+		}
+	}
 	
 	public abstract boolean retrieveContext(TaskRepository repository, AbstractRepositoryTask task, IRemoteContextDelegate remoteContextDelegate)  throws IOException;
 	
@@ -90,7 +105,7 @@ public abstract class AbstractRepositoryConnector {
 	public abstract ITask createTaskFromExistingId(TaskRepository repository, String id);
 	public abstract AbstractRepositorySettingsPage getSettingsPage();
 
-	public abstract IWizard getQueryWizard(TaskRepository repository);
+	public abstract IWizard getNewQueryWizard(TaskRepository repository);
 
 	public abstract void openEditQueryDialog(AbstractRepositoryQuery query);
 
@@ -268,7 +283,7 @@ public abstract class AbstractRepositoryConnector {
 //				}
 //			}
 //		});
-		job.setPriority(Job.DECORATE);
+		job.setPriority(priority);
 		job.schedule(delay);
 		return job;
 	}

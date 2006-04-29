@@ -47,7 +47,7 @@ public class TaskListManager {
 	// TODO: get these two fields from preferences
 	private static final int START_DAY = Calendar.MONDAY;
 
-	private static final int START_HOUR = 9;
+	private static final int START_HOUR = 8;
 
 	private static final int NUM_WEEKS_PREVIOUS = -1;
 
@@ -422,6 +422,10 @@ public class TaskListManager {
 		reminderCalendar.set(Calendar.SECOND, 0);
 		reminderCalendar.set(Calendar.MILLISECOND, 0);
 	}
+	
+	public void setInHour(Calendar reminderCalendar) {
+		reminderCalendar.add(Calendar.HOUR_OF_DAY, 1);
+	}
 
 	public Object[] getDateRanges() {
 		// parseFutureReminders();
@@ -524,6 +528,9 @@ public class TaskListManager {
 	}
 
 	public void deactivateTask(ITask task) {
+		if (task == null) {
+			return;
+		}
 		TaskActivityTimer taskTimer = timerMap.remove(task);
 		if (taskTimer != null) {
 			taskTimer.stopTimer();
@@ -577,6 +584,38 @@ public class TaskListManager {
 			}
 		}
 		return false;
+	}
+
+	public boolean isReminderAfterThisWeek(ITask task) {
+		Date reminder = task.getReminderDate();
+		if (reminder != null) {
+			return reminder.compareTo(activityNextWeek.getStart().getTime()) > -1;
+		} else {
+			return false;
+		}
+	}
+	
+//	public boolean isReminderThisWeek(ITask task) {
+//		Date reminder = task.getReminderDate();
+//		if (reminder != null) {
+//			Date now = new Date();
+//			Calendar nextWeekStart = activityNextWeek.getStart();
+//			return (reminder.compareTo(now) == 1 && reminder.compareTo(nextWeekStart.getTime()) == -1);
+//		} else {
+//			return false;
+//		}
+//	}
+
+	public boolean isReminderToday(ITask task) {
+		Date reminder = task.getReminderDate();
+		if (reminder != null) {
+			Date now = new Date();
+			Calendar tomorrow = GregorianCalendar.getInstance();
+			MylarTaskListPlugin.getTaskListManager().setTomorrow(tomorrow);
+			return (reminder.compareTo(now) == 1 && reminder.compareTo(tomorrow.getTime()) == -1);
+		} else {
+			return false;
+		}
 	}
 
 	/**

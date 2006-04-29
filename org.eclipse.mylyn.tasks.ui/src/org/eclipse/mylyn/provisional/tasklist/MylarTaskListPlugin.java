@@ -361,7 +361,7 @@ public class MylarTaskListPlugin extends AbstractUIPlugin implements IStartup {
 		} catch (Exception e) {
 			MylarStatusHandler.log(e, "Mylar Task List stop terminated abnormally");
 		}
-	} 
+	}
 	
 	private void migrateHandlesToRepositorySupport() {
 		boolean migrated = false; 

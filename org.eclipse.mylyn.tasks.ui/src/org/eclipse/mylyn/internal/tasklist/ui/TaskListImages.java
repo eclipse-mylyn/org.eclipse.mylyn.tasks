@@ -61,9 +61,13 @@ public class TaskListImages {
 
 	public static final ImageDescriptor TASK = createSize(create(T_TOOL, "task.gif"), SIZE);
 
+	public static final ImageDescriptor TASK_COMPLETED = createSize(create(T_TOOL, "task-completed.gif"), SIZE);
+	
 	public static final ImageDescriptor TASK_NOTES = createSize(create(T_TOOL, "task-notes.gif"), SIZE);
 
 	public static final ImageDescriptor TASK_REPOSITORY_NOTES = createSize(create(T_TOOL, "task-repository-notes.gif"), SIZE);
+
+	public static final ImageDescriptor TASK_REPOSITORY_COMPLETED = createSize(create(T_TOOL, "task-repository-completed.gif"), SIZE);
 	
 	public static final ImageDescriptor TASK_NEW = create(T_TOOL, "task-new.gif");
 
@@ -95,6 +99,8 @@ public class TaskListImages {
 
 	public static final ImageDescriptor OVERLAY_REPOSITORY = create(T_EVIEW, "overlay-repository.gif");
 	
+	public static final ImageDescriptor OVERLAY_REPOSITORY_CONTEXT = create(T_EVIEW, "overlay-repository-context.gif");
+		
 	public static final ImageDescriptor STATUS_NORMAL = create(T_EVIEW, "status-normal.gif");
 	
 	public static final ImageDescriptor STATUS_CONTEXT = create(T_EVIEW, "status-server-context.gif");
@@ -167,6 +173,8 @@ public class TaskListImages {
 	public static final ImageDescriptor CALENDAR = create(T_EVIEW, "task-activity.gif");
 
 	public static final ImageDescriptor BANNER_REPOSITORY = create(T_WIZBAN, "banner-repository.gif");
+	
+	public static final ImageDescriptor BANNER_REPOSITORY_CONTEXT = create(T_WIZBAN, "banner-repository-context.gif");
 	
 	private static ImageDescriptor create(String prefix, String name) {
 		try {

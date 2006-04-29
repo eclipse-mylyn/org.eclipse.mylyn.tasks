@@ -15,7 +15,9 @@ package org.eclipse.mylar.tasklist.tests;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -68,6 +70,28 @@ public class TaskListManagerTest extends TestCase {
 		manager.resetTaskList();
 		MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskListAndContexts();
 		MylarTaskListPlugin.getRepositoryManager().removeRepository(repository);
+	}
+	
+	public void testIsActiveToday() {
+		ITask task = new Task("1", "task-1", true);
+		assertFalse(manager.isReminderToday(task));
+		
+		task.setReminderDate(new Date());
+		assertFalse(manager.isReminderToday(task));
+		
+		task.setReminded(true);
+		assertFalse(manager.isReminderToday(task));
+		task.setReminded(true);
+		
+		Calendar inAnHour = Calendar.getInstance();
+		inAnHour.set(Calendar.HOUR_OF_DAY, inAnHour.get(Calendar.HOUR_OF_DAY)+1);
+		inAnHour.getTime();
+		task.setReminderDate(inAnHour.getTime());
+		Calendar tomorrow = Calendar.getInstance();
+		manager.setTomorrow(tomorrow);
+		assertEquals(-1, inAnHour.compareTo(tomorrow));
+		
+		assertTrue(manager.isReminderToday(task)); 
 	}
 	
 	public void testLegacyTaskListReading() throws IOException {
@@ -147,6 +171,28 @@ public class TaskListManagerTest extends TestCase {
 
 		manager.getTaskList().deleteQuery(query);
 		assertEquals(0, manager.getTaskList().getQueries().size());
+	}
+	
+	public void testDeleteQueryAfterRename() {
+		AbstractRepositoryQuery query = new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager.getTaskList());
+		manager.getTaskList().addQuery(query);
+
+		AbstractRepositoryQuery readQuery = manager.getTaskList().getQueries().iterator().next();
+		assertEquals(query, readQuery);
+		manager.getTaskList().renameContainer(query, "newName");
+		manager.getTaskList().deleteQuery(query);
+		assertEquals(0, manager.getTaskList().getQueries().size());
+	}
+	
+	public void testCreateQueryWithSameName() {
+		AbstractRepositoryQuery query = new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager.getTaskList());
+		manager.getTaskList().addQuery(query);
+		assertEquals(1, manager.getTaskList().getQueries().size());
+		AbstractRepositoryQuery readQuery = manager.getTaskList().getQueries().iterator().next();
+		assertEquals(query, readQuery);
+		
+		manager.getTaskList().addQuery(new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager.getTaskList()));
+		assertEquals(1, manager.getTaskList().getQueries().size());
 	}
 	
 	public void testMoveCategories() {
@@ -230,6 +276,58 @@ public class TaskListManagerTest extends TestCase {
 		assertEquals(""+manager.getTaskList().getCategories(), 2, manager.getTaskList().getCategories().size());
 		assertEquals(1, manager.getTaskList().getAllTasks().size());
 	}
+	
+	public void testDeleteCategory() {
+
+		assertNotNull(manager.getTaskList());
+		assertEquals(1, manager.getTaskList().getCategories().size());
+		TaskCategory category = new TaskCategory("cat", manager.getTaskList());
+		manager.getTaskList().addCategory(category);
+		assertEquals(2, manager.getTaskList().getCategories().size());
+		manager.getTaskList().deleteCategory(category);		
+		assertEquals(1, manager.getTaskList().getCategories().size());
+	}
+	
+	public void testRenameCategory() {
+
+		assertNotNull(manager.getTaskList());
+		
+		TaskCategory category = new TaskCategory("cat", manager.getTaskList());
+		manager.getTaskList().addCategory(category);
+		assertEquals(2, manager.getTaskList().getCategories().size());
+		String newDesc = "newDescription";
+		manager.getTaskList().renameContainer(category, newDesc);
+		AbstractTaskContainer container = manager.getTaskList().getContainerForHandle(newDesc);
+		assertNotNull(container);
+		assertEquals(newDesc, container.getDescription());
+		manager.getTaskList().deleteCategory(container);
+		assertEquals(1, manager.getTaskList().getCategories().size());
+	}
+	
+	public void testDeleteCategoryAfterRename() {
+		String newDesc = "newDescription";
+		assertNotNull(manager.getTaskList());
+		assertEquals(1, manager.getTaskList().getCategories().size());
+		TaskCategory category = new TaskCategory("cat", manager.getTaskList());
+		manager.getTaskList().addCategory(category);
+		assertEquals(2, manager.getTaskList().getCategories().size());
+		manager.getTaskList().renameContainer(category, newDesc);
+		manager.getTaskList().deleteCategory(category);		
+		assertEquals(1, manager.getTaskList().getCategories().size());
+	}
+	
+	public void testCreateSameCategoryName() {
+		assertNotNull(manager.getTaskList());
+		assertEquals(1, manager.getTaskList().getCategories().size());
+		TaskCategory category = new TaskCategory("cat", manager.getTaskList());
+		manager.getTaskList().addCategory(category);
+		assertEquals(2, manager.getTaskList().getCategories().size());
+		TaskCategory category2 = new TaskCategory("cat", manager.getTaskList());
+		manager.getTaskList().addCategory(category2);
+		assertEquals(2, manager.getTaskList().getCategories().size());
+		AbstractTaskContainer container = manager.getTaskList().getContainerForHandle("cat");
+		assertEquals(container, category);
+	}
 
 	public void testDelete() {
 		ITask task = new Task("handle", "label", true);
@@ -257,8 +355,12 @@ public class TaskListManagerTest extends TestCase {
 
 	public void testQueryExternalization() {
 		AbstractRepositoryQuery query = new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager.getTaskList());
+		long time = 1234;
+		Date oldDate = new Date(time);	
+		query.setLastRefresh(oldDate);
 		assertEquals("repositoryUrl", query.getRepositoryUrl());
 		assertEquals("queryUrl", query.getQueryUrl());
+		assertEquals(time, query.getLastRefresh().getTime());
 		manager.getTaskList().addQuery(query);
 		manager.saveTaskList();
 		assertNotNull(manager.getTaskList());
@@ -270,6 +372,7 @@ public class TaskListManagerTest extends TestCase {
 		assertEquals(query.getQueryUrl(), readQuery.getQueryUrl());
 		assertEquals(query.getRepositoryUrl(), readQuery.getRepositoryUrl());
 		assertEquals("repositoryUrl", readQuery.getRepositoryUrl());
+		assertEquals(time, readQuery.getLastRefresh().getTime());
 	}
 
 	public void testArchiveRepositoryTaskExternalization() {
@@ -303,7 +406,7 @@ public class TaskListManagerTest extends TestCase {
 
 		assertEquals(repositoryTask.getHandleIdentifier(), readTask.getHandleIdentifier());
 		assertEquals(repositoryTask.getDescription(), readTask.getDescription());
-		assertEquals(repositoryTask.getKind(), readTask.getKind());
+		assertEquals(repositoryTask.getTaskType(), readTask.getTaskType());
 	}
 
 	public void testRepositoryTasksAndCategoriesMultiRead() {

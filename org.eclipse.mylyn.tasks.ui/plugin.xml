@@ -194,6 +194,11 @@
                menubarPath="additions"
                tooltip="Synchronize with Repository">
          </action>
+    <action
+          class="org.eclipse.mylar.internal.tasklist.ui.actions.CopyDescriptionAction"
+          id="org.eclipse.mylar.tasklist.copy.details"
+          label="Copy Details"
+          style="push"/>
   			
 	    </viewContribution> 
 	</extension>
@@ -299,9 +304,29 @@
            label="Mylar"/>
      <colorDefinition
            categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasklist.ui.colors.foreground.overdue"
+           isEditable="true"
+           label="Tasks - Past Reminder"
+           value="167,10,26"> 
+         <description>
+            Text color for overdue tasks.
+         </description>
+     </colorDefinition>
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasklist.ui.colors.foreground.today"
+           isEditable="true"
+           label="Tasks - Today"
+           value="30,14,231">  
+         <description>
+            Text color for tasks due today.
+         </description>
+     </colorDefinition>
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
            id="org.eclipse.mylar.tasklist.ui.colors.background.category"
            isEditable="true"
-           label="Task List Category Background"
+           label="Categories - Background"
            value="234,233,237"> 
          <description>
             Background color of Task List categories and queries.
@@ -313,7 +338,7 @@
         defaultsTo="org.eclipse.jface.textfont"
         id="org.eclipse.mylar.tasklist.ui.fonts.task.editor.comment"
         isEditable="true"
-        label="Task Editor Comment">
+        label="Task Editor - Comments">
          <description>
             Text font used for rendering comments.
          </description>
@@ -335,7 +360,7 @@
    <extension point="org.eclipse.mylar.tasklist.providers">    
       <dynamicPopupMenu class="org.eclipse.mylar.internal.tasklist.ui.TaskReminderMenuContributor"/>
    </extension>
-  
+   
    <!--
    <extension
          point="org.eclipse.mylar.tasklist.editors">

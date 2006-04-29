@@ -23,6 +23,7 @@ import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -34,9 +35,12 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 
 /**
  * @author Rob Elves
+ * @author Mik Kersten
  */
 public class ContextRetrieveWizardPage extends WizardPage {
 
+	private static final String DESCRIPTION = "Loads context from repository task into the workspace";
+		
 	private static final String COLUMN_COMMENT = "Comment";
 
 	private static final String COLUMN_AUTHOR = "Author";
@@ -55,16 +59,22 @@ public class ContextRetrieveWizardPage extends WizardPage {
 		super(ContextAttachWizard.WIZARD_TITLE);
 		this.repository = repository;
 		this.task = task;
+		setDescription(DESCRIPTION);
 	}
 
 	public void createControl(Composite parent) {
 		FormToolkit toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createForm(parent);
 		form.getBody().setLayout(new GridLayout(1, false));
+		
+		Color formBackground = form.getBackground();
+		form.setBackground(parent.getBackground());
+		toolkit.setBackground(parent.getBackground());
 		toolkit.createLabel(form.getBody(), "Task: " + task.getDescription());
 		toolkit.createLabel(form.getBody(), "Repository: " + repository.getUrl());
 		toolkit.createLabel(form.getBody(), "Select context below:");
 		final Table contextTable = toolkit.createTable(form.getBody(), SWT.FULL_SELECTION | SWT.SINGLE | SWT.V_SCROLL);
+		contextTable.setBackground(formBackground);
 		contextTable.setHeaderVisible(true);
 		contextTable.setLinesVisible(true);
 		contextTable.addSelectionListener(new SelectionAdapter() {

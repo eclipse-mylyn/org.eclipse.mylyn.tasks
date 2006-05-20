@@ -2,17 +2,15 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Mylar TaskList Plug-in
 Bundle-SymbolicName: org.eclipse.mylar.tasklist; singleton:=true
-Bundle-Version: 0.5.1
+Bundle-Version: 0.5.1.v20060519-1700
 Bundle-Activator: org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
- org.eclipse.core.resources,
- org.eclipse.ui.browser,
  org.eclipse.ui.forms,
- org.eclipse.mylar.core,
  org.eclipse.jface.text,
- org.eclipse.ui.editors
+ org.eclipse.mylar.core,
+ org.eclipse.update.core
 Eclipse-AutoStart: true
 Bundle-Vendor: Eclipse.org
 Bundle-ClassPath: mylar-tasklist.jar

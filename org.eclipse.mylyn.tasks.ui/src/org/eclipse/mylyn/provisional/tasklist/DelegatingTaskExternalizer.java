@@ -482,10 +482,10 @@ public class DelegatingTaskExternalizer implements ITaskListExternalizer {
 		node.setAttribute(KEY_QUERY_MAX_HITS, query.getMaxHits() + "");
 		node.setAttribute(KEY_QUERY_STRING, query.getQueryUrl());
 		node.setAttribute(KEY_REPOSITORY_URL, query.getRepositoryUrl());
-		if (query.getLastRefresh() != null) {
-			node.setAttribute(KEY_LAST_REFRESH, String.valueOf(query.getLastRefresh().getTime()));
+		if (query.getLastSynchronized() != null) {
+			node.setAttribute(KEY_LAST_REFRESH, String.valueOf(query.getLastSynchronized().getTime()));
 		}
-		for (AbstractQueryHit hit : query.getHits()) {
+		for (AbstractQueryHit hit : new ArrayList<AbstractQueryHit>(query.getHits())) {
 			try {
 				Element element = null;
 				for (ITaskListExternalizer externalizer : delegateExternalizers) {

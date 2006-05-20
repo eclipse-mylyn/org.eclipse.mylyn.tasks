@@ -26,7 +26,7 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
-import org.eclipse.mylar.internal.bugzilla.core.NewBugModel;
+import org.eclipse.mylar.internal.bugzilla.core.NewBugzillaReport;
 import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
@@ -47,7 +47,7 @@ import org.eclipse.ui.PlatformUI;
  * The first page of the new bug wizard where the user chooses the bug's product
  */
 public class BugzillaProductPage extends AbstractWizardListPage {
-
+  
 	private static final String NEW_BUGZILLA_TASK_ERROR_TITLE = "New Bugzilla Task Error";
 
 	private static final String DESCRIPTION = "Pick a product on which to enter a bug.\n"
@@ -87,13 +87,12 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 		this.bugWizard = bugWiz;
 		this.repository = repository;
 		setImageDescriptor(BugzillaUiPlugin.imageDescriptorFromPlugin("org.eclipse.mylar.bugzilla.ui",
-			"icons/wizban/bug-wizard.gif"));
+				"icons/wizban/bug-wizard.gif"));
 	}
 
-	protected ProgressMonitorDialog monitorDialog = new ProgressMonitorDialog(BugzillaPlugin.getDefault()
-			.getWorkbench().getActiveWorkbenchWindow().getShell());
+	protected ProgressMonitorDialog monitorDialog = new ProgressMonitorDialog(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell());
 
-	protected IPreferenceStore prefs = BugzillaPlugin.getDefault().getPreferenceStore();
+	protected IPreferenceStore prefs = BugzillaUiPlugin.getDefault().getPreferenceStore();
 
 	@Override
 	public void createAdditionalControls(Composite parent) {
@@ -112,11 +111,11 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 				monitor.beginTask("Updating search options...", 55);
 
 				try {
-					BugzillaRepositoryUtil.updateQueryOptions(repository, monitor);
+					BugzillaUiPlugin.updateQueryOptions(repository, monitor);
 
 					products = new ArrayList<String>();
-					for (String product : BugzillaRepositoryUtil.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT,
-							repository.getUrl())) {
+					for (String product : BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT,
+							null, repository.getUrl())) {
 						products.add(product);
 					}
 					monitor.worked(1);
@@ -131,10 +130,8 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 									"Bugzilla could not log you in to get the information you requested since login name or password is incorrect.\nPlease check your settings in the bugzilla preferences. ");
 					BugzillaPlugin.log(exception);
 				} catch (IOException exception) {
-					MessageDialog
-					.openError(
-							null,
-							"Connection Error","\nPlease check your settings in the bugzilla preferences. ");
+					MessageDialog.openError(null, "Connection Error",
+							"\nPlease check your settings in the bugzilla preferences. ");
 				} finally {
 					monitor.done();
 					monitorDialog.close();
@@ -148,23 +145,23 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 		if (!bugWizard.model.hasParsedProducts()) {
 			String repositoryUrl = repository.getUrl();
 			try {
-				String[] storedProducts = BugzillaRepositoryUtil.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT,
-						repositoryUrl);
+				String[] storedProducts = BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT,
+						null, repositoryUrl);
 				if (storedProducts.length > 0) {
 					products = Arrays.asList(storedProducts);
 				} else {
-					products = BugzillaRepositoryUtil.getProductList(repository);
+					products = BugzillaRepositoryUtil.getProductList(repository.getUrl(), repository.getUserName(), repository.getPassword(), repository.getCharacterEncoding());
 				}
 				bugWizard.model.setConnected(true);
 				bugWizard.model.setParsedProductsStatus(true);
 
 			} catch (Exception e) {
-				bugWizard.model.setConnected(false);						
+				bugWizard.model.setConnected(false);
 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-					public void run() {					
-						MessageDialog
-								.openError(Display.getDefault().getActiveShell(), NEW_BUGZILLA_TASK_ERROR_TITLE,
-										"Unable to get products. Ensure proper repository configuration in "+TaskRepositoriesView.NAME+".");
+					public void run() {
+						MessageDialog.openError(Display.getDefault().getActiveShell(), NEW_BUGZILLA_TASK_ERROR_TITLE,
+								"Unable to get products. Ensure proper repository configuration in "
+										+ TaskRepositoriesView.NAME + ".");
 					}
 				});
 			}
@@ -204,29 +201,24 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 		// save the product information to the model
 		saveDataToModel();
 		NewBugzillaReportWizard wizard = (NewBugzillaReportWizard) getWizard();
-		NewBugModel model = wizard.model;
+		NewBugzillaReport model = wizard.model;
 
 		// try to get the attributes from the bugzilla server
 		try {
-			//if (prevProduct != null && !prevProduct.equals(model.getProduct())) {
-				//!model.hasParsedAttributes() || 
-				String serverUrl = repository.getUrl();
-//				if (model.isConnected()) {
-//					BugzillaRepositoryUtil.setupNewBugAttributes(serverUrl, model, false);
-//				} else {
-				
-					BugzillaRepositoryUtil.setupBugAttributes(serverUrl, model);
-//				}
+			if (!model.hasParsedAttributes() || !model.getProduct().equals(prevProduct)) {
+				BugzillaRepositoryUtil.setupNewBugAttributes(repository.getUrl(), repository.getUserName(), repository.getPassword(), model, null);
 				model.setParsedAttributesStatus(true);
-				if (prevProduct == null) {
-					bugWizard.setAttributePage(new WizardAttributesPage(workbench));
-					bugWizard.addPage(bugWizard.getAttributePage());
-				} else {
-					// selected product has changed
-					// will createControl again with new attributes in model
-					bugWizard.getAttributePage().setControl(null);
-				}
-			//}
+			}
+
+			if (prevProduct == null) {
+				bugWizard.setAttributePage(new WizardAttributesPage(workbench));
+				bugWizard.addPage(bugWizard.getAttributePage());
+			} else {
+				// selected product has changed
+				// will createControl again with new attributes in model
+				bugWizard.getAttributePage().setControl(null);
+			}
+			// }
 		} catch (final Exception e) {
 			e.printStackTrace();
 			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
@@ -235,9 +227,12 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 							.getLocalizedMessage()
 							+ " Ensure proper repository configuration in " + TaskRepositoriesView.NAME + ".");
 				}
-			});			
-//			MylarStatusHandler.fail(e, e.getLocalizedMessage()+" Ensure proper repository configuration in "+TaskRepositoriesView.NAME+".", true);			
-//			BugzillaPlugin.getDefault().logAndShowExceptionDetailsDialog(e, "occurred.", "Bugzilla Error");
+			});
+			// MylarStatusHandler.fail(e, e.getLocalizedMessage()+" Ensure
+			// proper repository configuration in
+			// "+TaskRepositoriesView.NAME+".", true);
+			// BugzillaPlugin.getDefault().logAndShowExceptionDetailsDialog(e,
+			// "occurred.", "Bugzilla Error");
 		}
 		return super.getNextPage();
 	}
@@ -247,14 +242,9 @@ public class BugzillaProductPage extends AbstractWizardListPage {
 	 */
 	private void saveDataToModel() {
 		// Gets the model
-		NewBugModel model = bugWizard.model;
+		NewBugzillaReport model = bugWizard.model;
 
 		prevProduct = model.getProduct();
 		model.setProduct((listBox.getSelection())[0]);
-	}
-
-	@Override
-	public String getTableName() {
-		return "Product:";
 	}
 }

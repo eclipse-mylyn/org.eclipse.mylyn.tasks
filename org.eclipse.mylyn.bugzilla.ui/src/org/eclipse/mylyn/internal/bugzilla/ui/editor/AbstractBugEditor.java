@@ -10,11 +10,10 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.bugzilla.ui.editor;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,22 +29,37 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.util.SafeRunnable;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.mylar.bugzilla.core.Attribute;
-import org.eclipse.mylar.bugzilla.core.Comment;
-import org.eclipse.mylar.bugzilla.core.IBugzillaBug;
+import org.eclipse.jface.viewers.TableViewer;
+import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaTools;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaAttributeListener;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
-import org.eclipse.mylar.internal.bugzilla.core.IBugzillaReportSelection;
+import org.eclipse.mylar.internal.bugzilla.ui.BugzillaTools;
+import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
+import org.eclipse.mylar.internal.bugzilla.ui.IBugzillaReportSelection;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor;
+import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
+import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReport;
+import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReportAttribute;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
+import org.eclipse.mylar.provisional.bugzilla.core.Comment;
+import org.eclipse.mylar.provisional.bugzilla.core.IBugzillaBug;
+import org.eclipse.mylar.provisional.bugzilla.core.ReportAttachment;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.SWT;
@@ -55,6 +69,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -64,6 +79,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.ISharedImages;
@@ -105,6 +122,8 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	private static final String LABEL_SECTION_ATTRIBUTES = "Attributes";
 
+	private static final String LABEL_SECTION_ATTACHMENTS = "Attachments";
+
 	protected static final String LABEL_SECTION_DESCRIPTION = "Description";
 
 	protected static final String LABEL_SECTION_COMMENTS = "Comments";
@@ -125,11 +144,11 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	public static final Font TEXT_FONT = JFaceResources.getDefaultFont();
 
-	public static final Font COMMENT_FONT = JFaceResources.getFontRegistry().get(JFaceResources.TEXT_FONT);
+	//public static final Font COMMENT_FONT = JFaceResources.getFontRegistry().get(JFaceResources.TEXT_FONT);
 
 	public static final Font HEADER_FONT = JFaceResources.getDefaultFont();
 
-	public static final int DESCRIPTION_WIDTH = 79 * 7;
+	public static final int DESCRIPTION_WIDTH = 79 * 8; //500;
 
 	public static final int DESCRIPTION_HEIGHT = 10 * 14;
 
@@ -145,9 +164,8 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	// private static int MARGIN = 0;// 5
 
-	protected SimpleDateFormat simpleDateFormat = new SimpleDateFormat("E MMM dd, yyyy hh:mm aa");// "yyyy-MM-dd
-
-	// HH:mm"
+	protected SimpleDateFormat simpleDateFormat = new SimpleDateFormat("E MMM dd, yyyy hh:mm aa");
+	// "yyyy-MM-dd HH:mm"
 
 	/**
 	 * Style option for function <code>newLayout</code>. This will create a
@@ -170,7 +188,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	protected final int HORZ_INDENT = 0;
 
-	protected CCombo oSCombo;
+	protected CCombo attributeCombo;
 
 	protected CCombo versionCombo;
 
@@ -183,6 +201,8 @@ public abstract class AbstractBugEditor extends EditorPart {
 	protected CCombo milestoneCombo;
 
 	protected CCombo componentCombo;
+	
+	protected Button addSelfToCCCheck;
 
 	protected Text urlText;
 
@@ -192,7 +212,13 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	protected Button submitButton;
 
-	// protected Button saveButton;
+	protected Table attachmentsTable;
+
+	protected TableViewer attachmentTableViewer;
+
+	protected String[] attachmentsColumns = { "Description", "Type", "Creator", "Created" };
+
+	protected int[] attachmentsColumnWidths = { 200, 100, 100, 200 };
 
 	protected int scrollIncrement;
 
@@ -257,7 +283,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	protected List<ISelectionChangedListener> selectionChangedListeners = new ArrayList<ISelectionChangedListener>();
 
-	protected HashMap<CCombo, String> comboListenerMap = new HashMap<CCombo, String>();
+	protected HashMap<CCombo, AbstractRepositoryReportAttribute> comboListenerMap = new HashMap<CCombo, AbstractRepositoryReportAttribute>();
 
 	private IBugzillaReportSelection lastSelected = null;
 
@@ -309,9 +335,9 @@ public abstract class AbstractBugEditor extends EditorPart {
 			if (comboListenerMap.containsKey(combo)) {
 				if (combo.getSelectionIndex() > -1) {
 					String sel = combo.getItem(combo.getSelectionIndex());
-					Attribute attribute = getBug().getAttribute(comboListenerMap.get(combo));
-					if (sel != null && !(sel.equals(attribute.getNewValue()))) {
-						attribute.setNewValue(sel);
+					AbstractRepositoryReportAttribute attribute = comboListenerMap.get(combo);
+					if (sel != null && !(sel.equals(attribute.getValue()))) {
+						attribute.setValue(sel);
 						for (IBugzillaAttributeListener client : attributesListeners) {
 							client.attributeChanged(attribute.getName(), sel);
 						}
@@ -382,6 +408,11 @@ public abstract class AbstractBugEditor extends EditorPart {
 	 */
 	public abstract IBugzillaBug getBug();
 
+	// TODO: temporary as part of conversion to xml
+	public AbstractRepositoryReport getReport() {
+		return (AbstractRepositoryReport) getBug();
+	}
+
 	/**
 	 * @return Any currently selected text.
 	 */
@@ -414,50 +445,61 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 		toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createScrolledForm(parent);
-		String truncatedSummary = getBug().getSummary();
-		int maxLength = 50;
-		if (truncatedSummary.length() > maxLength) {
-			truncatedSummary = truncatedSummary.substring(0, maxLength) + "...";
-		}
-		form.setText("Bugzilla Bug: " + truncatedSummary);
-
+		// String truncatedSummary = getBug().getSummary();
+		// int maxLength = 50;
+		// if (truncatedSummary.length() > maxLength) {
+		// truncatedSummary = truncatedSummary.substring(0, maxLength) + "...";
+		// }
+		// form.setFont(COMMENT_FONT);
+		// form.setText("Bugzilla Bug: " + getBug().getSummary());
+		
+		
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 
 		// Header information
+		
+		
+		Composite summaryComposite = toolkit.createComposite(editorComposite);
+		summaryComposite.setLayout(new GridLayout(2, false));
+		// XXX: put back?
+//		GridDataFactory.fillDefaults().grab(true, false).applyTo(summaryComposite);
+		addSummaryText(summaryComposite);
+		toolkit.paintBordersFor(summaryComposite);
 		Composite headerInfoComposite = toolkit.createComposite(editorComposite);
-		headerInfoComposite.setLayout(new GridLayout(6, false));
+		headerInfoComposite.setLayout(new GridLayout(6, false));		
 		toolkit.createLabel(headerInfoComposite, "Bug# ").setFont(TITLE_FONT);
-		toolkit.createText(headerInfoComposite, "" + getBug().getId());
+		toolkit.createText(headerInfoComposite, "" + getReport().getId(), SWT.FLAT | SWT.READ_ONLY);
 
 		toolkit.createLabel(headerInfoComposite, " Opened: ").setFont(TITLE_FONT);
 		String openedDateString = "";
 		if (getBug().getCreated() != null) {
 			openedDateString = simpleDateFormat.format(getBug().getCreated());
 		}
-		toolkit.createText(headerInfoComposite, openedDateString);
+		toolkit.createText(headerInfoComposite, openedDateString, SWT.FLAT | SWT.READ_ONLY);
 
 		toolkit.createLabel(headerInfoComposite, " Modified: ").setFont(TITLE_FONT);
 		String lastModifiedDateString = "";
 		if (getBug().getLastModified() != null) {
 			lastModifiedDateString = simpleDateFormat.format(getBug().getLastModified());
 		}
-		toolkit.createText(headerInfoComposite, lastModifiedDateString);
+		toolkit.createText(headerInfoComposite, lastModifiedDateString, SWT.FLAT | SWT.READ_ONLY);
 
 		// openedText.setFont(TITLE_FONT);
 		// display = parent.getDisplay();
 		// background = JFaceColors.getBannerBackground(display);
 		// foreground = JFaceColors.getBannerForeground(display);
 
-		// createInfoArea(editorComposite);
+		//createInfoArea(editorComposite);
 		createContextMenu();
 		createAttributeLayout();
+		createAttachmentLayout();
 		createDescriptionLayout(toolkit, form);
 		createCommentLayout(toolkit, form);
 		createButtonLayouts(toolkit, form.getBody());
 
-		WorkbenchHelpSystem.getInstance().setHelp(parent, IBugzillaConstants.EDITOR_PAGE_CONTEXT);
+		WorkbenchHelpSystem.getInstance().setHelp(parent, BugzillaUiPlugin.EDITOR_PAGE_CONTEXT);
 
 		editorComposite.setMenu(contextMenuManager.createContextMenu(editorComposite));
 		form.reflow(true);
@@ -490,6 +532,387 @@ public abstract class AbstractBugEditor extends EditorPart {
 		getSite().registerContextMenu("#BugEditor", contextMenuManager, getSite().getSelectionProvider());
 	}
 
+	// /**
+	// * Creates the attribute layout, which contains most of the basic
+	// attributes
+	// * of the bug (some of which are editable).
+	// */
+	// protected void createAttributeLayout() {
+	//
+	// String title = getTitleString();
+	// String keywords = "";
+	// String url = "";
+	//
+	// Section section = toolkit.createSection(form.getBody(),
+	// ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+	// section.setText(LABEL_SECTION_ATTRIBUTES);
+	// section.setExpanded(true);
+	// section.setLayout(new GridLayout());
+	// section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+	//
+	// section.addExpansionListener(new IExpansionListener() {
+	// public void expansionStateChanging(ExpansionEvent e) {
+	// form.reflow(true);
+	// }
+	//
+	// public void expansionStateChanged(ExpansionEvent e) {
+	// form.reflow(true);
+	// }
+	// });
+	//
+	// // Attributes Composite- this holds all the combo fiels and text fields
+	// Composite attributesComposite = toolkit.createComposite(section);
+	// GridLayout attributesLayout = new GridLayout();
+	// attributesLayout.numColumns = 4;
+	// attributesLayout.horizontalSpacing = 14;
+	// attributesLayout.verticalSpacing = 6;
+	// attributesComposite.setLayout(attributesLayout);
+	// GridData attributesData = new GridData(GridData.FILL_BOTH);
+	// attributesData.horizontalSpan = 1;
+	// attributesData.grabExcessVerticalSpace = false;
+	// attributesComposite.setLayoutData(attributesData);
+	// // attributesComposite.setBackground(background);
+	// // End Attributes Composite
+	//
+	// section.setClient(attributesComposite);
+	//
+	// // Attributes Title Area
+	// // Composite attributesTitleComposite = new
+	// // Composite(attributesComposite, SWT.NONE);
+	// // GridLayout attributesTitleLayout = new GridLayout();
+	// // attributesTitleLayout.horizontalSpacing = 0;
+	// // attributesTitleLayout.marginWidth = 0;
+	// // attributesTitleComposite.setLayout(attributesTitleLayout);
+	// // attributesTitleComposite.setBackground(background);
+	// // GridData attributesTitleData = new
+	// // GridData(GridData.HORIZONTAL_ALIGN_FILL);
+	// // attributesTitleData.horizontalSpan = 4;
+	// // attributesTitleData.grabExcessVerticalSpace = false;
+	// // attributesTitleComposite.setLayoutData(attributesTitleData);
+	// // End Attributes Title
+	//
+	// // Set the Attributes Title
+	// // newAttributesLayout(attributesTitleComposite);
+	// // titleLabel.setText(title);
+	// bugzillaInput.setToolTipText(title);
+	// int currentCol = 1;
+	//
+	// // String ccValue = null;
+	//
+	// // Populate Attributes
+	// for (Iterator<AbstractRepositoryReportAttribute> it =
+	// getReport().getAttributes().iterator(); it.hasNext();) {
+	// AbstractRepositoryReportAttribute attribute = it.next();
+	// String key = attribute.getID();
+	// String name = attribute.getName();
+	// String value = checkText(attribute.getValue());
+	// System.err.println(">>> AbstractBugEditor>> name: "+name+" key: "+key+"
+	// value:"+value);
+	// Map<String, String> values = attribute.getOptionValues();
+	//
+	// // make sure we don't try to display a hidden field
+	// if (attribute.isHidden() || (key != null &&
+	// key.equals("status_whiteboard")))
+	// continue;
+	//
+	// if (values == null)
+	// values = new HashMap<String, String>();
+	//
+	// if (key == null)
+	// key = "";
+	//
+	// GridData data = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
+	// data.horizontalSpan = 1;
+	// data.horizontalIndent = HORZ_INDENT;
+	//
+	// if (key.equals(BugzillaReportElement.KEYWORDS.getKeyString())) {
+	// keywords = attribute.getValue();
+	// } else if (key.equals(BugzillaReportElement.CC.getKeyString())) {
+	// continue;
+	// } else if (key.equals(BugzillaReportElement.NEWCC.getKeyString())) {
+	// // force move to first column
+	// if (currentCol > 1) {
+	// while (currentCol <= attributesLayout.numColumns) {
+	// newLayout(attributesComposite, 1, "", PROPERTY);
+	// currentCol++;
+	// }
+	// }
+	// addCCList(toolkit, "", attributesComposite);
+	// } else if (key.equals(BugzillaReportElement.DEPENDSON.getKeyString())) {
+	// // Dependson and blocked are multi valued so need to explicitly
+	// // be parsed and shown in the AbstractBugEditor
+	// continue;
+	// } else if (key.equals(BugzillaReportElement.BLOCKED.getKeyString())) {
+	// // Dependson and blocked are multi valued so need to explicitly
+	// // be parsed and shown in the AbstractBugEditor
+	// continue;
+	// } else if (key.equals("bug_file_loc")) {
+	// url = value;
+	// } else if (key.equals("op_sys")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// // oSCombo = new Combo(attributesComposite, SWT.NO_BACKGROUND |
+	// // SWT.MULTI | SWT.V_SCROLL | SWT.READ_ONLY);//SWT.NONE
+	// oSCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
+	// // oSCombo = new Combo(attributesComposite, SWT.FLAT |
+	// // SWT.READ_ONLY);
+	// toolkit.adapt(oSCombo, true, true);
+	// oSCombo.setFont(TEXT_FONT);
+	// oSCombo.setLayoutData(data);
+	// // oSCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// oSCombo.add(a[i]);
+	// }
+	// if (oSCombo.indexOf(value) != -1) {
+	// oSCombo.select(oSCombo.indexOf(value));
+	// } else {
+	// oSCombo.select(oSCombo.indexOf("All"));
+	// }
+	// // oSCombo.addListener(SWT.Modify, this);
+	// oSCombo.addSelectionListener(new ComboSelectionListener(oSCombo));
+	// comboListenerMap.put(oSCombo, attribute);
+	// oSCombo.addListener(SWT.FocusIn, new GenericListener());
+	// currentCol += 2;
+	// } else if (key.equals("version")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// versionCombo = new CCombo(attributesComposite, SWT.FLAT |
+	// SWT.NO_BACKGROUND | SWT.MULTI | SWT.V_SCROLL
+	// | SWT.READ_ONLY);
+	// toolkit.adapt(versionCombo, true, true);
+	// versionCombo.setFont(TEXT_FONT);
+	// versionCombo.setLayoutData(data);
+	// // versionCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// versionCombo.add(a[i]);
+	// }
+	// versionCombo.select(versionCombo.indexOf(value));
+	// // versionCombo.addListener(SWT.Modify, this);
+	// versionCombo.addSelectionListener(new
+	// ComboSelectionListener(versionCombo));
+	// versionCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(versionCombo, attribute);
+	// currentCol += 2;
+	// } else if (key.equals("priority")) {
+	// // newLayout(attributesComposite, 1, "Priority", PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// priorityCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.V_SCROLL |
+	// SWT.READ_ONLY);
+	// toolkit.adapt(priorityCombo, true, true);
+	// priorityCombo.setFont(TEXT_FONT);
+	// priorityCombo.setLayoutData(data);
+	// // priorityCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// priorityCombo.add(a[i]);
+	// }
+	// priorityCombo.select(priorityCombo.indexOf(value));
+	// // priorityCombo.addListener(SWT.Modify, this);
+	// priorityCombo.addSelectionListener(new
+	// ComboSelectionListener(priorityCombo));
+	// priorityCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(priorityCombo, attribute);
+	// currentCol += 2;
+	// } else if (key.equals("bug_severity")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// severityCombo = new CCombo(attributesComposite, SWT.FLAT |
+	// SWT.READ_ONLY);
+	// toolkit.adapt(severityCombo, true, true);
+	// severityCombo.setFont(TEXT_FONT);
+	// severityCombo.setLayoutData(data);
+	// // severityCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// severityCombo.add(a[i]);
+	// }
+	// severityCombo.select(severityCombo.indexOf(value));
+	// severityCombo.addSelectionListener(new
+	// ComboSelectionListener(severityCombo));
+	// // severityCombo.addListener(SWT.Modify, this);
+	// severityCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(severityCombo, attribute);
+	// currentCol += 2;
+	// } else if (key.equals("target_milestone")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// milestoneCombo = new CCombo(attributesComposite, SWT.FLAT |
+	// SWT.NO_BACKGROUND | SWT.MULTI
+	// | SWT.V_SCROLL | SWT.READ_ONLY);
+	// toolkit.adapt(milestoneCombo, true, true);
+	// milestoneCombo.setFont(TEXT_FONT);
+	// milestoneCombo.setLayoutData(data);
+	// // milestoneCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// milestoneCombo.add(a[i]);
+	// }
+	// milestoneCombo.select(milestoneCombo.indexOf(value));
+	// // milestoneCombo.addListener(SWT.Modify, this);
+	// milestoneCombo.addSelectionListener(new
+	// ComboSelectionListener(milestoneCombo));
+	// milestoneCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(milestoneCombo, attribute);
+	// currentCol += 2;
+	// } else if (key.equals("rep_platform")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// platformCombo = new CCombo(attributesComposite, SWT.FLAT |
+	// SWT.NO_BACKGROUND | SWT.MULTI | SWT.V_SCROLL
+	// | SWT.READ_ONLY);
+	// toolkit.adapt(platformCombo, true, true);
+	// platformCombo.setFont(TEXT_FONT);
+	// platformCombo.setLayoutData(data);
+	// // platformCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// platformCombo.add(a[i]);
+	// }
+	// platformCombo.select(platformCombo.indexOf(value));
+	// // platformCombo.addListener(SWT.Modify, this);
+	// platformCombo.addSelectionListener(new
+	// ComboSelectionListener(platformCombo));
+	// platformCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(platformCombo, attribute);
+	// currentCol += 2;
+	// } else if (key.equals("product")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// // toolkit.createLabel(attributesComposite, value);
+	// Composite uneditableComp = toolkit.createComposite(attributesComposite);
+	// GridLayout textLayout = new GridLayout();
+	// textLayout.marginWidth = 1;
+	// uneditableComp.setLayout(textLayout);
+	// toolkit.createText(uneditableComp, value, SWT.READ_ONLY);//
+	// Label(attributesComposite,
+	// // value);
+	// // newLayout(attributesComposite, 1, value,
+	// // VALUE).addListener(SWT.FocusIn, new GenericListener());
+	// currentCol += 2;
+	// } else if (key.equals("assigned_to")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// assignedTo = new Text(attributesComposite, SWT.SINGLE | SWT.WRAP);
+	// assignedTo.setFont(TEXT_FONT);
+	// assignedTo.setText(value);
+	// data = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
+	// data.horizontalSpan = 1;
+	// assignedTo.setLayoutData(data);
+	//
+	// assignedTo.addListener(SWT.KeyUp, new Listener() {
+	// public void handleEvent(Event event) {
+	// String sel = assignedTo.getText();
+	// AbstractRepositoryReportAttribute a = getReport().getAttribute(
+	// BugzillaReportElement.ASSIGNED_TO);
+	// if (!(a.getValue().equals(sel))) {
+	// a.setValue(sel);
+	// changeDirtyStatus(true);
+	// }
+	// }
+	// });
+	// assignedTo.addListener(SWT.FocusIn, new GenericListener());
+	//
+	// currentCol += 2;
+	// } else if (key.equals("component")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// componentCombo = new CCombo(attributesComposite, SWT.FLAT |
+	// SWT.NO_BACKGROUND | SWT.MULTI
+	// | SWT.V_SCROLL | SWT.READ_ONLY);
+	// toolkit.adapt(componentCombo, true, true);
+	// componentCombo.setFont(TEXT_FONT);
+	// componentCombo.setLayoutData(data);
+	// // componentCombo.setBackground(background);
+	// Set<String> s = values.keySet();
+	// String[] a = s.toArray(new String[s.size()]);
+	// Arrays.sort(a);
+	// for (int i = 0; i < a.length; i++) {
+	// componentCombo.add(a[i]);
+	// }
+	// componentCombo.select(componentCombo.indexOf(value));
+	// // componentCombo.addListener(SWT.Modify, this);
+	// componentCombo.addSelectionListener(new
+	// ComboSelectionListener(componentCombo));
+	// componentCombo.addListener(SWT.FocusIn, new GenericListener());
+	// comboListenerMap.put(componentCombo, attribute);
+	// currentCol += 2;
+	// } else if (name.equals("Summary")) {
+	// // Don't show the summary here.
+	// continue;
+	// } else if (name.equals("Last Modified")) {
+	// // Don't show last modified here.
+	// continue;
+	// } else if (name.equals("Bug#")) {
+	// // Don't show bug number here
+	// continue;
+	// } else if (key.equals("bug_status")) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// Composite uneditableComp = toolkit.createComposite(attributesComposite);
+	// GridLayout textLayout = new GridLayout();
+	// textLayout.marginWidth = 1;
+	// uneditableComp.setLayout(textLayout);
+	// toolkit.createText(uneditableComp, value, SWT.READ_ONLY);//
+	// Label(attributesComposite,
+	// // value);
+	// // newLayout(attributesComposite, 1, value,
+	// // VALUE).addListener(SWT.FocusIn, new GenericListener());
+	// currentCol += 2;
+	// } else if (values.isEmpty()) {
+	// // newLayout(attributesComposite, 1, name, PROPERTY);
+	// toolkit.createLabel(attributesComposite, name);
+	// Composite uneditableComp = toolkit.createComposite(attributesComposite);
+	// GridLayout textLayout = new GridLayout();
+	// textLayout.marginWidth = 1;
+	// uneditableComp.setLayout(textLayout);
+	// toolkit.createText(uneditableComp, value, SWT.READ_ONLY);//
+	// Label(attributesComposite,
+	// // value);
+	// // newLayout(attributesComposite, 1, value,
+	// // VALUE).addListener(SWT.FocusIn, new GenericListener());
+	// currentCol += 2;
+	// }
+	// if (currentCol > attributesLayout.numColumns) {
+	// currentCol -= attributesLayout.numColumns;
+	// }
+	// }
+	// // End Populate Attributes
+	//
+	// // make sure that we are in the first column
+	// if (currentCol > 1) {
+	// while (currentCol <= attributesLayout.numColumns) {
+	// newLayout(attributesComposite, 1, "", PROPERTY);
+	// currentCol++;
+	// }
+	// }
+	//
+	// // URL field
+	// addUrlText(url, attributesComposite);
+	//
+	// // keywords text field (not editable)
+	// addKeywordsList(toolkit, keywords, attributesComposite);
+	// // if (ccValue != null) {
+	// // addCCList(toolkit, ccValue, attributesComposite);
+	// // }
+	// addSummaryText(attributesComposite);
+	// // End URL, Keywords, Summary Text Fields
+	// toolkit.paintBordersFor(attributesComposite);
+	// }
+
 	/**
 	 * Creates the attribute layout, which contains most of the basic attributes
 	 * of the bug (some of which are editable).
@@ -497,9 +920,6 @@ public abstract class AbstractBugEditor extends EditorPart {
 	protected void createAttributeLayout() {
 
 		String title = getTitleString();
-		String keywords = "";
-		String url = "";
-
 		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_ATTRIBUTES);
 		section.setExpanded(true);
@@ -516,7 +936,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 			}
 		});
 
-		// Attributes Composite- this holds all the combo fiels and text fields
+		// Attributes Composite- this holds all the combo fields and text fields
 		Composite attributesComposite = toolkit.createComposite(section);
 		GridLayout attributesLayout = new GridLayout();
 		attributesLayout.numColumns = 4;
@@ -527,297 +947,130 @@ public abstract class AbstractBugEditor extends EditorPart {
 		attributesData.horizontalSpan = 1;
 		attributesData.grabExcessVerticalSpace = false;
 		attributesComposite.setLayoutData(attributesData);
-		// attributesComposite.setBackground(background);
-		// End Attributes Composite
-
 		section.setClient(attributesComposite);
-
-		// Attributes Title Area
-		// Composite attributesTitleComposite = new
-		// Composite(attributesComposite, SWT.NONE);
-		// GridLayout attributesTitleLayout = new GridLayout();
-		// attributesTitleLayout.horizontalSpacing = 0;
-		// attributesTitleLayout.marginWidth = 0;
-		// attributesTitleComposite.setLayout(attributesTitleLayout);
-		// attributesTitleComposite.setBackground(background);
-		// GridData attributesTitleData = new
-		// GridData(GridData.HORIZONTAL_ALIGN_FILL);
-		// attributesTitleData.horizontalSpan = 4;
-		// attributesTitleData.grabExcessVerticalSpace = false;
-		// attributesTitleComposite.setLayoutData(attributesTitleData);
-		// End Attributes Title
-
-		// Set the Attributes Title
-		// newAttributesLayout(attributesTitleComposite);
-		// titleLabel.setText(title);
 		bugzillaInput.setToolTipText(title);
+
 		int currentCol = 1;
 
-		String ccValue = null;
+		for (AbstractRepositoryReportAttribute attribute : getReport().getAttributes()) {
 
-		// Populate Attributes
-		for (Iterator<Attribute> it = getBug().getAttributes().iterator(); it.hasNext();) {
-			Attribute attribute = it.next();
-			String key = attribute.getParameterName();
+			// String key = attribute.getID();
 			String name = attribute.getName();
-			String value = checkText(attribute.getValue());
-			Map<String, String> values = attribute.getOptionValues();
-
-			// make sure we don't try to display a hidden field
-			if (attribute.isHidden() || (key != null && key.equals("status_whiteboard")))
+			String value = "";
+			//try {
+				value = checkText(attribute.getValue());
+				//value = checkText(BugzillaRepositoryUtil.decodeStringFromCharset(attribute.getValue(), getReport().getCharset()));
+//			} catch (UnsupportedEncodingException e1) {
+//				// ignore
+//			}
+			// System.err.println(">>> AbstractBugEditor>> name: "+name+"
+			// key:"+key+" value:"+value+" is hidden"+attribute.isHidden());
+			if (attribute.isHidden())
 				continue;
-
+			Map<String, String> values = attribute.getOptionValues();
 			if (values == null)
 				values = new HashMap<String, String>();
-
-			if (key == null)
-				key = "";
 
 			GridData data = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
 			data.horizontalSpan = 1;
 			data.horizontalIndent = HORZ_INDENT;
 
-			if (key.equals("short_desc") || key.equals("keywords")) {
-				keywords = value;
-			} else if (key.equals("newcc")) {
-				ccValue = value;
-				if (value == null)
-					ccValue = "";
-			} else if (key.equals("bug_file_loc")) {
-				url = value;
-			} else if (key.equals("op_sys")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
+			if (attribute.hasOptions() && !attribute.isReadOnly()) {
 				toolkit.createLabel(attributesComposite, name);
-				// oSCombo = new Combo(attributesComposite, SWT.NO_BACKGROUND |
-				// SWT.MULTI | SWT.V_SCROLL | SWT.READ_ONLY);//SWT.NONE
-				oSCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
-				// oSCombo = new Combo(attributesComposite, SWT.FLAT |
-				// SWT.READ_ONLY);
-				toolkit.adapt(oSCombo, true, true);
-				oSCombo.setFont(TEXT_FONT);
-				oSCombo.setLayoutData(data);
-				// oSCombo.setBackground(background);
+				attributeCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
+				toolkit.adapt(attributeCombo, true, true);
+				attributeCombo.setFont(TEXT_FONT);
+				attributeCombo.setLayoutData(data);
 				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
+				String[] a = s.toArray(new String[s.size()]);				
 				for (int i = 0; i < a.length; i++) {
-					oSCombo.add(a[i]);
+					attributeCombo.add(a[i]);
 				}
-				if (oSCombo.indexOf(value) != -1) {
-					oSCombo.select(oSCombo.indexOf(value));
+				if (attributeCombo.indexOf(value) != -1) {
+					attributeCombo.select(attributeCombo.indexOf(value));
+				}
+				attributeCombo.addSelectionListener(new ComboSelectionListener(attributeCombo));
+				comboListenerMap.put(attributeCombo, attribute);
+				attributeCombo.addListener(SWT.FocusIn, new GenericListener());
+				currentCol += 2;
+			} else {
+				toolkit.createLabel(attributesComposite, name);
+				Composite textFieldComposite = toolkit.createComposite(attributesComposite);
+				GridLayout textLayout = new GridLayout();
+				textLayout.marginWidth = 1;
+				textFieldComposite.setLayout(textLayout);
+				GridData textData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
+				textData.horizontalSpan = 1;
+				textData.widthHint = 135;
+
+				if (attribute.isReadOnly()) {
+					final Text text = toolkit.createText(textFieldComposite, value, SWT.FLAT | SWT.READ_ONLY);					
+					text.setLayoutData(textData);
 				} else {
-					oSCombo.select(oSCombo.indexOf("All"));
-				}
-				// oSCombo.addListener(SWT.Modify, this);
-				oSCombo.addSelectionListener(new ComboSelectionListener(oSCombo));
-				comboListenerMap.put(oSCombo, name);
-				oSCombo.addListener(SWT.FocusIn, new GenericListener());
-				currentCol += 2;
-			} else if (key.equals("version")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				versionCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.NO_BACKGROUND | SWT.MULTI | SWT.V_SCROLL
-						| SWT.READ_ONLY);
-				toolkit.adapt(versionCombo, true, true);
-				versionCombo.setFont(TEXT_FONT);
-				versionCombo.setLayoutData(data);
-				// versionCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					versionCombo.add(a[i]);
-				}
-				versionCombo.select(versionCombo.indexOf(value));
-				// versionCombo.addListener(SWT.Modify, this);
-				versionCombo.addSelectionListener(new ComboSelectionListener(versionCombo));
-				versionCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(versionCombo, name);
-				currentCol += 2;
-			} else if (key.equals("priority")) {
-				// newLayout(attributesComposite, 1, "Priority", PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				priorityCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.V_SCROLL | SWT.READ_ONLY);
-				toolkit.adapt(priorityCombo, true, true);
-				priorityCombo.setFont(TEXT_FONT);
-				priorityCombo.setLayoutData(data);
-				// priorityCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					priorityCombo.add(a[i]);
-				}
-				priorityCombo.select(priorityCombo.indexOf(value));
-				// priorityCombo.addListener(SWT.Modify, this);
-				priorityCombo.addSelectionListener(new ComboSelectionListener(priorityCombo));
-				priorityCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(priorityCombo, name);
-				currentCol += 2;
-			} else if (key.equals("bug_severity")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				severityCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
-				toolkit.adapt(severityCombo, true, true);
-				severityCombo.setFont(TEXT_FONT);
-				severityCombo.setLayoutData(data);
-				// severityCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					severityCombo.add(a[i]);
-				}
-				severityCombo.select(severityCombo.indexOf(value));
-				severityCombo.addSelectionListener(new ComboSelectionListener(severityCombo));
-				// severityCombo.addListener(SWT.Modify, this);
-				severityCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(severityCombo, name);
-				currentCol += 2;
-			} else if (key.equals("target_milestone")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				milestoneCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.NO_BACKGROUND | SWT.MULTI
-						| SWT.V_SCROLL | SWT.READ_ONLY);
-				toolkit.adapt(milestoneCombo, true, true);
-				milestoneCombo.setFont(TEXT_FONT);
-				milestoneCombo.setLayoutData(data);
-				// milestoneCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					milestoneCombo.add(a[i]);
-				}
-				milestoneCombo.select(milestoneCombo.indexOf(value));
-				// milestoneCombo.addListener(SWT.Modify, this);
-				milestoneCombo.addSelectionListener(new ComboSelectionListener(milestoneCombo));
-				milestoneCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(milestoneCombo, name);
-				currentCol += 2;
-			} else if (key.equals("rep_platform")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				platformCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.NO_BACKGROUND | SWT.MULTI | SWT.V_SCROLL
-						| SWT.READ_ONLY);
-				toolkit.adapt(platformCombo, true, true);
-				platformCombo.setFont(TEXT_FONT);
-				platformCombo.setLayoutData(data);
-				// platformCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					platformCombo.add(a[i]);
-				}
-				platformCombo.select(platformCombo.indexOf(value));
-				// platformCombo.addListener(SWT.Modify, this);
-				platformCombo.addSelectionListener(new ComboSelectionListener(platformCombo));
-				platformCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(platformCombo, name);
-				currentCol += 2;
-			} else if (key.equals("product")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				// toolkit.createLabel(attributesComposite, value);
-				Composite uneditableComp = toolkit.createComposite(attributesComposite);
-				GridLayout textLayout = new GridLayout();
-				textLayout.marginWidth = 1;
-				uneditableComp.setLayout(textLayout);
-				toolkit.createText(uneditableComp, value, SWT.READ_ONLY);// Label(attributesComposite,
-				// value);
-				// newLayout(attributesComposite, 1, value,
-				// VALUE).addListener(SWT.FocusIn, new GenericListener());
-				currentCol += 2;
-			} else if (key.equals("assigned_to")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				assignedTo = new Text(attributesComposite, SWT.BORDER | SWT.SINGLE | SWT.WRAP);
-				assignedTo.setFont(TEXT_FONT);
-				assignedTo.setText(value);
-				data = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
-				data.horizontalSpan = 1;
-				assignedTo.setLayoutData(data);
-
-				assignedTo.addListener(SWT.KeyUp, new Listener() {
-					public void handleEvent(Event event) {
-						String sel = assignedTo.getText();
-						Attribute a = getBug().getAttribute("Assign To");
-						if (!(a.getNewValue().equals(sel))) {
-							a.setNewValue(sel);
-							changeDirtyStatus(true);
+					final Text text = toolkit.createText(textFieldComposite, value, SWT.FLAT);
+					//text.setFont(COMMENT_FONT);						
+					text.setLayoutData(textData);
+					toolkit.paintBordersFor(textFieldComposite);
+					text.setData(attribute);
+					text.addListener(SWT.KeyUp, new Listener() {
+						public void handleEvent(Event event) {
+							String sel = text.getText();
+							AbstractRepositoryReportAttribute a = (AbstractRepositoryReportAttribute) text.getData();
+							if (!(a.getValue().equals(sel))) {
+								a.setValue(sel);
+								changeDirtyStatus(true);
+							}
 						}
-					}
-				});
-				assignedTo.addListener(SWT.FocusIn, new GenericListener());
-
-				currentCol += 2;
-			} else if (key.equals("component")) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				componentCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.NO_BACKGROUND | SWT.MULTI
-						| SWT.V_SCROLL | SWT.READ_ONLY);
-				toolkit.adapt(componentCombo, true, true);
-				componentCombo.setFont(TEXT_FONT);
-				componentCombo.setLayoutData(data);
-				// componentCombo.setBackground(background);
-				Set<String> s = values.keySet();
-				String[] a = s.toArray(new String[s.size()]);
-				Arrays.sort(a);
-				for (int i = 0; i < a.length; i++) {
-					componentCombo.add(a[i]);
+					});
+					text.addListener(SWT.FocusIn, new GenericListener());
 				}
-				componentCombo.select(componentCombo.indexOf(value));
-				// componentCombo.addListener(SWT.Modify, this);
-				componentCombo.addSelectionListener(new ComboSelectionListener(componentCombo));
-				componentCombo.addListener(SWT.FocusIn, new GenericListener());
-				comboListenerMap.put(componentCombo, name);
-				currentCol += 2;
-			} else if (name.equals("Summary")) {
-				// Don't show the summary here.
-				continue;
-			} else if (name.equals("Last Modified")) {
-				// Don't show last modified here.
-				continue;
-			} else if (name.equals("Bug#")) {
-				// Don't show bug number here
-				continue;
-			} else if (values.isEmpty()) {
-				// newLayout(attributesComposite, 1, name, PROPERTY);
-				toolkit.createLabel(attributesComposite, name);
-				Composite uneditableComp = toolkit.createComposite(attributesComposite);
-				GridLayout textLayout = new GridLayout();
-				textLayout.marginWidth = 1;
-				uneditableComp.setLayout(textLayout);
-				toolkit.createText(uneditableComp, value, SWT.READ_ONLY);// Label(attributesComposite,
-				// value);
-				// newLayout(attributesComposite, 1, value,
-				// VALUE).addListener(SWT.FocusIn, new GenericListener());
+
 				currentCol += 2;
 			}
 			if (currentCol > attributesLayout.numColumns) {
 				currentCol -= attributesLayout.numColumns;
 			}
+
 		}
-		// End Populate Attributes
 
 		// make sure that we are in the first column
 		if (currentCol > 1) {
 			while (currentCol <= attributesLayout.numColumns) {
-				newLayout(attributesComposite, 1, "", PROPERTY);
+				toolkit.createLabel(attributesComposite, "");
+				// newLayout(attributesComposite, 1, "", PROPERTY);
 				currentCol++;
 			}
 		}
 
-		// URL, Keywords, Summary Text Fields
-		addUrlText(url, attributesComposite);
+		// Perhaps these should be performed in subclass eventually
+
+		addCCList(toolkit, "", attributesComposite);
+
+		// URL field
+		addUrlText(getReport().getAttributeValue(BugzillaReportElement.BUG_FILE_LOC), attributesComposite);
 
 		// keywords text field (not editable)
-		addKeywordsList(toolkit, keywords, attributesComposite);
-		if (ccValue != null) {
-			addCCList(toolkit, ccValue, attributesComposite);
+		try {
+			addKeywordsList(toolkit, getReport().getAttributeValue(BugzillaReportElement.KEYWORDS), attributesComposite);
+		} catch (IOException e) {
+			MessageDialog.openInformation(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
+					"Could not retrieve keyword list, ensure proper configuration in "+TaskRepositoriesView.NAME+"\n\nError reported: " + e.getMessage());
 		}
-		addSummaryText(attributesComposite);
+
+//		addSelfToCCCheck = toolkit.createButton(attributesComposite, "Add "+repository.getUserName()+" to CC", SWT.FLAT | SWT.CHECK);
+//		addSelfToCCCheck.setSelection(true);
+//		addSelfToCCCheck.addSelectionListener(new SelectionAdapter() {
+//
+//			@Override
+//			public void widgetSelected(SelectionEvent e) {
+//				if(addSelfToCCCheck.getSelection()) {
+//					getReport().setAttributeValue(BugzillaReportElement.ADDSELFCC, "1");
+//				} else {
+//					getReport().setAttributeValue(BugzillaReportElement.ADDSELFCC, "0");
+//				}
+//			}});
+//		
+		//addSummaryText(attributesComposite);
 		// End URL, Keywords, Summary Text Fields
 		toolkit.paintBordersFor(attributesComposite);
 	}
@@ -843,9 +1096,9 @@ public abstract class AbstractBugEditor extends EditorPart {
 		urlText.addListener(SWT.KeyUp, new Listener() {
 			public void handleEvent(Event event) {
 				String sel = urlText.getText();
-				Attribute a = getBug().getAttribute("URL");
-				if (!(a.getNewValue().equals(sel))) {
-					a.setNewValue(sel);
+				AbstractRepositoryReportAttribute a = getReport().getAttribute(BugzillaReportElement.BUG_FILE_LOC);
+				if (!(a.getValue().equals(sel))) {
+					a.setValue(sel);
 					changeDirtyStatus(true);
 				}
 			}
@@ -853,7 +1106,8 @@ public abstract class AbstractBugEditor extends EditorPart {
 		urlText.addListener(SWT.FocusIn, new GenericListener());
 	}
 
-	protected abstract void addKeywordsList(FormToolkit toolkit, String keywords, Composite attributesComposite);
+	protected abstract void addKeywordsList(FormToolkit toolkit, String keywords, Composite attributesComposite)
+			throws IOException;
 
 	protected abstract void addCCList(FormToolkit toolkit, String value, Composite attributesComposite);
 
@@ -865,20 +1119,139 @@ public abstract class AbstractBugEditor extends EditorPart {
 	 */
 	protected void addSummaryText(Composite attributesComposite) {
 		// newLayout(attributesComposite, 1, "Summary:", PROPERTY);
-		toolkit.createLabel(attributesComposite, "Summary:");
-		summaryText = toolkit.createText(attributesComposite, getBug().getSummary());// SWT.BORDER
-		// |
-		// SWT.SINGLE
-		// |
-		// SWT.WRAP
-		summaryText.setFont(TEXT_FONT);
-		GridData summaryTextData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
-		summaryTextData.horizontalSpan = 3;
-		summaryTextData.widthHint = 200;
+		toolkit.createLabel(attributesComposite, "Summary:").setFont(TITLE_FONT);
+		summaryText = toolkit.createText(attributesComposite, getBug().getSummary(), SWT.FLAT);
+		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
+		Font summaryFont = themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID);		
+		summaryText.setFont(summaryFont);
+		GridData summaryTextData = new GridData(GridData.FILL_HORIZONTAL);//HORIZONTAL_ALIGN_FILL
+		summaryTextData.horizontalSpan = 1;
+		//summaryTextData.widthHint = 200;
+		
 		summaryText.setLayoutData(summaryTextData);
-		// summaryText.setText(getBug().getSummary());
 		summaryText.addListener(SWT.KeyUp, new SummaryListener());
 		summaryText.addListener(SWT.FocusIn, new GenericListener());
+	}
+
+	protected void createAttachmentLayout() {
+		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+		section.setText(LABEL_SECTION_ATTACHMENTS);
+		section.setExpanded(true);
+		section.setLayout(new GridLayout());
+		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+		Composite attachmentsComposite = toolkit.createComposite(section);
+		attachmentsComposite.setLayout(new GridLayout());
+		attachmentsComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
+		section.setClient(attachmentsComposite);
+
+		if (getReport().getAttachments().size() > 0) {
+
+			attachmentsTable = toolkit.createTable(attachmentsComposite, SWT.SINGLE | SWT.BORDER | SWT.FULL_SELECTION);
+			attachmentsTable.setLinesVisible(true);
+			attachmentsTable.setHeaderVisible(true);
+			attachmentsTable.setLayout(new GridLayout());
+			GridData tableGridData = new GridData(GridData.FILL_BOTH);
+			// tableGridData.heightHint = 100;
+			tableGridData.widthHint = DESCRIPTION_WIDTH;
+			attachmentsTable.setLayoutData(tableGridData);
+
+			for (int i = 0; i < attachmentsColumns.length; i++) {
+				TableColumn column = new TableColumn(attachmentsTable, SWT.LEFT, i);
+				column.setText(attachmentsColumns[i]);
+				column.setWidth(attachmentsColumnWidths[i]);
+			}
+
+			TableViewer attachmentsTableViewer = new TableViewer(attachmentsTable);
+			attachmentsTableViewer.setUseHashlookup(true);
+			attachmentsTableViewer.setColumnProperties(attachmentsColumns);
+
+			attachmentsTableViewer.setSorter(new ViewerSorter() {
+				public int compare(Viewer viewer, Object e1, Object e2) {
+					ReportAttachment attachment1 = (ReportAttachment) e1;
+					ReportAttachment attachment2 = (ReportAttachment) e2;
+					return attachment1.getDateCreated().compareTo(attachment2.getDateCreated());
+				}
+			});
+
+			attachmentsTableViewer.setContentProvider(new IStructuredContentProvider() {
+				public Object[] getElements(Object inputElement) {
+					return getReport().getAttachments().toArray();
+				}
+
+				public void dispose() {
+					// ignore
+
+				}
+
+				public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+					// ignore
+
+				}
+			});
+
+			attachmentsTableViewer.setLabelProvider(new ITableLabelProvider() {
+
+				public Image getColumnImage(Object element, int columnIndex) {
+					// ReportAttachment attachment = (ReportAttachment) element;
+					return null;
+				}
+
+				public String getColumnText(Object element, int columnIndex) {
+					ReportAttachment attachment = (ReportAttachment) element;
+					switch (columnIndex) {
+					case 0:
+						return attachment.getDescription();
+					case 1:
+						return attachment.getContentType();
+					case 2:
+						return attachment.getCreator();
+					case 3:
+						return attachment.getDateCreated().toString();
+					}
+					return "unrecognized column";
+				}
+
+				public void addListener(ILabelProviderListener listener) {
+					// ignore
+
+				}
+
+				public void dispose() {
+					// ignore
+
+				}
+
+				public boolean isLabelProperty(Object element, String property) {
+					// ignore
+					return false;
+				}
+
+				public void removeListener(ILabelProviderListener listener) {
+					// ignore
+
+				}
+
+			});
+
+			attachmentsTableViewer.addDoubleClickListener(new IDoubleClickListener() {
+				public void doubleClick(DoubleClickEvent event) {
+					String address = repository.getUrl() + "/attachment.cgi?id=";
+					if (!event.getSelection().isEmpty()) {
+						StructuredSelection selection = (StructuredSelection) event.getSelection();
+						ReportAttachment attachment = (ReportAttachment) selection.getFirstElement();
+						address += attachment.getId() + "&amp;action=view";
+						;
+						TaskUiUtil.openUrl(address, address, address);
+					}
+				}
+			});
+
+			attachmentsTableViewer.setInput(getReport());
+
+		} else {
+			toolkit.createLabel(attachmentsComposite, "No attachments");
+		}
 	}
 
 	/**
@@ -1065,14 +1438,13 @@ public abstract class AbstractBugEditor extends EditorPart {
 	}
 
 	protected TextViewer addRepositoryText(TaskRepository repository, Composite composite, String text) {
-		RepositoryTextViewer commentViewer = new RepositoryTextViewer(repository, composite, SWT.NONE);
+		RepositoryTextViewer commentViewer = new RepositoryTextViewer(repository, composite, SWT.MULTI | SWT.WRAP);
 
 		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
 
 		commentViewer.getTextWidget().setFont(themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID));
 
 		commentViewer.setEditable(false);
-
 		commentViewer.getTextWidget().addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -1187,12 +1559,12 @@ public abstract class AbstractBugEditor extends EditorPart {
 	public void saveBug() {
 		try {
 			updateBug();
-			IBugzillaBug bug = getBug();
+			// IBugzillaBug bug = getBug();
 
 			final BugzillaRepositoryConnector bugzillaRepositoryClient = (BugzillaRepositoryConnector) MylarTaskListPlugin
 					.getRepositoryManager().getRepositoryConnector(BugzillaPlugin.REPOSITORY_KIND);
 			changeDirtyStatus(false);
-			bugzillaRepositoryClient.saveBugReport(bug);
+			bugzillaRepositoryClient.saveBugReport((BugzillaReport) getReport());
 		} catch (Exception e) {
 			MylarStatusHandler.fail(e, "bug save offline failed", true);
 		}
@@ -1336,7 +1708,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 	 */
 	protected class GenericListener implements Listener {
 		public void handleEvent(Event event) {
-			IBugzillaBug bug = getBug();
+			BugzillaReport bug = (BugzillaReport) getReport();
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
 					new BugzillaReportSelection(bug.getId(), bug.getRepositoryUrl(), bug.getLabel(), false, bug
 							.getSummary()))));
@@ -1366,6 +1738,8 @@ public abstract class AbstractBugEditor extends EditorPart {
 
 	protected HashMap<Object, StyledText> textHash = new HashMap<Object, StyledText>();
 
+	protected List<StyledText> commentStyleText = new ArrayList<StyledText>();
+	
 	/** Index into the styled texts */
 	protected int textsindex = 0;
 
@@ -1395,7 +1769,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 	}
 
 	public void revealAllComments() {
-		for (StyledText text : textHash.values()) {
+		for (StyledText text : commentStyleText) {
 			Composite comp = text.getParent();
 			while (comp != null) {
 				if (comp instanceof ExpandableComposite) {

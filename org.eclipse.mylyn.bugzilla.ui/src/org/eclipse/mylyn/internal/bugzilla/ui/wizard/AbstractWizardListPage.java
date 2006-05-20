@@ -14,8 +14,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -69,14 +67,14 @@ public abstract class AbstractWizardListPage extends WizardPage implements Liste
 		composite.setLayout(gl);
 
 		// create the bug report label
-		Label label = new Label(composite, SWT.NONE);
-		label.setText(getTableName());
-		FontData fontData = label.getFont().getFontData()[0];
-		fontData.setStyle(SWT.BOLD | fontData.getStyle());
-		int height = (int) Math.abs(fontData.getHeight() * 1.25);
-		fontData.setHeight(height);
-		Font font = new Font(null, fontData);
-		label.setFont(font);
+//		Label label = new Label(composite, SWT.NONE);
+//		label.setText(getTableName());
+//		FontData fontData = label.getFont().getFontData()[0];
+//		fontData.setStyle(SWT.BOLD | fontData.getStyle());
+//		int height = (int) Math.abs(fontData.getHeight() * 1.25);
+//		fontData.setHeight(height);
+//		Font font = new Font(null, fontData);
+//		label.setFont(font);
 
 		// create the list of bug reports
 		gd = new GridData(GridData.FILL_HORIZONTAL);
@@ -95,8 +93,6 @@ public abstract class AbstractWizardListPage extends WizardPage implements Liste
 		setControl(composite);
 		addListeners();
 	}
-
-	public abstract String getTableName();
 
 	/**
 	 * Populate the list of items

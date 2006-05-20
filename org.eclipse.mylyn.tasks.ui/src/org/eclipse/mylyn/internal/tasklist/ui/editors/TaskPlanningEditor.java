@@ -19,7 +19,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasklist.ui.actions.TaskEditorCopyAction;
 import org.eclipse.mylar.internal.tasklist.ui.views.DatePicker;
@@ -76,9 +75,14 @@ import org.eclipse.ui.part.EditorPart;
  * 
  * @author Mik Kersten
  * @author Ken Sueda (initial prototype)
- * @author Rob Elves (added additional fields)
+ * @author Rob Elves
  */
 public class TaskPlanningEditor extends EditorPart {
+
+	private static final String LABEL_SCHEDULE = "Scheduled for:";
+
+	private static final String DESCRIPTION_ESTIMATED = "Time that the task has been actively worked on.\n Inactivity timeout is "
+			+ MylarPlugin.getContextManager().getInactivityTimeout() + " seconds.";
 
 	private static final String LABEL_INCOMPLETE = "Incomplete";
 
@@ -139,10 +143,18 @@ public class TaskPlanningEditor extends EditorPart {
 	private ITaskListChangeListener TASK_LIST_LISTENER = new ITaskListChangeListener() {
 
 		public void localInfoChanged(final ITask updateTask) {
-			if (updateTask != null && task != null && updateTask.getHandleIdentifier().equals(task.getHandleIdentifier())) {
-				if (PlatformUI.getWorkbench() != null && !PlatformUI.getWorkbench().getDisplay().isDisposed()) {
+			if (updateTask != null && task != null
+					&& updateTask.getHandleIdentifier().equals(task.getHandleIdentifier())) {
+				if (PlatformUI.getWorkbench() != null && !PlatformUI.getWorkbench().isClosing()) {
 					PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 						public void run() {
+							
+							if( datePicker != null && !datePicker.isDisposed() && updateTask.getReminderDate() != null) {
+								Calendar cal = Calendar.getInstance();
+								cal.setTime(updateTask.getReminderDate());
+								datePicker.setDate(cal);
+							}
+							
 							if (description == null)
 								return;
 							if (!description.isDisposed()) {
@@ -162,7 +174,7 @@ public class TaskPlanningEditor extends EditorPart {
 								} else {
 									statusCombo.select(1);
 								}
-							}
+							}							
 							if (!(updateTask instanceof AbstractRepositoryTask) && !endDate.isDisposed()) {
 								endDate.setText(getTaskDateString(updateTask));
 							}
@@ -260,7 +272,7 @@ public class TaskPlanningEditor extends EditorPart {
 			MylarTaskListPlugin.getTaskListManager().setReminder(task, datePicker.getDate().getTime());
 			// task.setReminderDate(datePicker.getDate().getTime());
 		} else {
-//			task.setReminderDate(null);
+			// task.setReminderDate(null);
 			MylarTaskListPlugin.getTaskListManager().setReminder(task, null);
 		}
 		MylarTaskListPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
@@ -307,19 +319,21 @@ public class TaskPlanningEditor extends EditorPart {
 	public void createPartControl(Composite parent) {
 		FormToolkit toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createScrolledForm(parent);
-		String trucatedDescription = task.getDescription();
-		int maxLength = 50;
-		if (trucatedDescription.length() > maxLength) {
-			trucatedDescription = trucatedDescription.substring(0, maxLength) + "...";
-		}
-		form.setText(trucatedDescription);
+		// String trucatedDescription = task.getDescription();
+		// int maxLength = 50;
+		// if (trucatedDescription.length() > maxLength) {
+		// trucatedDescription = trucatedDescription.substring(0, maxLength) +
+		// "...";
+		// }
+		// form.setText(trucatedDescription);
+		form.setText(task.getDescription());
 
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 		// Put the info onto the editor
 		createContent(editorComposite, toolkit);
-//		form.setFocus();
+		// form.setFocus();
 		if (description != null && NewLocalTaskAction.DESCRIPTION_DEFAULT.equals(description.getText())) {
 			description.setSelection(0);
 			description.setFocus();
@@ -403,19 +417,11 @@ public class TaskPlanningEditor extends EditorPart {
 		if (task instanceof AbstractRepositoryTask) {
 			description.setEnabled(false);
 		} else {
-			description.addKeyListener(new KeyListener() {
-
-				public void keyPressed(KeyEvent e) {
+			description.addModifyListener(new ModifyListener() {
+				public void modifyText(ModifyEvent e) {
 					markDirty(true);
-
-				}
-
-				public void keyReleased(KeyEvent e) {
-					// ignore
-
 				}
 			});
-
 		}
 
 		Label urlLabel = toolkit.createLabel(container, "Web Link:");
@@ -565,13 +571,14 @@ public class TaskPlanningEditor extends EditorPart {
 		String url = issueReportURL.getText();
 
 		if (url.length() > 10 && (url.startsWith("http://") || url.startsWith("https://"))) {
-			String defaultPrefix = MylarPlugin.getDefault().getPreferenceStore().getString(
-					TaskListPreferenceConstants.DEFAULT_URL_PREFIX);
-			if (url.equals(defaultPrefix)) {
-				getDescButton.setEnabled(false);
-			} else {
-				getDescButton.setEnabled(true);
-			}
+			// String defaultPrefix =
+			// MylarPlugin.getDefault().getPreferenceStore().getString(
+			// TaskListPreferenceConstants.DEFAULT_URL_PREFIX);
+			// if (url.equals(defaultPrefix)) {
+			// getDescButton.setEnabled(false);
+			// } else {
+			getDescButton.setEnabled(true);
+			// }
 		} else {
 			getDescButton.setEnabled(false);
 		}
@@ -637,10 +644,10 @@ public class TaskPlanningEditor extends EditorPart {
 		sectionClient.setLayoutData(clientDataLayout);
 
 		// Reminder
-		Label label = toolkit.createLabel(sectionClient, "Reminder:");
+		Label label = toolkit.createLabel(sectionClient, LABEL_SCHEDULE);
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
-		datePicker = new DatePicker(sectionClient, SWT.NONE, "<reminder>");
+		datePicker = new DatePicker(sectionClient, SWT.NONE, DatePicker.LABEL_CHOOSE);
 
 		Calendar calendar = Calendar.getInstance();
 		if (task.getReminderDate() != null) {
@@ -749,6 +756,7 @@ public class TaskPlanningEditor extends EditorPart {
 
 		label = toolkit.createLabel(sectionClient, "Elapsed time:");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
+		label.setToolTipText(DESCRIPTION_ESTIMATED);
 
 		Composite elapsedComposite = toolkit.createComposite(sectionClient);
 		GridLayout elapsedLayout = new GridLayout();

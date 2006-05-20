@@ -31,20 +31,18 @@ import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
  */
 public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 
+	private static final String LABEL_REMINDER = "Schedule for";
+
+	private static final String LABEL_TODAY = "Today";
+	
+	private static final String LABEL_NEXT_WEEK = "Next Week";
+
+	private static final String LABEL_FUTURE = "Later";
+	
 	private static final String LABEL_CALENDAR = "Choose Date...";
 
 	private static final String LABEL_CLEAR = "Clear";
 	
-	private static final String LABEL_IN_HOUR = "In an hour";
-	
-	private static final String LABEL_FUTURE = "Future";
-
-	private static final String LABEL_NEXT_WEEK = "Next week";
-
-	private static final String LABEL_TOMORROW = "Tomorrow";
-
-	private static final String LABEL_REMINDER = "Reminder";
-
 	private ITask task = null;
 
 	public MenuManager getSubMenuManager(TaskListView view, ITaskListElement selection) {
@@ -60,31 +58,39 @@ public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 			}
 		}
 
-		
 		Action action = new Action() {
 			@Override
 			public void run() {
 				Calendar reminderCalendar = GregorianCalendar.getInstance();
-				MylarTaskListPlugin.getTaskListManager().setInHour(reminderCalendar);
+				MylarTaskListPlugin.getTaskListManager().setScheduledToday(reminderCalendar);
 				MylarTaskListPlugin.getTaskListManager().setReminder(task, reminderCalendar.getTime());
 			}
 		};
-		action.setText(LABEL_IN_HOUR);
-		action.setEnabled(task != null);
+		action.setText(LABEL_TODAY);
+		action.setEnabled(canSchedule());
 		subMenuManager.add(action);
+		subMenuManager.add(new Separator());
 		
-		action = new Action() {
-			@Override
-			public void run() {
-				Calendar reminderCalendar = GregorianCalendar.getInstance();
-				MylarTaskListPlugin.getTaskListManager().setTomorrow(reminderCalendar);
-				MylarTaskListPlugin.getTaskListManager().setReminder(task, reminderCalendar.getTime());
-			}
-		};
-		action.setText(LABEL_TOMORROW);
-		action.setEnabled(task != null);
-		subMenuManager.add(action);
+		final int today = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
+		for (int i = today+1; i <= 7; i++) {
+			final int day = i;
+			action = new Action() {
+				@Override
+				public void run() {
+					Calendar reminderCalendar = GregorianCalendar.getInstance();
+					int dueIn = day-today;
+					MylarTaskListPlugin.getTaskListManager().setSecheduledIn(reminderCalendar, dueIn);
+					MylarTaskListPlugin.getTaskListManager().setReminder(task, reminderCalendar.getTime());
+				}
+			};
+			getDayLabel(i, action);
+			
+			action.setEnabled(canSchedule());
+			subMenuManager.add(action);	
+		}
 
+		subMenuManager.add(new Separator());
+		
 		action = new Action() {
 			@Override
 			public void run() {
@@ -93,7 +99,7 @@ public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 			}
 		};
 		action.setText(LABEL_NEXT_WEEK);
-		action.setEnabled(task != null);
+		action.setEnabled(canSchedule());
 		subMenuManager.add(action);
 
 		action = new Action() {
@@ -104,7 +110,7 @@ public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 			}
 		};
 		action.setText(LABEL_FUTURE);
-		action.setEnabled(task != null);
+		action.setEnabled(canSchedule());
 		subMenuManager.add(action);
 
 		subMenuManager.add(new Separator());
@@ -124,7 +130,7 @@ public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 			}
 		};
 		action.setText(LABEL_CALENDAR);
-		action.setEnabled(task != null);
+		action.setEnabled(canSchedule());
 		subMenuManager.add(action);
 		
 		action = new Action() {
@@ -137,5 +143,37 @@ public class TaskReminderMenuContributor implements IDynamicSubMenuContributor {
 		action.setEnabled(task != null);
 		subMenuManager.add(action);
 		return subMenuManager;
+	}
+
+	private void getDayLabel(int i, Action action) {
+		switch (i) {
+			case Calendar.MONDAY:
+				action.setText("Monday");
+				break;
+			case Calendar.TUESDAY:
+				action.setText("Tuesday");
+				break;
+			case Calendar.WEDNESDAY:
+				action.setText("Wednesday");
+				break;
+			case Calendar.THURSDAY:
+				action.setText("Thursday");
+				break;
+			case Calendar.FRIDAY:
+				action.setText("Friday");
+				break;
+			case Calendar.SATURDAY:
+				action.setText("Saturday");
+				break;
+			case Calendar.SUNDAY:
+				action.setText("Sunday");
+				break;
+		default:
+			break;
+		}
+	}
+
+	private boolean canSchedule() {
+		return task != null && !task.isCompleted();
 	}
 }

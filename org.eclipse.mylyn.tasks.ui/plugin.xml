@@ -5,10 +5,18 @@
     <extension-point id="repositories" name="Task Repositories" schema="schema/repositories.exsd"/>
     <extension-point id="editors" name="Task Editors" schema="schema/editors.exsd"/>
 
-   <extension
+	<extension point="org.eclipse.ui.views">
+     	<category name="Mylar" id="org.eclipse.mylar"/>
+    </extension>
+     	
+    <extension point="org.eclipse.ui.newWizards">
+        <category name="Mylar" id="org.eclipse.mylar.wizards"/>
+    </extension>
+
+    <extension
          name="Mylar Task List Startup (required)"
          point="org.eclipse.ui.startup">
-   </extension>
+    </extension>
 
 	<extension
          id="org.eclipse.mylar.helpDocs"
@@ -18,7 +26,7 @@
             file="doc/toc.xml"
             primary="false">
       </toc>
-   </extension>
+    </extension>
 
     <extension point="org.eclipse.ui.newWizards">
       <wizard
@@ -53,7 +61,7 @@
            Import Mylar task data files from file system.
         </description>
      </wizard>
-  </extension>
+ </extension>
 
      <extension point="org.eclipse.ui.exportWizards"> 
       <wizard
@@ -207,6 +215,24 @@
       <viewerContribution
             id="org.eclipse.mylar.tasklist.ui.viewerContribution"
             targetID="org.eclipse.mylar.tasks.ui.views.TaskListView">
+
+         <action
+               class="org.eclipse.mylar.internal.tasklist.ui.SynchronizeReportsAction"
+               enablesFor="*"
+               icon="icons/etool16/repository-synchronize.gif"
+               id="org.eclipse.mylar.bugzilla.ui.popup.refresh"
+               label="Synchronize with Repository"
+               menubarPath="reports"
+               tooltip="Synchronize with Repository">
+            <enablement>
+               <or>
+                    <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractQueryHit"/>
+					<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery"/>
+               		<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask"/>
+                 <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer"/>
+               </or>
+            </enablement>
+         </action>
          
 		<action
               class="org.eclipse.mylar.internal.tasklist.ui.actions.AddRepositoryTaskAction"
@@ -239,24 +265,6 @@
               style="push"
               tooltip="New Repository Query"> 
   		</action>
-
-         <action
-               class="org.eclipse.mylar.internal.tasklist.ui.SynchronizeReportsAction"
-               enablesFor="*"
-               icon="icons/etool16/repository-synchronize.gif"
-               id="org.eclipse.mylar.bugzilla.ui.popup.refresh"
-               label="Synchronize with Repository"
-               menubarPath="reports"
-               tooltip="Synchronize with Repository">
-            <enablement>
-               <or>
-                    <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractQueryHit"/>
-					<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery"/>
-               		<objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask"/>
-                 <objectClass name="org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer"/>
-               </or>
-            </enablement>
-         </action>
       </viewerContribution>
    </extension>
 
@@ -306,20 +314,40 @@
            categoryId="org.eclipse.mylar.tasklist.ui.presentation"
            id="org.eclipse.mylar.tasklist.ui.colors.foreground.overdue"
            isEditable="true"
-           label="Tasks - Past Reminder"
-           value="167,10,26"> 
+           label="Tasks - Overdue"
+           value="198,4,38"> 
          <description>
             Text color for overdue tasks.
          </description>
      </colorDefinition>
      <colorDefinition
            categoryId="org.eclipse.mylar.tasklist.ui.presentation"
-           id="org.eclipse.mylar.tasklist.ui.colors.foreground.today"
+           id="org.eclipse.mylar.tasklist.ui.colors.foreground.today.scheduled"
            isEditable="true"
-           label="Tasks - Today"
-           value="30,14,231">  
+           label="Tasks - Scheduled for Today"
+           value="32,21,223">  
          <description>
-            Text color for tasks due today.
+            Text color for tasks scheduled for today.
+         </description>
+     </colorDefinition>
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasklist.ui.colors.foreground.thisweek.scheduled"
+           isEditable="true"
+           label="Tasks - Scheduled for This Week"
+           value="0,0,0">  
+         <description>
+            Text color for tasks scheduled for this week
+         </description>
+     </colorDefinition>
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasklist.ui.colors.foreground.today.completed"
+           isEditable="true"
+           label="Tasks - Completed Today"
+           value="107,169,128">  
+         <description>
+            Text color for tasks completed.
          </description>
      </colorDefinition>
      <colorDefinition

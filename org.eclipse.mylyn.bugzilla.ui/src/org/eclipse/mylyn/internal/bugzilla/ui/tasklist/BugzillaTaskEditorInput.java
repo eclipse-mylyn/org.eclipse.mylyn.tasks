@@ -14,13 +14,13 @@
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
 import java.io.IOException;
-
-import javax.security.auth.login.LoginException;
+import java.security.GeneralSecurityException;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.mylar.bugzilla.core.BugReport;
 import org.eclipse.mylar.internal.bugzilla.ui.editor.ExistingBugEditorInput;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask.RepositoryTaskSyncState;
 import org.eclipse.ui.IPersistableElement;
 
@@ -32,14 +32,14 @@ public class BugzillaTaskEditorInput extends ExistingBugEditorInput {
 
 	private String bugTitle;
 
-	private BugReport offlineBug;
+	private BugzillaReport offlineBug;
 
 	private BugzillaTask bugTask;
 
 	private boolean offline;
 
-	public BugzillaTaskEditorInput(BugzillaTask bugTask, boolean offline) throws LoginException, IOException {
-		super(bugTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugTask.getHandleIdentifier()), offline);
+	public BugzillaTaskEditorInput(TaskRepository repository, BugzillaTask bugTask, boolean offline) throws IOException, GeneralSecurityException {
+		super(repository, AbstractRepositoryTask.getTaskIdAsInt(bugTask.getHandleIdentifier()), offline);
 		this.bugTask = bugTask;
 		offlineBug = bugTask.getBugReport();
 		bugId = AbstractRepositoryTask.getTaskIdAsInt(bugTask.getHandleIdentifier());
@@ -99,7 +99,7 @@ public class BugzillaTaskEditorInput extends ExistingBugEditorInput {
 	/**
 	 * Returns the offline bug for this input's Bugzilla task
 	 */
-	public BugReport getOfflineBug() {
+	public BugzillaReport getOfflineBug() {
 		if (offline || bugTask.getSyncState() == RepositoryTaskSyncState.OUTGOING
 				|| bugTask.getSyncState() == RepositoryTaskSyncState.CONFLICT)
 			return offlineBug;
@@ -107,7 +107,7 @@ public class BugzillaTaskEditorInput extends ExistingBugEditorInput {
 			return super.getBug();
 	}
 
-	public void setOfflineBug(BugReport offlineBug) {
+	public void setOfflineBug(BugzillaReport offlineBug) {
 		this.offlineBug = offlineBug;
 	}
 

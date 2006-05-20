@@ -47,7 +47,10 @@ public class TaskListManager {
 	// TODO: get these two fields from preferences
 	private static final int START_DAY = Calendar.MONDAY;
 
-	private static final int START_HOUR = 8;
+	// TODO: refactor into configurable intervals
+	private static final int HOUR_DAY_START = 8;
+	
+	private static final int HOUR_DAY_END = 23;
 
 	private static final int NUM_WEEKS_PREVIOUS = -1;
 
@@ -414,17 +417,22 @@ public class TaskListManager {
 		cal.set(Calendar.MILLISECOND, cal.getMaximum(Calendar.MILLISECOND));
 		cal.getTime();
 	}
-
-	public void setTomorrow(Calendar reminderCalendar) {
-		reminderCalendar.add(Calendar.DAY_OF_MONTH, 1);
-		reminderCalendar.set(Calendar.HOUR_OF_DAY, START_HOUR);
-		reminderCalendar.set(Calendar.MINUTE, 0);
-		reminderCalendar.set(Calendar.SECOND, 0);
-		reminderCalendar.set(Calendar.MILLISECOND, 0);
+	
+	public Calendar setSecheduledIn(Calendar calendar, int days) {
+		calendar.add(Calendar.DAY_OF_MONTH, days);
+		calendar.set(Calendar.HOUR_OF_DAY, HOUR_DAY_START);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);	
+		return calendar;
 	}
 	
-	public void setInHour(Calendar reminderCalendar) {
-		reminderCalendar.add(Calendar.HOUR_OF_DAY, 1);
+	public Calendar setScheduledToday(Calendar calendar) {
+		calendar.set(Calendar.HOUR_OF_DAY, HOUR_DAY_END);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);
+		return calendar;
 	}
 
 	public Object[] getDateRanges() {
@@ -585,6 +593,25 @@ public class TaskListManager {
 		}
 		return false;
 	}
+	
+	public boolean isCompletedToday(ITask task) {
+		Date completionDate = task.getCompletionDate();
+		if (completionDate == null) {
+			return false;
+		} else {
+			Calendar tomorrow = Calendar.getInstance();
+			MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
+
+			Calendar yesterday = Calendar.getInstance();
+			yesterday.set(Calendar.HOUR_OF_DAY, 0);
+			yesterday.set(Calendar.MINUTE, 0);
+			yesterday.set(Calendar.SECOND, 0);
+			yesterday.set(Calendar.MILLISECOND, 0);
+
+			return completionDate.compareTo(yesterday.getTime()) == 1
+					&& completionDate.compareTo(tomorrow.getTime()) == -1;
+		}
+	}
 
 	public boolean isReminderAfterThisWeek(ITask task) {
 		Date reminder = task.getReminderDate();
@@ -611,7 +638,7 @@ public class TaskListManager {
 		if (reminder != null) {
 			Date now = new Date();
 			Calendar tomorrow = GregorianCalendar.getInstance();
-			MylarTaskListPlugin.getTaskListManager().setTomorrow(tomorrow);
+			MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
 			return (reminder.compareTo(now) == 1 && reminder.compareTo(tomorrow.getTime()) == -1);
 		} else {
 			return false;

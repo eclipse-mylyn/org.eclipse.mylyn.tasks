@@ -12,23 +12,22 @@
 package org.eclipse.mylar.internal.bugs;
 
 import java.lang.reflect.InvocationTargetException;
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.mylar.bugzilla.core.BugReport;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaTools;
-import org.eclipse.mylar.internal.bugzilla.core.search.BugzillaSearchHit;
+import org.eclipse.mylar.internal.bugzilla.ui.BugzillaTools;
 import org.eclipse.mylar.internal.bugzilla.ui.editor.AbstractBugEditor;
 import org.eclipse.mylar.internal.bugzilla.ui.editor.BugzillaOutlineNode;
 import org.eclipse.mylar.internal.bugzilla.ui.editor.BugzillaReportSelection;
-import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaReportNode;
+import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaSearchHit;
 import org.eclipse.mylar.internal.core.DegreeOfSeparation;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
 import org.eclipse.mylar.provisional.core.AbstractRelationProvider;
 import org.eclipse.mylar.provisional.core.IDegreeOfSeparation;
 import org.eclipse.mylar.provisional.core.IMylarStructureBridge;
@@ -75,7 +74,7 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 		return null;
 	}
 
-	private BugReport result;
+	private BugzillaReport result;
 
 	/**
 	 * TODO: this will not return a non-cached handle
@@ -112,7 +111,7 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 				return findNode(node, commentNumber);
 			}
 
-			BugzillaReportNode reportNode = MylarBugsPlugin.getReferenceProvider().getCached(handle);
+			BugzillaReportElement reportNode = MylarBugsPlugin.getReferenceProvider().getCached(handle);
 
 			// try to get from the cache, if it doesn't exist, startup an
 			// operation to get it
@@ -124,7 +123,9 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 					public void run(IProgressMonitor monitor) {
 						monitor.beginTask("Downloading Bug# " + id, IProgressMonitor.UNKNOWN);
 						try {
-							result = BugzillaRepositoryUtil.getCurrentBug(repository.getUrl(), id);
+							Proxy proxySettings = MylarTaskListPlugin.getDefault().getProxySettings();
+							// XXX: move this
+							result = BugzillaRepositoryUtil.getBug(repository.getUrl(), repository.getUserName(), repository.getPassword(), proxySettings, repository.getCharacterEncoding(), id);
 							if (result != null) {
 								MylarBugsPlugin.getDefault().getCache().cache(bugHandle, result);
 							}
@@ -144,9 +145,6 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 				}
 				return null;
 			}
-			// BugzillaOutlineNode node =
-			// BugzillaOutlineNode.parseBugReport(result);
-			// return findNode(node, commentNumber);
 		}
 		return null;
 	}
@@ -201,9 +199,9 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 		if (object instanceof BugzillaOutlineNode) {
 			BugzillaOutlineNode b = (BugzillaOutlineNode) object;
 			return BugzillaTools.getName(b);
-		} else if (object instanceof BugzillaReportNode) {
-			BugzillaSearchHit hit = ((BugzillaReportNode) object).getHit();
-			return hit.getRepository() + ": Bug#: " + hit.getId() + ": " + hit.getDescription();
+		} else if (object instanceof BugzillaReportElement) {
+			BugzillaSearchHit hit = ((BugzillaReportElement) object).getHit();
+			return hit.getRepositoryUrl() + ": Bug#: " + hit.getId() + ": " + hit.getDescription();
 		}
 		return "";
 	}
@@ -225,11 +223,6 @@ public class BugzillaStructureBridge implements IMylarStructureBridge {
 	}
 
 	public String getHandleForMarker(ProblemMarker marker) {
-		return null;
-	}
-
-	public IProject getProjectForObject(Object object) {
-		// bugzilla objects do not yet sit in a project
 		return null;
 	}
 

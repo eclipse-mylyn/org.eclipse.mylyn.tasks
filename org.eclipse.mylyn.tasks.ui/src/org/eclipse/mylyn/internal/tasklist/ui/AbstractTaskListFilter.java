@@ -10,9 +10,7 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.tasklist.ui;
 
-import org.eclipse.mylar.internal.tasklist.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 
 /**
  * Custom filters are used so that the "Find:" filter can 'see through'
@@ -24,10 +22,7 @@ public abstract class AbstractTaskListFilter {
 
 	public abstract boolean select(Object element);
 
-	protected boolean shouldAlwaysShow(ITask task) {
-		return task.isActive() 
-			|| (MylarTaskListPlugin.getTaskListManager().isReminderToday(task) && !task.isCompleted())
-			|| (task.isPastReminder() && !task.isCompleted())
-			|| NewLocalTaskAction.DESCRIPTION_DEFAULT.equals(task.getDescription());
+	public boolean shouldAlwaysShow(ITask task) {
+		return task.isActive();
 	}
 }

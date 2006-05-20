@@ -13,6 +13,7 @@
  */
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,10 +22,11 @@ import javax.security.auth.login.LoginException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.mylar.internal.bugzilla.core.search.BugzillaSearchEngine;
-import org.eclipse.mylar.internal.bugzilla.core.search.BugzillaSearchQuery;
-import org.eclipse.mylar.internal.bugzilla.core.search.IBugzillaSearchOperation;
 import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaResultCollector;
+import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaSearchEngine;
+import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaSearchQuery;
+import org.eclipse.mylar.internal.bugzilla.ui.search.IBugzillaSearchOperation;
+import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 
@@ -74,7 +76,8 @@ public class BugzillaCategorySearchOperation extends WorkspaceModifyOperation im
 		collector = new BugzillaResultCollector();
 		collector.setOperation(this);
 		collector.setProgressMonitor(monitor);
-		search(queryUrl, monitor);
+		Proxy proxySettings = MylarTaskListPlugin.getDefault().getProxySettings();
+		search(queryUrl, proxySettings, monitor);
 		for (ICategorySearchListener listener : listeners)
 			listener.searchCompleted(collector);
 	}
@@ -90,13 +93,13 @@ public class BugzillaCategorySearchOperation extends WorkspaceModifyOperation im
 	 *            The progress monitor to use for the search
 	 * @return The BugzillaResultCollector with the search results
 	 */
-	private BugzillaResultCollector search(String queryUrl, IProgressMonitor monitor) {
+	private BugzillaResultCollector search(String queryUrl, Proxy proxySettings, IProgressMonitor monitor) {
 
 		// set the initial number of matches to 0
 		int matches = 0;
 		// setup the progress monitor and start the search
 		collector.setProgressMonitor(monitor);
-		BugzillaSearchEngine engine = new BugzillaSearchEngine(repository, queryUrl);
+		BugzillaSearchEngine engine = new BugzillaSearchEngine(repository, queryUrl, proxySettings);
 		try {
 
 			// perform the search
@@ -122,7 +125,7 @@ public class BugzillaCategorySearchOperation extends WorkspaceModifyOperation im
 	}
 
 	/**
-	 * @see org.eclipse.mylar.internal.bugzilla.core.search.IBugzillaSearchOperation#getStatus()
+	 * @see org.eclipse.mylar.internal.bugzilla.ui.search.IBugzillaSearchOperation#getStatus()
 	 */
 	public IStatus getStatus() throws LoginException {
 		// if a LoginException was thrown while trying to search, throw this

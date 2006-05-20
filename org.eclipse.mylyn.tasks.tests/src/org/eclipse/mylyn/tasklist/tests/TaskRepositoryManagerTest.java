@@ -125,6 +125,44 @@ public class TaskRepositoryManagerTest extends TestCase {
 
 	}
 
+	public void testRepositoryEncodingPersistance() throws MalformedURLException {
+		assertEquals("", MylarTaskListPlugin.getMylarCorePrefs().getString(TaskRepositoryManager.PREF_REPOSITORIES));
+
+		String encoding = "UTF-8";
+
+		TaskRepository repository1 = new TaskRepository("bugzilla", "http://bugzilla");
+		MylarTaskListPlugin.getRepositoryManager().setEncoding(repository1, encoding);
+		manager.addRepository(repository1);
+
+		String prefIdEncoding = repository1.getUrl() + TaskRepositoryManager.PROPERTY_DELIM
+				+ TaskRepositoryManager.PROPERTY_ENCODING;
+
+		assertEquals(encoding, MylarTaskListPlugin.getMylarCorePrefs().getString(prefIdEncoding));
+
+		manager.readRepositories();
+		TaskRepository temp = manager.getRepository(repository1.getKind(), repository1.getUrl());
+		assertNotNull(temp);
+		assertEquals(temp.getCharacterEncoding(), encoding);
+	}
+	
+	public void testRepositoryTimeZonePersistance() throws MalformedURLException {
+		assertEquals("", MylarTaskListPlugin.getMylarCorePrefs().getString(TaskRepositoryManager.PREF_REPOSITORIES));
+		TaskRepository repository1 = new TaskRepository("bugzilla", "http://bugzilla");
+		String fakeTimeZone = "nowhere";
+		MylarTaskListPlugin.getRepositoryManager().setTimeZoneId(repository1, fakeTimeZone);
+		manager.addRepository(repository1);
+
+		String prefIdTimeZoneId = repository1.getUrl() + TaskRepositoryManager.PROPERTY_DELIM
+				+ TaskRepositoryManager.PROPERTY_TIMEZONE;
+
+		assertEquals(fakeTimeZone, MylarTaskListPlugin.getMylarCorePrefs().getString(prefIdTimeZoneId));
+
+		manager.readRepositories();
+		TaskRepository temp = manager.getRepository(repository1.getKind(), repository1.getUrl());
+		assertNotNull(temp);
+		assertEquals(temp.getTimeZoneId(), fakeTimeZone);
+	}
+	
 	public void testRepositoryPersistanceAfterDelete() throws MalformedURLException {
 		manager.clearRepositories();
 

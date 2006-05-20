@@ -88,7 +88,7 @@ public class TaskListManagerTest extends TestCase {
 		inAnHour.getTime();
 		task.setReminderDate(inAnHour.getTime());
 		Calendar tomorrow = Calendar.getInstance();
-		manager.setTomorrow(tomorrow);
+		manager.setSecheduledIn(tomorrow, 1);
 		assertEquals(-1, inAnHour.compareTo(tomorrow));
 		
 		assertTrue(manager.isReminderToday(task)); 
@@ -360,7 +360,7 @@ public class TaskListManagerTest extends TestCase {
 		query.setLastRefresh(oldDate);
 		assertEquals("repositoryUrl", query.getRepositoryUrl());
 		assertEquals("queryUrl", query.getQueryUrl());
-		assertEquals(time, query.getLastRefresh().getTime());
+		assertEquals(time, query.getLastSynchronized().getTime());
 		manager.getTaskList().addQuery(query);
 		manager.saveTaskList();
 		assertNotNull(manager.getTaskList());
@@ -372,7 +372,7 @@ public class TaskListManagerTest extends TestCase {
 		assertEquals(query.getQueryUrl(), readQuery.getQueryUrl());
 		assertEquals(query.getRepositoryUrl(), readQuery.getRepositoryUrl());
 		assertEquals("repositoryUrl", readQuery.getRepositoryUrl());
-		assertEquals(time, readQuery.getLastRefresh().getTime());
+		assertEquals(time, readQuery.getLastSynchronized().getTime());
 	}
 
 	public void testArchiveRepositoryTaskExternalization() {

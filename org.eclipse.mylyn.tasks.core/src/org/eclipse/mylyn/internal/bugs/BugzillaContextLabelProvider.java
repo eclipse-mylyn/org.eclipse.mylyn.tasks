@@ -11,12 +11,11 @@
 
 package org.eclipse.mylar.internal.bugs;
 
-import org.eclipse.mylar.bugzilla.core.BugReport;
 import org.eclipse.mylar.internal.bugs.search.BugzillaReferencesProvider;
-import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaReportNode;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.ui.AbstractContextLabelProvider;
 import org.eclipse.mylar.internal.ui.MylarImages;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
 import org.eclipse.mylar.provisional.core.IMylarElement;
 import org.eclipse.mylar.provisional.core.IMylarRelation;
 import org.eclipse.mylar.provisional.core.IMylarStructureBridge;
@@ -55,8 +54,8 @@ public class BugzillaContextLabelProvider extends AbstractContextLabelProvider {
 	protected String getText(IMylarElement node) {
 		// try to get from the cache before downloading
 		Object report;
-		BugzillaReportNode reportNode = MylarBugsPlugin.getReferenceProvider().getCached(node.getHandleIdentifier());
-		BugReport cachedReport = MylarBugsPlugin.getDefault().getCache().getCached(node.getHandleIdentifier());
+		BugzillaReportElement reportNode = MylarBugsPlugin.getReferenceProvider().getCached(node.getHandleIdentifier());
+		BugzillaReport cachedReport = MylarBugsPlugin.getDefault().getCache().getCached(node.getHandleIdentifier());
 		IMylarStructureBridge bridge = MylarPlugin.getDefault()
 				.getStructureBridge(BugzillaStructureBridge.CONTENT_TYPE);
 

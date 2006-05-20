@@ -11,13 +11,14 @@
 package org.eclipse.mylar.internal.bugzilla.ui.editor;
 
 import java.io.IOException;
+import java.net.Proxy;
+import java.security.GeneralSecurityException;
 
-import javax.security.auth.login.LoginException;
-
-import org.eclipse.mylar.bugzilla.core.BugReport;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
-import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
+import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
+import org.eclipse.mylar.internal.bugzilla.ui.OfflineReportsFile;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
+import org.eclipse.mylar.provisional.bugzilla.core.IBugzillaBug;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 
 /**
@@ -32,19 +33,12 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 
 	protected int bugId;
 
-	protected BugReport bug;
+	protected BugzillaReport bug;
 
-	/**
-	 * Creates a new <code>ExistingBugEditorInput</code>.
-	 * 
-	 * @param bug
-	 *            The bug for this editor input.
-	 */
-	public ExistingBugEditorInput(BugReport bug) {
+	public ExistingBugEditorInput(TaskRepository repository, BugzillaReport bug) {
 		this.bug = bug;
 		this.bugId = bug.getId();
-		repository = MylarTaskListPlugin.getRepositoryManager().getRepository(BugzillaPlugin.REPOSITORY_KIND,
-				bug.getRepositoryUrl());
+		this.repository = repository;
 	}
 
 	/**
@@ -53,26 +47,26 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 	 * 
 	 * @param bugId
 	 *            The id of the bug for this editor input.
-	 * @throws LoginException
 	 * @throws IOException
+	 * @throws GeneralSecurityException 
 	 */
-	public ExistingBugEditorInput(String repositoryUrl, int bugId) throws LoginException, IOException {
+	public ExistingBugEditorInput(TaskRepository repository, int bugId) throws IOException, GeneralSecurityException {
 		this.bugId = bugId;
+		this.repository = repository;
 		// get the bug from the server if it exists
-		bug = BugzillaRepositoryUtil.getBug(repositoryUrl, bugId);
-		repository = MylarTaskListPlugin.getRepositoryManager().getRepository(BugzillaPlugin.REPOSITORY_KIND,
-				repositoryUrl);
+		bug = BugzillaRepositoryUtil.getBug(repository.getUrl(), repository.getUserName(), repository.getPassword(), proxySettings, repository.getCharacterEncoding(), bugId);
+//		repository = MylarTaskListPlugin.getRepositoryManager().getRepository(BugzillaPlugin.REPOSITORY_KIND,
+//				repositoryUrl);
 	}
 
-	public ExistingBugEditorInput(String repositoryUrl, int bugId, boolean offline) throws LoginException, IOException {
+	public ExistingBugEditorInput(TaskRepository repository, int bugId, boolean offline) throws IOException, GeneralSecurityException {
 		this.bugId = bugId;
-		repository = MylarTaskListPlugin.getRepositoryManager().getRepository(BugzillaPlugin.REPOSITORY_KIND,
-				repositoryUrl);
+		this.repository = repository;
 		if (!offline) {
 			try {
-				bug = BugzillaRepositoryUtil.getBug(repositoryUrl, bugId);
+				bug = BugzillaRepositoryUtil.getBug(repository.getUrl(), repository.getUserName(), repository.getPassword(), proxySettings, repository.getCharacterEncoding(), bugId);
 			} catch (IOException e) {
-				bug = BugzillaRepositoryUtil.getCurrentBug(repositoryUrl, bugId);
+				bug = getCurrentBug(repository, proxySettings, bugId);
 				// IWorkbench workbench = PlatformUI.getWorkbench();
 				// workbench.getDisplay().asyncExec(new Runnable() {
 				// public void run() {
@@ -85,8 +79,28 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 				// });
 			}
 		} else {
-			bug = BugzillaRepositoryUtil.getCurrentBug(repositoryUrl, bugId);
+			bug = getCurrentBug(repository, proxySettings, bugId);
 		}
+	}
+
+	// TODO: move
+	private BugzillaReport getCurrentBug(TaskRepository repository, Proxy proxySettings, int id)
+			throws IOException, GeneralSecurityException {
+		// Look among the offline reports for a bug with the given id.
+		OfflineReportsFile reportsFile = BugzillaUiPlugin.getDefault().getOfflineReportsFile();
+		if (reportsFile != null) {
+			int offlineId = reportsFile.find(repository.getUrl(), id);
+	
+			// If an offline bug was found, return it if possible.
+			if (offlineId != -1) {
+				IBugzillaBug bug = reportsFile.elements().get(offlineId);
+				if (bug instanceof BugzillaReport) {
+					return (BugzillaReport) bug;
+				}
+			}
+		} 
+		// If a suitable offline report was not found, get it from the server
+		return BugzillaRepositoryUtil.getBug(repository.getUrl(), repository.getUserName(), repository.getPassword(), proxySettings, repository.getCharacterEncoding(), id);
 	}
 
 	public String getName() {
@@ -101,7 +115,7 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 	}
 
 	@Override
-	public BugReport getBug() {
+	public BugzillaReport getBug() {
 		return bug;
 	}
 
@@ -121,4 +135,5 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 	public TaskRepository getRepository() {
 		return repository;
 	}
+
 }

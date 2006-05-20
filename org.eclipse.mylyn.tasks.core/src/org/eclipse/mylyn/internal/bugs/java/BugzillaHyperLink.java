@@ -13,14 +13,13 @@ package org.eclipse.mylar.internal.bugs.java;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
-import org.eclipse.mylar.internal.bugs.OpenBugzillaReportJob;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
-import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.bugzilla.ui.tasklist.OpenBugzillaReportJob;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.progress.IProgressService;
 
 /**
  * @author Mik Kersten
@@ -54,13 +53,16 @@ public class BugzillaHyperLink implements IHyperlink {
 		TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getDefaultRepository(
 				BugzillaPlugin.REPOSITORY_KIND);
 		if (repository != null) {
-			OpenBugzillaReportJob job = new OpenBugzillaReportJob(repository.getUrl(), id);
-			IProgressService service = PlatformUI.getWorkbench().getProgressService();
-			try {
-				service.run(true, false, job);
-			} catch (Exception e) {
-				MylarStatusHandler.fail(e, "Could not open report", true);
-			}
+			
+			IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			OpenBugzillaReportJob job = new OpenBugzillaReportJob(repository.getUrl(), id, page);
+			job.schedule();
+//			IProgressService service = PlatformUI.getWorkbench().getProgressService();
+//			try {
+//				service.run(true, false, job);
+//			} catch (Exception e) {
+//				MylarStatusHandler.fail(e, "Could not open report", true);
+//			}
 		} else {
 			MessageDialog.openError(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
 					"Could not determine repository for report");

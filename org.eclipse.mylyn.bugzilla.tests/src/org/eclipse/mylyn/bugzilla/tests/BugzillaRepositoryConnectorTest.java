@@ -13,21 +13,20 @@ package org.eclipse.mylar.bugzilla.tests;
 
 import java.net.MalformedURLException;
 import java.util.Date;
-import java.util.Iterator;
 
 import javax.security.auth.login.LoginException;
 
 import junit.framework.TestCase;
 
-import org.eclipse.mylar.bugzilla.core.Attribute;
-import org.eclipse.mylar.bugzilla.core.BugReport;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaException;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportSubmitForm;
+import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.bugzilla.core.PossibleBugzillaFailureException;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaQueryHit;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaTask;
+import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
@@ -45,7 +44,7 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 
 	private static final String DEFAULT_KIND = BugzillaPlugin.REPOSITORY_KIND;
 
-	private static final String TEST_REPOSITORY_URL = "https://bugs.eclipse.org/bugs";
+	//private static final String TEST_REPOSITORY_URL = "https://bugs.eclipse.org/bugs";
 
 	private BugzillaRepositoryConnector client;
 
@@ -60,7 +59,7 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 		super.setUp();
 		manager = MylarTaskListPlugin.getRepositoryManager();
 		manager.clearRepositories();
-		repository = new TaskRepository(DEFAULT_KIND, TEST_REPOSITORY_URL);
+		repository = new TaskRepository(DEFAULT_KIND, IBugzillaConstants.TEST_BUGZILLA_222_URL);
 		// repository.setAuthenticationCredentials("userid", "password");
 		manager.addRepository(repository);
 		assertNotNull(manager);
@@ -85,10 +84,10 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 	}
 
 	public void testCreateTaskFromExistingId() throws MalformedURLException, InterruptedException {
-		BugzillaTask badId = (BugzillaTask) client.createTaskFromExistingId(repository, "bad-id");
+		BugzillaTask badId = (BugzillaTask) client.createTaskFromExistingKey(repository, "bad-id");
 		assertNull(badId);
 
-		BugzillaTask task = (BugzillaTask) client.createTaskFromExistingId(repository, "1");
+		BugzillaTask task = (BugzillaTask) client.createTaskFromExistingKey(repository, "1");
 		assertNotNull(task);
 		assertEquals(task.getSyncState(), RepositoryTaskSyncState.SYNCHRONIZED);
 
@@ -104,7 +103,7 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 			PossibleBugzillaFailureException {
 
 		// Get the task
-		BugzillaTask task = (BugzillaTask) client.createTaskFromExistingId(repository, "1");
+		BugzillaTask task = (BugzillaTask) client.createTaskFromExistingKey(repository, "1");
 		MylarTaskListPlugin.getTaskListManager().getTaskList().moveToRoot(task);
 		assertTrue(task.isDownloaded());
 		// (The initial local copy from server)
@@ -113,16 +112,17 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 
 		// Modify it
 		String newCommentText = "BugzillaRepositoryClientTest.testSynchronize(): " + (new Date()).toString();
-		task.getBugReport().setNewNewComment(newCommentText);
+		task.getBugReport().setNewComment(newCommentText);
 		// overwrites old fields/attributes with new content (ususually done by
 		// BugEditor)
-		updateBug(task.getBugReport());
+		task.getBugReport().setHasChanged(true);
+//		updateBug(task.getBugReport());
 		assertEquals(task.getSyncState(), RepositoryTaskSyncState.SYNCHRONIZED);
 		client.saveBugReport(task.getBugReport());
 		assertEquals(RepositoryTaskSyncState.OUTGOING, task.getSyncState());
 
 		// Submit changes
-		MockBugzillaReportSubmitForm form = new MockBugzillaReportSubmitForm();
+		MockBugzillaReportSubmitForm form = new MockBugzillaReportSubmitForm(BugzillaPlugin.ENCODING_UTF_8);
 		client.submitBugReport(task.getBugReport(), form, null);
 		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
 
@@ -155,7 +155,7 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 		// because task doesn't have bug report (new query hit)
 		// Result: retrieved with no incoming status
 		task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
-		BugReport bugReport = task.getBugReport();
+		BugzillaReport bugReport = task.getBugReport();
 		task.setBugReport(null);
 		client.synchronize(task, false, null);
 		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
@@ -178,6 +178,10 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 
 	class MockBugzillaReportSubmitForm extends BugzillaReportSubmitForm {
 
+		public MockBugzillaReportSubmitForm(String encoding_utf_8) {
+			super(encoding_utf_8);			
+		}
+
 		@Override
 		public String submitReportToRepository() throws BugzillaException, LoginException,
 				PossibleBugzillaFailureException {
@@ -186,24 +190,24 @@ public class BugzillaRepositoryConnectorTest extends TestCase {
 
 	}
 
-	protected void updateBug(BugReport bug) {
+	protected void updateBug(BugzillaReport bug) {
 
 		// go through all of the attributes and update the main values to the
 		// new ones
-		for (Iterator<Attribute> it = bug.getAttributes().iterator(); it.hasNext();) {
-			Attribute attribute = it.next();
-			if (attribute.getNewValue() != null && attribute.getNewValue().compareTo(attribute.getValue()) != 0) {
-				bug.setHasChanged(true);
-			}
-			attribute.setValue(attribute.getNewValue());
-
-		}
-		if (bug.getNewComment().compareTo(bug.getNewNewComment()) != 0) {
-			bug.setHasChanged(true);
-		}
+//		for (Iterator<AbstractRepositoryReportAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
+//			AbstractRepositoryReportAttribute attribute = it.next();
+//			if (attribute.getValue() != null && attribute.getValue().compareTo(attribute.getValue()) != 0) {
+//				bug.setHasChanged(true);
+//			}
+//			attribute.setValue(attribute.getNewValue());
+//
+//		}
+//		if (bug.getNewComment().compareTo(bug.getNewNewComment()) != 0) {
+//			bug.setHasChanged(true);
+//		}
 
 		// Update some other fields as well.
-		bug.setNewComment(bug.getNewNewComment());
+		//bug.setNewComment(bug.getNewNewComment());
 
 	}
 

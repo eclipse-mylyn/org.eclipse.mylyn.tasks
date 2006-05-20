@@ -14,6 +14,7 @@ package org.eclipse.mylar.provisional.tasklist;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
@@ -24,6 +25,8 @@ import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
  */
 public class TaskRepository {
 
+	public static final String DEFAULT_CHARACTER_ENCODING = "UTF-8";
+	
 	public static final String AUTH_PASSWORD = "org.eclipse.mylar.tasklist.repositories.password"; //$NON-NLS-1$ 
 
 	public static final String AUTH_USERNAME = "org.eclipse.mylar.tasklist.repositories.username"; //$NON-NLS-1$ 
@@ -35,6 +38,7 @@ public class TaskRepository {
 	private static final String AUTH_REALM = "";
 
     private static final URL DEFAULT_URL;
+    
     static {
       URL u = null;
       try {
@@ -51,14 +55,32 @@ public class TaskRepository {
 	
 	private String version = NO_VERSION_SPECIFIED;
 
+	private String characterEncoding = DEFAULT_CHARACTER_ENCODING;
+	
+	private String timeZoneId = "";
+	
+	/**
+	 * for testing purposes
+	 */
 	public TaskRepository(String kind, String serverUrl) {
+		this(kind, serverUrl, NO_VERSION_SPECIFIED);
+	}
+	 
+	/**
+	 * for testing purposes
+	 * sets repository time zone to local default time zone
+	 * sets character encoding to DEFAULT_CHARACTER_ENCODING
+	 */ 
+	public TaskRepository(String kind, String serverUrl, String version) {
+		this(kind, serverUrl, version, DEFAULT_CHARACTER_ENCODING, TimeZone.getDefault().getID());		
+	}
+	
+	public TaskRepository(String kind, String serverUrl, String version, String encoding, String timeZoneId) {
 		this.serverUrl = serverUrl;
 		this.kind = kind;
-	}
-
-	public TaskRepository(String kind, String serverUrl, String version) {
-		this(kind, serverUrl);
 		this.version = version;
+		this.characterEncoding = encoding;
+		this.timeZoneId = timeZoneId;
 	}
 	
 	public String getUrl() {
@@ -68,7 +90,8 @@ public class TaskRepository {
 	public boolean hasCredentials() {
 		String username = getUserName();
 		String password = getPassword();
-		return username != null && !username.equals("") && password != null && !password.equals("");
+		//return username != null && !username.equals("") && password != null && !password.equals("");
+		return username != null && password != null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -168,12 +191,38 @@ public class TaskRepository {
 		return version;
 	}
 	
+	/**
+	 * for testing purposes
+	 */
 	void setVersion(String ver) {
 		if(ver == null) {
 			version = NO_VERSION_SPECIFIED;
 		} else {
 			version = ver;
 		}
+	}
+
+	
+	public String getCharacterEncoding() {
+		return characterEncoding;
+	}
+	
+	/**
+	 * for testing purposes
+	 */
+	void setCharacterEncoding(String characterEncoding) {
+		this.characterEncoding = characterEncoding;
+	}
+	
+	public String getTimeZoneId() {
+		return timeZoneId;
+	}
+	
+	/**
+	 * for testing purposes
+	 */
+	public void setTimeZoneId(String timeZoneId) {
+		this.timeZoneId = timeZoneId;
 	}
 
 }

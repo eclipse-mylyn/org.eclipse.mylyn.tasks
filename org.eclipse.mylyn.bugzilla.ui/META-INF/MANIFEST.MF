@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Mylar Bugzilla Client Ui Plug-in
 Bundle-SymbolicName: org.eclipse.mylar.bugzilla.ui; singleton:=true
-Bundle-Version: 0.5.1
+Bundle-Version: 0.5.1.v20060519-1700
 Bundle-Activator: org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin
 Bundle-Vendor: Eclipse.org
 Bundle-Localization: plugin
@@ -21,7 +21,8 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.team.ui,
  org.eclipse.team.cvs.ui,
  org.eclipse.ui.editors,
- org.eclipse.ui.workbench.texteditor
+ org.eclipse.ui.workbench.texteditor,
+ org.eclipse.update.ui
 Eclipse-AutoStart: true
 Export-Package: org.eclipse.mylar.internal.bugzilla.ui,
  org.eclipse.mylar.internal.bugzilla.ui.actions,

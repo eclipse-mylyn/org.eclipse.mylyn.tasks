@@ -10,22 +10,26 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.bugzilla.ui.editor;
 
-import java.util.Iterator;
+import java.io.UnsupportedEncodingException;
+import java.net.Proxy;
 
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.core.runtime.jobs.IJobChangeListener;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.mylar.bugzilla.core.Attribute;
-import org.eclipse.mylar.bugzilla.core.IBugzillaBug;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportSubmitForm;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
-import org.eclipse.mylar.internal.bugzilla.core.NewBugModel;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportSubmitForm;
+import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
+import org.eclipse.mylar.internal.bugzilla.core.NewBugzillaReport;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
+import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
+import org.eclipse.mylar.provisional.bugzilla.core.IBugzillaBug;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -35,12 +39,14 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.forms.events.ExpansionEvent;
 import org.eclipse.ui.forms.events.IExpansionListener;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
+import org.eclipse.ui.themes.IThemeManager;
 
 /**
  * An editor used to view a locally created bug that does not yet exist on a
@@ -48,7 +54,7 @@ import org.eclipse.ui.forms.widgets.Section;
  */
 public class NewBugEditor extends AbstractBugEditor {
 
-	protected NewBugModel bug;
+	protected NewBugzillaReport bug;
 
 	protected Text descriptionText;
 
@@ -122,7 +128,10 @@ public class NewBugEditor extends AbstractBugEditor {
 				new DescriptionListener());
 
 		descriptionText = new Text(descriptionComposite, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.WRAP);
-		descriptionText.setFont(COMMENT_FONT);
+		//descriptionText.setFont(COMMENT_FONT);
+		IThemeManager themeManager = PlatformUI.getWorkbench().getThemeManager();
+		Font descriptionFont = themeManager.getCurrentTheme().getFontRegistry().get(AbstractBugEditor.REPOSITORY_TEXT_ID);
+		descriptionText.setFont(descriptionFont);
 		GridData descriptionTextData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
 		descriptionTextData.horizontalSpan = 4;
 		descriptionTextData.widthHint = DESCRIPTION_WIDTH;
@@ -164,11 +173,17 @@ public class NewBugEditor extends AbstractBugEditor {
 
 	@Override
 	protected void submitBug() {
-
 		updateBug();
-
-		final BugzillaReportSubmitForm bugzillaReportSubmitForm = BugzillaReportSubmitForm.makeNewBugPost(repository, bug);
-	
+		Proxy proxySettings = MylarTaskListPlugin.getDefault().getProxySettings();
+		boolean wrap = IBugzillaConstants.BugzillaServerVersion.SERVER_218.equals(repository.getVersion());
+		BugzillaReportSubmitForm bugzillaReportSubmitForm;
+		try {
+			bugzillaReportSubmitForm = BugzillaReportSubmitForm.makeNewBugPost(repository.getUrl(), repository.getUserName(), repository.getPassword(), proxySettings, repository.getCharacterEncoding(), bug, wrap);
+		} catch (UnsupportedEncodingException e) {
+			// should never get here but just in case...
+			MessageDialog.openError(null, "Posting Error", "Ensure proper encoding selected in "+TaskRepositoriesView.NAME+".");
+			return;
+		}
 		final BugzillaRepositoryConnector bugzillaRepositoryClient = (BugzillaRepositoryConnector) MylarTaskListPlugin
 				.getRepositoryManager().getRepositoryConnector(BugzillaPlugin.REPOSITORY_KIND);
 
@@ -204,76 +219,16 @@ public class NewBugEditor extends AbstractBugEditor {
 			}
 		};
 		bugzillaRepositoryClient.submitBugReport(bug, bugzillaReportSubmitForm, closeEditorListener);
-		
-//		final WorkspaceModifyOperation op = new WorkspaceModifyOperation() {
-//			protected void execute(final IProgressMonitor monitor) throws CoreException {
-//				PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
-//					public void run() {
-//						// update the bug on the server
-//						try {
-//
-//							bugzillaRepositoryClient.submitBugReport(bug, bugReportPostHandler);
-//
-//							// If the bug was successfully sent...
-//							if (NewBugEditor.this != null && !NewBugEditor.this.isDisposed()) {
-//								changeDirtyStatus(false);
-//								close();
-//								// BugzillaPlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getActivePage()
-//								// .closeEditor(NewBugEditor.this, false);
-//							}
-//						} catch (BugzillaException e) {
-//							MessageDialog.openError(null, "I/O Error", "Bugzilla could not post your bug.");
-//							BugzillaPlugin.log(e);
-//						} catch (PossibleBugzillaFailureException e) {
-//							WebBrowserDialog.openAcceptAgreement(null, "Possible Bugzilla Client Failure",
-//									"Bugzilla may not have posted your bug.\n" + e.getMessage(), bugReportPostHandler
-//											.getError());
-//							BugzillaPlugin.log(e);
-//						} catch (LoginException e) {
-//							e.printStackTrace();
-//							// if we had an error with logging in, display an
-//							// error
-//							MessageDialog.openError(null, "Posting Error",
-//									"Bugzilla could not post your bug since your login name or password is incorrect."
-//											+ "\nPlease check your settings in the bugzilla preferences. ");
-//						}
-//					}
-//				});
-//			}
-//		};
-//		Job job = new Job("Submitting New Bug") {
-//
-//			@Override
-//			protected IStatus run(IProgressMonitor monitor) {
-//				try {
-//					op.run(monitor);
-//				} catch (Exception e) {
-//					MylarStatusHandler.log(e, "Failed to submit bug");
-//					return new Status(Status.ERROR, "org.eclipse.mylar.internal.bugzilla.ui", Status.ERROR,
-//							"Failed to submit bug", e);
-//				}
-//
-//				BugzillaRepositoryClient client = (BugzillaRepositoryClient) MylarTaskListPlugin.getRepositoryManager()
-//						.getRepositoryClient(BugzillaPlugin.REPOSITORY_KIND);
-//				if (client != null) {
-//					client.synchronize();
-//				}
-//				return Status.OK_STATUS;
-//			}
-//
-//		};
-//		job.schedule();
-
 	}
 
 	@Override
 	protected void updateBug() {
 		// go through all of the attributes and update the main values to the
 		// new ones
-		for (Iterator<Attribute> it = bug.getAttributes().iterator(); it.hasNext();) {
-			Attribute a = it.next();
-			a.setValue(a.getNewValue());
-		}
+//		for (Iterator<AbstractRepositoryReportAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
+//			AbstractRepositoryReportAttribute a = it.next();
+//			a.setValue(a.getNewValue());
+//		}
 
 		// Update some other fields as well.
 		bug.setSummary(newSummary);
@@ -284,10 +239,10 @@ public class NewBugEditor extends AbstractBugEditor {
 	protected void restoreBug() {
 		// go through all of the attributes and restore the new values to the
 		// main ones
-		for (Iterator<Attribute> it = bug.getAttributes().iterator(); it.hasNext();) {
-			Attribute a = it.next();
-			a.setNewValue(a.getValue());
-		}
+//		for (Iterator<AbstractRepositoryReportAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
+//			AbstractRepositoryReportAttribute a = it.next();
+//			a.setNewValue(a.getValue());
+//		}
 	}
 
 	@SuppressWarnings("deprecation")
@@ -332,5 +287,63 @@ public class NewBugEditor extends AbstractBugEditor {
 	protected void addCCList(FormToolkit toolkit, String value, Composite attributesComposite) {
 		// do nothing here right now
 	}
-
 }
+
+//final WorkspaceModifyOperation op = new WorkspaceModifyOperation() {
+//protected void execute(final IProgressMonitor monitor) throws CoreException {
+//	PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
+//		public void run() {
+//			// update the bug on the server
+//			try {
+//
+//				bugzillaRepositoryClient.submitBugReport(bug, bugReportPostHandler);
+//
+//				// If the bug was successfully sent...
+//				if (NewBugEditor.this != null && !NewBugEditor.this.isDisposed()) {
+//					changeDirtyStatus(false);
+//					close();
+//					// BugzillaPlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getActivePage()
+//					// .closeEditor(NewBugEditor.this, false);
+//				}
+//			} catch (BugzillaException e) {
+//				MessageDialog.openError(null, "I/O Error", "Bugzilla could not post your bug.");
+//				BugzillaPlugin.log(e);
+//			} catch (PossibleBugzillaFailureException e) {
+//				WebBrowserDialog.openAcceptAgreement(null, "Possible Bugzilla Client Failure",
+//						"Bugzilla may not have posted your bug.\n" + e.getMessage(), bugReportPostHandler
+//								.getError());
+//				BugzillaPlugin.log(e);
+//			} catch (LoginException e) {
+//				e.printStackTrace();
+//				// if we had an error with logging in, display an
+//				// error
+//				MessageDialog.openError(null, "Posting Error",
+//						"Bugzilla could not post your bug since your login name or password is incorrect."
+//								+ "\nPlease check your settings in the bugzilla preferences. ");
+//			}
+//		}
+//	});
+//}
+//};
+//Job job = new Job("Submitting New Bug") {
+//
+//@Override
+//protected IStatus run(IProgressMonitor monitor) {
+//	try {
+//		op.run(monitor);
+//	} catch (Exception e) {
+//		MylarStatusHandler.log(e, "Failed to submit bug");
+//		return new Status(Status.ERROR, "org.eclipse.mylar.internal.bugzilla.ui", Status.ERROR,
+//				"Failed to submit bug", e);
+//	}
+//
+//	BugzillaRepositoryClient client = (BugzillaRepositoryClient) MylarTaskListPlugin.getRepositoryManager()
+//			.getRepositoryClient(BugzillaPlugin.REPOSITORY_KIND);
+//	if (client != null) {
+//		client.synchronize();
+//	}
+//	return Status.OK_STATUS;
+//}
+//
+//};
+//job.schedule();

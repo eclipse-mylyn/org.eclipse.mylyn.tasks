@@ -45,6 +45,7 @@ import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
+import org.eclipse.mylar.internal.tasklist.util.GridDataFactory;
 import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReportAttribute;
 import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
 import org.eclipse.mylar.provisional.bugzilla.core.Comment;
@@ -446,9 +447,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		final StyledText styledText = viewer.getTextWidget();
 		styledText.addListener(SWT.FocusIn, new DescriptionListener());
 		styledText.setLayout(new GridLayout());
-		
-		// XXX: put back
-//		GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
+		GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
 		
 		texts.add(textsindex, styledText);
 		textHash.put(bug.getDescription(), styledText);
@@ -479,7 +478,6 @@ public class ExistingBugEditor extends AbstractBugEditor {
 
 		
 		ImageHyperlink hyperlink = toolkit.createImageHyperlink(section, SWT.NONE);
-		// XXX: put back?
 //		hyperlink.setBackgroundMode(SWT.INHERIT_NONE);		
 		hyperlink.setBackground(section.getTitleBarBackground());
 		hyperlink.setImage(TaskListImages.getImage(TaskListImages.EXPAND_ALL));
@@ -498,8 +496,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		addCommentsLayout.numColumns = 1;
 		addCommentsComposite.setLayout(addCommentsLayout);
 		// addCommentsComposite.setBackground(background);
-		// XXX: put back?
-//		GridDataFactory.fillDefaults().grab(true, false).applyTo(addCommentsComposite);
+		GridDataFactory.fillDefaults().grab(true, false).applyTo(addCommentsComposite);
 		// End Additional (read-only) Comments Area
 
 		StyledText styledText = null;
@@ -582,8 +579,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 			TextViewer viewer = addRepositoryText(repository, ecComposite, comment.getText());
 			styledText = viewer.getTextWidget();
 
-			// XXX: put back?
-//			GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
+			GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
 			// line wrapping
 			// GridData styledTextData = new GridData(GridData.FILL_HORIZONTAL);
 			// styledTextData.widthHint = DESCRIPTION_WIDTH;

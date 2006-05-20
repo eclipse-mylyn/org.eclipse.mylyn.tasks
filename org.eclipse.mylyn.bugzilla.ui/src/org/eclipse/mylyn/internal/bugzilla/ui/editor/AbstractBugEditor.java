@@ -54,6 +54,7 @@ import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
+import org.eclipse.mylar.internal.tasklist.util.GridDataFactory;
 import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReport;
 import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReportAttribute;
 import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
@@ -463,8 +464,7 @@ public abstract class AbstractBugEditor extends EditorPart {
 		
 		Composite summaryComposite = toolkit.createComposite(editorComposite);
 		summaryComposite.setLayout(new GridLayout(2, false));
-		// XXX: put back?
-//		GridDataFactory.fillDefaults().grab(true, false).applyTo(summaryComposite);
+		GridDataFactory.fillDefaults().grab(true, false).applyTo(summaryComposite);
 		addSummaryText(summaryComposite);
 		toolkit.paintBordersFor(summaryComposite);
 		Composite headerInfoComposite = toolkit.createComposite(editorComposite);

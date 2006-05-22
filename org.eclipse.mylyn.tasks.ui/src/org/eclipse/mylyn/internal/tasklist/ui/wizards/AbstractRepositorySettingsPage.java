@@ -18,6 +18,7 @@ import java.util.TimeZone;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.util.GridDataFactory;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -115,17 +116,22 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		for (String zone : timeZoneIds) {
 			timeZonesCombo.add(zone);
 		}
+		boolean setZone = false;
 		if (repository != null) {
 			if (timeZonesCombo.indexOf(repository.getTimeZoneId()) > -1) {
 				timeZonesCombo.select(timeZonesCombo.indexOf(repository.getTimeZoneId()));
+				setZone = true;
 			}
 		}
-
+		if (!setZone) {
+			timeZonesCombo.select(timeZonesCombo.indexOf(TimeZone.getDefault().getID()));
+		}
+		
 		createAdditionalControls(container);
 
 		Composite encodingContainer = new Composite(container, SWT.NONE);
-		encodingContainer.setLayout(new GridLayout(2, false));
-//		GridDataFactory.fillDefaults().span(2, SWT.DEFAULT).applyTo(encodingContainer);
+		encodingContainer.setLayout(new GridLayout());
+		GridDataFactory.fillDefaults().span(2, SWT.DEFAULT).applyTo(encodingContainer);
 
 		Group encodingGroup = new Group(encodingContainer, SWT.FLAT);
 		encodingGroup.setText("Character Encoding");
@@ -133,7 +139,7 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		defaultEncoding = new Button(encodingGroup, SWT.RADIO);
 		defaultEncoding.setText("Default (" + TaskRepository.DEFAULT_CHARACTER_ENCODING + ")");
 		defaultEncoding.setSelection(true);
-//		GridDataFactory.fillDefaults().span(2, SWT.DEFAULT).applyTo(defaultEncoding);
+		GridDataFactory.fillDefaults().span(2, SWT.DEFAULT).applyTo(defaultEncoding);
 
 		final Button otherEncoding = new Button(encodingGroup, SWT.RADIO);
 		otherEncoding.setText("Other:");

@@ -13,7 +13,7 @@ package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
 import java.util.Date;
 
-import org.eclipse.mylar.internal.tasklist.ReportAttachment;
+import org.eclipse.mylar.internal.tasklist.RepositoryAttachment;
 import org.eclipse.mylar.provisional.tasklist.IRemoteContextDelegate;
 
 /**
@@ -22,9 +22,9 @@ import org.eclipse.mylar.provisional.tasklist.IRemoteContextDelegate;
  */
 public class BugzillaRemoteContextDelegate implements IRemoteContextDelegate {
 
-	private ReportAttachment attachment;
+	private RepositoryAttachment attachment;
 	
-	public BugzillaRemoteContextDelegate(ReportAttachment attachment) {
+	public BugzillaRemoteContextDelegate(RepositoryAttachment attachment) {
 		this.attachment = attachment;
 	}
 	public Date getDate() {

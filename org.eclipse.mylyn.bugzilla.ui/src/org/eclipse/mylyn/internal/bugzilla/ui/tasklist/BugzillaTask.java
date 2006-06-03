@@ -17,11 +17,11 @@ import java.util.Date;
 import java.util.List;
 
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
-import org.eclipse.mylar.internal.bugzilla.core.HtmlStreamTokenizer;
-import org.eclipse.mylar.internal.tasklist.RepositoryReport;
-import org.eclipse.mylar.internal.tasklist.BugzillaReportElement;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.Comment;
+import org.eclipse.mylar.internal.tasklist.util.HtmlStreamTokenizer;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 
 /**
@@ -33,7 +33,7 @@ public class BugzillaTask extends AbstractRepositoryTask {
 	 * The bug report for this BugzillaTask. This is <code>null</code> if the
 	 * bug report with the specified ID was unable to download.
 	 */
-	protected transient RepositoryReport bugReport = null;
+	protected transient RepositoryTaskData bugReport = null;
 
 	public BugzillaTask(String handle, String label, boolean newTask) {
 		super(handle, label, newTask);
@@ -71,13 +71,13 @@ public class BugzillaTask extends AbstractRepositoryTask {
 		}
 	}
 
-	public RepositoryReport getBugReport() {
+	public RepositoryTaskData getBugReport() {
 		return bugReport;
 	}
 	
 	public String getTaskType() {
-		if (bugReport != null && bugReport.getAttribute(BugzillaReportElement.BUG_SEVERITY) != null) {
-			return bugReport.getAttribute(BugzillaReportElement.BUG_SEVERITY).getValue();
+		if (bugReport != null && bugReport.getAttribute(BugzillaReportElement.BUG_SEVERITY.getKeyString()) != null) {
+			return bugReport.getAttribute(BugzillaReportElement.BUG_SEVERITY.getKeyString()).getValue();
 		} else {
 			return null;
 		}
@@ -87,7 +87,7 @@ public class BugzillaTask extends AbstractRepositoryTask {
 	 * @param bugReport
 	 *            The bugReport to set.
 	 */
-	public void setBugReport(RepositoryReport bugReport) {
+	public void setBugReport(RepositoryTaskData bugReport) {
 		this.bugReport = bugReport;
 		
 		// TODO: remove?
@@ -144,8 +144,8 @@ public class BugzillaTask extends AbstractRepositoryTask {
 
 	@Override
 	public String getPriority() {
-		if (bugReport != null && bugReport.getAttribute(BugzillaReportElement.PRIORITY) != null) {
-			return bugReport.getAttribute(BugzillaReportElement.PRIORITY).getValue();
+		if (bugReport != null && bugReport.getAttribute(BugzillaReportElement.PRIORITY.getKeyString()) != null) {
+			return bugReport.getAttribute(BugzillaReportElement.PRIORITY.getKeyString()).getValue();
 		} else {
 			return super.getPriority();
 		}

@@ -27,6 +27,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.AbstractAttributeFactory;
 import org.eclipse.mylar.internal.tasklist.ui.wizards.AbstractRepositorySettingsPage;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask.RepositoryTaskSyncState;
 import org.eclipse.ui.PlatformUI;
@@ -44,14 +45,10 @@ public abstract class AbstractRepositoryConnector {
 
 	public static final String MYLAR_CONTEXT_DESCRIPTION = "mylar/context/zip";
 
-	// private static final int MAX_REFRESH_JOBS = 1;
-	//
-	// private List<AbstractRepositoryTask> toBeRefreshed = new
-	// LinkedList<AbstractRepositoryTask>();
-	//
-	// private Map<AbstractRepositoryTask, Job> currentlyRefreshing = new
-	// HashMap<AbstractRepositoryTask, Job>();
+	protected List<String> supportedVersions;
 
+	protected AbstractAttributeFactory attributeFactory;
+	
 	protected boolean forceSyncExecForTesting = false;
 
 	boolean syncAll = false;
@@ -63,9 +60,13 @@ public abstract class AbstractRepositoryConnector {
 	public abstract boolean attachContext(TaskRepository repository, AbstractRepositoryTask task, String longComment)
 			throws IOException;
 
+	protected AbstractRepositoryConnector(AbstractAttributeFactory attributeFactory) {
+		this.attributeFactory = attributeFactory;
+	}
+	
 	/**
-	 * Implementors of this operations must perform it locally without going to
-	 * the server since it is used for frequent operations such as decoration.
+	 * Implementors of this repositoryOperations must perform it locally without going to
+	 * the server since it is used for frequent repositoryOperations such as decoration.
 	 * 
 	 * @return an emtpy set if no contexts
 	 */
@@ -288,6 +289,10 @@ public abstract class AbstractRepositoryConnector {
 	public void openRemoteTask(String repositoryUrl, String idString) {
 		MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
 				MylarTaskListPlugin.TITLE_DIALOG, "Opening JIRA issues not added to task list is not implemented.");
+	}
+	
+	public AbstractAttributeFactory getAttributeFactory() {
+		return attributeFactory;
 	}
 }
 

@@ -37,15 +37,11 @@ import org.eclipse.ui.PlatformUI;
  */
 public class OfflineTaskManager {
 
-//	public enum BugzillaOfflineStatus {
-//		SAVED, SAVED_WITH_OUTGOING_CHANGES, DELETED, SAVED_WITH_INCOMMING_CHANGES, CONFLICT, ERROR
-//	}
-
 	/** The file that the offline reports are written to */
 	private File file;
 
 	/** A list of offline reports */
-	private ArrayList<RepositoryReport> list = new ArrayList<RepositoryReport>();
+	private ArrayList<RepositoryTaskData> list = new ArrayList<RepositoryTaskData>();
 
 	/** The bug id of the most recently created offline report. */
 	protected int latestNewBugId = 0;
@@ -70,14 +66,14 @@ public class OfflineTaskManager {
 			readFile();
 		}
 	}
-
+	
 	/**
 	 * Add an offline report to the offline reports list
 	 * 
 	 * @param entry
 	 *            The bug to add
 	 */
-	public RepositoryTaskSyncState add(final RepositoryReport entry, boolean forceSync) throws CoreException {
+	public RepositoryTaskSyncState add(final RepositoryTaskData entry, boolean forceSync) throws CoreException {
 
 		RepositoryTaskSyncState status = RepositoryTaskSyncState.SYNCHRONIZED;
 
@@ -100,7 +96,7 @@ public class OfflineTaskManager {
 
 				int index = -1;
 				if ((index = find(entry.getRepositoryUrl(), entry.getId())) >= 0) {
-					RepositoryReport oldBug = list.get(index);
+					RepositoryTaskData oldBug = list.get(index);
 
 					if (repositoryTask.getLastSynchronized() == null
 							|| entry.getLastModified(repositoryTimeZone)
@@ -123,11 +119,11 @@ public class OfflineTaskManager {
 							});
 
 							if (!updateLocalCopy) {
-								((RepositoryReport) entry).setNewComment(((RepositoryReport) oldBug).getNewComment());
-								((RepositoryReport) entry).setHasChanged(true);
+								((RepositoryTaskData) entry).setNewComment(((RepositoryTaskData) oldBug).getNewComment());
+								((RepositoryTaskData) entry).setHasChanged(true);
 								status = RepositoryTaskSyncState.CONFLICT;
 							} else {
-								((RepositoryReport) entry).setHasChanged(false);
+								((RepositoryTaskData) entry).setHasChanged(false);
 								status = RepositoryTaskSyncState.SYNCHRONIZED;
 							}
 						} else {
@@ -313,7 +309,7 @@ public class OfflineTaskManager {
 	 */
 	public int find(String repositoryUrl, int id) {
 		for (int i = 0; i < list.size(); i++) {
-			RepositoryReport currBug = list.get(i);
+			RepositoryTaskData currBug = list.get(i);
 			if (currBug != null && currBug.getRepositoryUrl() != null
 					&& (currBug.getRepositoryUrl().equals(repositoryUrl) && currBug.getId() == id)
 					&& !currBug.isLocallyCreated())
@@ -323,7 +319,7 @@ public class OfflineTaskManager {
 	}
 
 	// TODO: move to plugin
-	public static RepositoryReport findBug(String repositoryUrl, int bugId) {
+	public static RepositoryTaskData findBug(String repositoryUrl, int bugId) {
 		int location = MylarTaskListPlugin.getDefault().getOfflineReportsFile().find(repositoryUrl, bugId);
 		if (location != -1) {
 			return MylarTaskListPlugin.getDefault().getOfflineReportsFile().elements().get(location);
@@ -336,7 +332,7 @@ public class OfflineTaskManager {
 	 * 
 	 * @return The list of offline reports
 	 */
-	public ArrayList<RepositoryReport> elements() {
+	public ArrayList<RepositoryTaskData> elements() {
 		return list;
 	}
 
@@ -355,7 +351,7 @@ public class OfflineTaskManager {
 
 			// write each element in the array list
 			for (int i = 0; i < list.size(); i++) {
-				RepositoryReport item = list.get(i);
+				RepositoryTaskData item = list.get(i);
 				out.writeObject(item);
 			}
 			out.close();
@@ -398,7 +394,7 @@ public class OfflineTaskManager {
 			// read in each of the offline reports in the file
 			for (int nX = 0; nX < size; nX++) {
 				// try {
-				RepositoryReport item = (RepositoryReport) in.readObject();
+				RepositoryTaskData item = (RepositoryTaskData) in.readObject();
 				// add the offline report to the offlineReports list
 				list.add(item);
 				// } catch (ClassNotFoundException e) {
@@ -422,7 +418,7 @@ public class OfflineTaskManager {
 	 * @param indicesToRemove
 	 *            An array of the indicies of the bugs to be removed
 	 */
-	public void remove(List<RepositoryReport> sel) {
+	public void remove(List<RepositoryTaskData> sel) {
 		list.removeAll(sel);
 
 		// rewrite the file so that the data is persistant

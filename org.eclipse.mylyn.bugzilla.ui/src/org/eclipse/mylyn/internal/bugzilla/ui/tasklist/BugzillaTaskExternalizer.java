@@ -14,8 +14,8 @@ package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 import java.util.Date;
 
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.OfflineTaskManager;
-import org.eclipse.mylar.internal.tasklist.RepositoryReport;
 import org.eclipse.mylar.internal.tasklist.TaskExternalizationException;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
@@ -190,12 +190,12 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	 * TODO: move?
 	 */
 	public boolean readBugReport(BugzillaTask bugzillaTask) {		
-		RepositoryReport tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
+		RepositoryTaskData tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
 		if (tempBug == null) {
 			bugzillaTask.setBugReport(null);
 			return true;
 		}
-		bugzillaTask.setBugReport((RepositoryReport)tempBug);
+		bugzillaTask.setBugReport((RepositoryTaskData)tempBug);
 
 		if (bugzillaTask.getBugReport().hasChanges())
 			bugzillaTask.setSyncState(RepositoryTaskSyncState.OUTGOING);

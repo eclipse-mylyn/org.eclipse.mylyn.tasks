@@ -217,8 +217,8 @@ public abstract class AbstractRepositoryConnector {
 				changedTasks = getChangedSinceLastSync(repository, repositoryTasks);
 			} catch (Exception e) {
 				if (attempts == MAX_QUERY_ATTEMPTS) {
-					Date now = new Date();
-					MylarStatusHandler.log(e, "Error determining modified reports on " + repository.getUrl() + ". ["+now.toString()+"]");
+					Date now = new Date(); 
+					MylarStatusHandler.log(e, "Could not determine modified tasks for " + repository.getUrl() + ". ["+now.toString()+"]");
 					return;
 				}
 				try {

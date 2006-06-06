@@ -16,6 +16,8 @@ import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 
 public class BugzillaAttributeFactory extends AbstractAttributeFactory {
 
+	private static final long serialVersionUID = 5087501781682994759L;
+
 	@Override
 	public String mapCommonAttributeKey(String key) {
 		if (key == null) {
@@ -56,6 +58,8 @@ public class BugzillaAttributeFactory extends AbstractAttributeFactory {
 			return BugzillaReportElement.CREATION_TS.getKeyString();
 		} else if (key.equals(RepositoryTaskAttribute.KEYWORDS)) {
 			return BugzillaReportElement.KEYWORDS.getKeyString();
+		} else if (key.equals(RepositoryTaskAttribute.ATTACHMENT_DATE)) {
+			return BugzillaReportElement.DATE.getKeyString();
 		}
 		return key;
 	}
@@ -75,6 +79,15 @@ public class BugzillaAttributeFactory extends AbstractAttributeFactory {
 			return BugzillaReportElement.valueOf(key).toString();
 		} catch (IllegalArgumentException e) {
 			return "<unknown>";
+		}
+	}
+
+	@Override
+	public boolean isReadOnly(String key) {
+		try {
+			return BugzillaReportElement.valueOf(key).isReadOnly();
+		} catch (IllegalArgumentException e) {
+			return true;
 		}
 	}
 

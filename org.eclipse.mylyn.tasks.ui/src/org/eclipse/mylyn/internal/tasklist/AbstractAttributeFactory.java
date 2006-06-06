@@ -11,40 +11,18 @@
 
 package org.eclipse.mylar.internal.tasklist;
 
+import java.io.Serializable;
+
 /**
  * @author Rob Elves
  */
-public abstract class AbstractAttributeFactory {
+public abstract class AbstractAttributeFactory implements Serializable {
 
 	public RepositoryTaskAttribute createAttribute(String key) {
 		String mapped = mapCommonAttributeKey(key);
+		RepositoryTaskAttribute attribute = new RepositoryTaskAttribute(mapped, getName(mapped), getIsHidden(mapped));
+		attribute.setReadOnly(isReadOnly(mapped));
 		return new RepositoryTaskAttribute(mapped, getName(mapped), getIsHidden(mapped));
-	}
-
-	public void addAttributeValue(RepositoryTaskData taskData, String key, String value) {
-		String mapped = mapCommonAttributeKey(key);
-		RepositoryTaskAttribute attrib = taskData.getAttribute(mapped);
-		if (attrib != null) {
-			attrib.addValue(value);
-		} else {
-			attrib = createAttribute(mapped);
-			attrib.addValue(value);
-			taskData.addAttribute(mapped, attrib);
-		}
-	}
-	
-	/**
-	 * sets a value on an attribute, if attribute doesn't exist, appropriate
-	 * attribute is created
-	 */
-	public void setAttributeValue(RepositoryTaskData taskData, String key, String value) {
-		String mapped = mapCommonAttributeKey(key);
-		RepositoryTaskAttribute attrib = taskData.getAttribute(mapped);
-		if (attrib == null) {
-			attrib = createAttribute(mapped);
-			taskData.addAttribute(mapped, attrib);
-		}
-		attrib.setValue(value);
 	}
 	
 	public abstract String mapCommonAttributeKey(String key);
@@ -52,4 +30,6 @@ public abstract class AbstractAttributeFactory {
 	public abstract boolean getIsHidden(String key);
 
 	public abstract String getName(String key);
+		
+	public abstract boolean isReadOnly(String key);
 }

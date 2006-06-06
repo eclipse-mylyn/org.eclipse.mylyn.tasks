@@ -192,12 +192,12 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	public boolean readBugReport(BugzillaTask bugzillaTask) {		
 		RepositoryTaskData tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
 		if (tempBug == null) {
-			bugzillaTask.setBugReport(null);
+			bugzillaTask.setTaskData(null);
 			return true;
 		}
-		bugzillaTask.setBugReport((RepositoryTaskData)tempBug);
+		bugzillaTask.setTaskData((RepositoryTaskData)tempBug);
 
-		if (bugzillaTask.getBugReport().hasChanges())
+		if (bugzillaTask.getTaskData().hasChanges())
 			bugzillaTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
 		return true;
 	}

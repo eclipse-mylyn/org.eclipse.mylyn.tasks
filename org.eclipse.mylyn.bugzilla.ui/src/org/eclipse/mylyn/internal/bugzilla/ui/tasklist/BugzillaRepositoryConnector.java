@@ -60,7 +60,7 @@ import org.eclipse.mylar.internal.bugzilla.ui.wizard.NewBugzillaReportWizard;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.ZipFileUtil;
-import org.eclipse.mylar.internal.tasklist.RepositoryAttachment;
+import org.eclipse.mylar.internal.tasklist.RemoteContextDelegate;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
 import org.eclipse.mylar.internal.tasklist.ui.wizards.AbstractAddExistingTaskWizard;
@@ -125,12 +125,13 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		return BugzillaPlugin.REPOSITORY_KIND;
 	}
 
+	// TODO: eliminate this method, should only need call to saveOffline(..)
 	public void saveBugReport(RepositoryTaskData bugzillaBug) {
 		String handle = AbstractRepositoryTask.getHandle(bugzillaBug.getRepositoryUrl(), bugzillaBug.getId());
 		ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
 		if (task instanceof BugzillaTask) {
 			BugzillaTask bugzillaTask = (BugzillaTask) task;
-			bugzillaTask.setBugReport((RepositoryTaskData) bugzillaBug);
+			bugzillaTask.setTaskData(bugzillaBug);
 
 			if (bugzillaBug.hasChanges()) {
 				bugzillaTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
@@ -139,11 +140,11 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			}
 		}
 
-		saveOffline(bugzillaBug, true);
+		saveOffline(bugzillaBug, false);
 
 	}
 
-	private RepositoryTaskData downloadReport(final BugzillaTask bugzillaTask) {
+	public RepositoryTaskData downloadTaskData(final AbstractRepositoryTask bugzillaTask) {
 		TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(
 				BugzillaPlugin.REPOSITORY_KIND, bugzillaTask.getRepositoryUrl());
 		Proxy proxySettings = MylarTaskListPlugin.getDefault().getProxySettings();
@@ -276,26 +277,6 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		}
 	}
 
-	private static void offlineStatusChange(RepositoryTaskData report, RepositoryTaskSyncState state) {
-		if (report == null || state == null) {
-			return;
-		}
-
-		String handle = AbstractRepositoryTask.getHandle(report.getRepositoryUrl(), report.getId());
-		ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
-		if (task != null && task instanceof BugzillaTask) {
-			final BugzillaTask bugTask = (BugzillaTask) task;
-			if (bugTask.getSyncState() != state) {
-				bugTask.setSyncState(state);
-				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						MylarTaskListPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(bugTask);
-					}
-				});
-			}
-		}
-	}
-
 	public void submitBugReport(final RepositoryTaskData bugReport, final BugzillaReportSubmitForm form,
 			IJobChangeListener listener) {
 
@@ -352,7 +333,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	private void internalSubmitBugReport(RepositoryTaskData bugReport, BugzillaReportSubmitForm form) {
 		try {
 			form.submitReportToRepository();
-			removeReport(bugReport);
+			removeOfflineTaskData(bugReport);
 			String handle = AbstractRepositoryTask.getHandle(bugReport.getRepositoryUrl(), bugReport.getId());
 
 			ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
@@ -369,34 +350,6 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	// TODO: pull up
-	public void saveOffline(final RepositoryTaskData report, final boolean forceSynch) {
-		// If there is already an offline report for this bug, update the file.
-
-		if (((RepositoryTaskData) report).isSavedOffline()) {
-			MylarTaskListPlugin.getDefault().getOfflineReportsFile().update();
-		} else {
-			try {
-				RepositoryTaskSyncState offlineStatus = MylarTaskListPlugin.getDefault().getOfflineReportsFile().add(
-						report, forceSynch);
-				((RepositoryTaskData) report).setOfflineState(true);
-				offlineStatusChange(report, offlineStatus);
-
-			} catch (CoreException e) {
-				MylarStatusHandler.fail(e, e.getMessage(), false);
-			}
-		}
-	}
-
-	public static void removeReport(RepositoryTaskData bug) {
-		bug.setOfflineState(false);
-		// offlineStatusChange(bug, BugzillaOfflineStatus.DELETED, false);
-		offlineStatusChange(bug, RepositoryTaskSyncState.SYNCHRONIZED);
-		ArrayList<RepositoryTaskData> bugList = new ArrayList<RepositoryTaskData>();
-		bugList.add(bug);
-		MylarTaskListPlugin.getDefault().getOfflineReportsFile().remove(bugList);
 	}
 
 	@Override
@@ -463,17 +416,17 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		return newHits;
 	}
 
-	@Override
-	protected void updateOfflineState(AbstractRepositoryTask repositoryTask, boolean forceSync) {
-		if (repositoryTask instanceof BugzillaTask) {
-			BugzillaTask bugzillaTask = (BugzillaTask) repositoryTask;
-			RepositoryTaskData downloadedReport = downloadReport(bugzillaTask);
-			if (downloadedReport != null) {
-				bugzillaTask.setBugReport(downloadedReport);
-				saveOffline(downloadedReport, forceSync);
-			}
-		}
-	}
+//	@Override
+//	protected void updateOfflineState(AbstractRepositoryTask repositoryTask, boolean forceSync) {
+//		if (repositoryTask instanceof BugzillaTask) {
+//			BugzillaTask bugzillaTask = (BugzillaTask) repositoryTask;
+//			RepositoryTaskData downloadedReport = downloadReport(bugzillaTask);
+//			if (downloadedReport != null) {
+//				bugzillaTask.setBugReport(downloadedReport);
+//				saveOffline(downloadedReport, forceSync);
+//			}
+//		}
+//	}
 
 	@Override
 	public boolean attachContext(TaskRepository repository, AbstractRepositoryTask task, String longComment)
@@ -523,29 +476,29 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		}
 	}
 
-	@Override
-	public Set<IRemoteContextDelegate> getAvailableContexts(TaskRepository repository, AbstractRepositoryTask task) {
-		Set<IRemoteContextDelegate> contextDelegates = new HashSet<IRemoteContextDelegate>();
-		if (task instanceof BugzillaTask) {
-			BugzillaTask bugzillaTask = (BugzillaTask) task;
-			if (bugzillaTask.getBugReport() != null) {
-				for (RepositoryAttachment attachment : bugzillaTask.getBugReport().getAttachments()) {
-					if (attachment.getDescription().equals(MYLAR_CONTEXT_DESCRIPTION)) {
-						contextDelegates.add(new BugzillaRemoteContextDelegate(attachment));
-					}
-				}
-			}
-		}
-		return contextDelegates;
-	}
+//	@Override
+//	public Set<IRemoteContextDelegate> getAvailableContexts(TaskRepository repository, AbstractRepositoryTask task) {
+//		Set<IRemoteContextDelegate> contextDelegates = new HashSet<IRemoteContextDelegate>();
+//		if (task instanceof BugzillaTask) {
+//			BugzillaTask bugzillaTask = (BugzillaTask) task;
+//			if (bugzillaTask.getTaskData() != null) {
+//				for (RepositoryAttachment attachment : bugzillaTask.getTaskData().getAttachments()) {
+//					if (attachment.getDescription().equals(MYLAR_CONTEXT_DESCRIPTION)) {
+//						contextDelegates.add(new BugzillaRemoteContextDelegate(attachment));
+//					}
+//				}
+//			}
+//		}
+//		return contextDelegates;
+//	}
 
 	@Override
 	public boolean retrieveContext(TaskRepository repository, AbstractRepositoryTask task,
 			IRemoteContextDelegate remoteContextDelegate) throws IOException, GeneralSecurityException {
 		boolean result = false;
 		boolean wasActive = false;
-		if (remoteContextDelegate instanceof BugzillaRemoteContextDelegate) {
-			BugzillaRemoteContextDelegate contextDelegate = (BugzillaRemoteContextDelegate) remoteContextDelegate;
+		if (remoteContextDelegate instanceof RemoteContextDelegate) {
+			RemoteContextDelegate contextDelegate = (RemoteContextDelegate) remoteContextDelegate;
 
 			if (task.isActive()) {
 				wasActive = true;

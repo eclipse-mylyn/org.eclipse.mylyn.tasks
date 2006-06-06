@@ -13,6 +13,7 @@ package org.eclipse.mylar.internal.bugzilla.ui.editor;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1168,7 +1169,13 @@ public abstract class AbstractBugEditor extends EditorPart {
 				public int compare(Viewer viewer, Object e1, Object e2) {
 					RepositoryAttachment attachment1 = (RepositoryAttachment) e1;
 					RepositoryAttachment attachment2 = (RepositoryAttachment) e2;
-					return attachment1.getDateCreated().compareTo(attachment2.getDateCreated());
+					Date created1 = attachment1.getDateCreated();
+					Date created2 = attachment2.getDateCreated();
+					if(created1 != null && created2 != null) {
+						return attachment1.getDateCreated().compareTo(attachment2.getDateCreated());
+					} else {
+						return 0;
+					}
 				}
 			});
 

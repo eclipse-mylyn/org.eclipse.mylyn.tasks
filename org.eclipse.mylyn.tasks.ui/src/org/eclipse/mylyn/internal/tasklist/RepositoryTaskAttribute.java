@@ -26,13 +26,13 @@ public class RepositoryTaskAttribute implements Serializable {
 	
 	private static final long serialVersionUID = 6959987055086133307L;
 
-	public static final String COMMENT_DATE = "task.common.comment.date";
-
 	public static final String USER_OWNER = "task.common.user.owner";
 
 	public static final String USER_CC = "task.common.user.cc";
 	
 	public static final String COMMENT_TEXT = "task.common.comment.text";
+	
+	public static final String COMMENT_DATE = "task.common.comment.date";
 
 	public static final String DESCRIPTION = "task.common.description";
 
@@ -41,6 +41,8 @@ public class RepositoryTaskAttribute implements Serializable {
 	public static final String ATTACHMENT_TYPE = "task.common.attachment.type";
 
 	public static final String ATTACHMENT_CTYPE = "task.common.attachment.ctype";
+	
+	public static final String ATTACHMENT_DATE = "task.common.attachment.date";
 
 	public static final String USER_ASSIGNED = "task.common.user.assigned";
 

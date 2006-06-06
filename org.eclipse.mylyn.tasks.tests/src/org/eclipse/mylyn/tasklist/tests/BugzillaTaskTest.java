@@ -16,6 +16,8 @@ import java.util.Date;
 
 import junit.framework.TestCase;
 
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaAttributeFactory;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
@@ -43,14 +45,14 @@ public class BugzillaTaskTest extends TestCase {
 
 	public void testCompletionDate() {
 		BugzillaTask task = new BugzillaTask("handle", "description", true);
-		RepositoryTaskData report = new RepositoryTaskData(IBugzillaConstants.ECLIPSE_BUGZILLA_URL, 1);
-		task.setBugReport(report);
+		RepositoryTaskData report = new RepositoryTaskData(new BugzillaAttributeFactory(),  BugzillaPlugin.REPOSITORY_KIND, IBugzillaConstants.ECLIPSE_BUGZILLA_URL, 1);
+		task.setTaskData(report);
 		assertNull(task.getCompletionDate());
 
 		Calendar calendar = Calendar.getInstance();
 		Date now = new Date(calendar.getTimeInMillis());
 
-		Comment comment = new Comment(report, 1);
+		Comment comment = new Comment(new BugzillaAttributeFactory(), report, 1);
 		RepositoryTaskAttribute attribute = BugzillaRepositoryUtil.makeNewAttribute(BugzillaReportElement.BUG_WHEN);
 		attribute.setValue(Comment.creation_ts_date_format.format(now));
 		comment.addAttribute(BugzillaReportElement.BUG_WHEN.getKeyString(), attribute);

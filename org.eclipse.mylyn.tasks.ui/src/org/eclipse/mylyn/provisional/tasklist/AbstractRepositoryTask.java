@@ -14,6 +14,8 @@ package org.eclipse.mylar.provisional.tasklist;
 import java.util.Date;
 
 import org.eclipse.mylar.internal.core.MylarContextManager;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
+import org.eclipse.mylar.internal.tasklist.util.HtmlStreamTokenizer;
 
 /**
  * Virtual proxy for a repository task.
@@ -25,7 +27,7 @@ public abstract class AbstractRepositoryTask extends Task {
 
 	/** The last time this task's bug report was downloaded from the server. */
 	protected Date lastSynchronized;
-	
+	protected RepositoryTaskData taskData;
 	protected boolean currentlySynchronizing;
 	
 	/**
@@ -161,5 +163,21 @@ public abstract class AbstractRepositoryTask extends Task {
 
 	public void setDirty(boolean isDirty) {
 		this.isDirty = isDirty;
+	}
+
+	
+	public RepositoryTaskData getTaskData() {
+		return taskData;
+	}
+	
+
+	public void setTaskData(RepositoryTaskData taskData) {
+		this.taskData = taskData;
+		// TODO: remove?
+		if (taskData != null) {
+			setDescription(HtmlStreamTokenizer.unescape(AbstractRepositoryTask
+					.getTaskIdAsInt(getHandleIdentifier())
+					+ ": " + taskData.getSummary()));
+		}
 	}
 }

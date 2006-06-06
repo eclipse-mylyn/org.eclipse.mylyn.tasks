@@ -123,7 +123,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 	protected Text addCommentsText;
 
 	protected RepositoryTaskData taskData;
-	
+
 	protected AbstractRepositoryConnector connector;
 
 	public String getNewCommentText() {
@@ -311,20 +311,22 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		});
 		compareButton.addListener(SWT.FocusIn, new GenericListener());
 
-//		Button expandAll = toolkit.createButton(buttonComposite, LABEL_EXPAND_ALL_BUTTON, SWT.NONE);
-//		expandAll.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
-//		expandAll.addSelectionListener(new SelectionListener() {
-//
-//			public void widgetDefaultSelected(SelectionEvent e) {
-//				// ignore
-//
-//			}
-//
-//			public void widgetSelected(SelectionEvent e) {
-//				revealAllComments();
-//
-//			}
-//		});
+		// Button expandAll = toolkit.createButton(buttonComposite,
+		// LABEL_EXPAND_ALL_BUTTON, SWT.NONE);
+		// expandAll.setLayoutData(new
+		// GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+		// expandAll.addSelectionListener(new SelectionListener() {
+		//
+		// public void widgetDefaultSelected(SelectionEvent e) {
+		// // ignore
+		//
+		// }
+		//
+		// public void widgetSelected(SelectionEvent e) {
+		// revealAllComments();
+		//
+		// }
+		// });
 
 		// TODO used for spell checking. Add back when we want to support this
 		// checkSpellingButton = new Button(buttonComposite, SWT.NONE);
@@ -370,12 +372,13 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		ExistingBugEditor.this.showBusy(true);
 		BugzillaReportSubmitForm bugzillaReportSubmitForm;
 		try {
-			bugzillaReportSubmitForm = BugzillaReportSubmitForm.makeExistingBugPost(taskData,
-					repository.getUrl(), repository.getUserName(), repository.getPassword(), bugzillaInput
-							.getProxySettings(), removeCC, repository.getCharacterEncoding());
+			bugzillaReportSubmitForm = BugzillaReportSubmitForm.makeExistingBugPost(taskData, repository.getUrl(),
+					repository.getUserName(), repository.getPassword(), bugzillaInput.getProxySettings(), removeCC,
+					repository.getCharacterEncoding());
 		} catch (UnsupportedEncodingException e) {
 			// should never get here but just in case...
-			MessageDialog.openError(null, "Posting Error", "Ensure proper encoding selected in "+TaskRepositoriesView.NAME+".");
+			MessageDialog.openError(null, "Posting Error", "Ensure proper encoding selected in "
+					+ TaskRepositoriesView.NAME + ".");
 			return;
 		}
 
@@ -437,8 +440,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 				form.reflow(true);
 			}
 		});
-		
-				
+
 		final Composite sectionComposite = toolkit.createComposite(section);
 		section.setClient(sectionComposite);
 		GridLayout addCommentsLayout = new GridLayout();
@@ -447,12 +449,12 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		GridData sectionCompositeData = new GridData(GridData.FILL_HORIZONTAL);
 		sectionComposite.setLayoutData(sectionCompositeData);
 
-		TextViewer viewer = addRepositoryText(repository, sectionComposite, taskData.getDescription());		
+		TextViewer viewer = addRepositoryText(repository, sectionComposite, taskData.getDescription());
 		final StyledText styledText = viewer.getTextWidget();
 		styledText.addListener(SWT.FocusIn, new DescriptionListener());
 		styledText.setLayout(new GridLayout());
 		GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
-		
+
 		texts.add(textsindex, styledText);
 		textHash.put(taskData.getDescription(), styledText);
 		textsindex++;
@@ -480,19 +482,18 @@ public class ExistingBugEditor extends AbstractBugEditor {
 			}
 		});
 
-		
 		ImageHyperlink hyperlink = toolkit.createImageHyperlink(section, SWT.NONE);
-		hyperlink.setBackgroundMode(SWT.INHERIT_NONE);		
+		hyperlink.setBackgroundMode(SWT.INHERIT_NONE);
 		hyperlink.setBackground(section.getTitleBarBackground());
 		hyperlink.setImage(TaskListImages.getImage(TaskListImages.EXPAND_ALL));
 		hyperlink.addHyperlinkListener(new HyperlinkAdapter() {
 			public void linkActivated(HyperlinkEvent e) {
 				revealAllComments();
-			}			
+			}
 		});
-		
+
 		section.setTextClient(hyperlink);
-		
+
 		// Additional (read-only) Comments Area
 		Composite addCommentsComposite = toolkit.createComposite(section);
 		section.setClient(addCommentsComposite);
@@ -585,10 +586,9 @@ public class ExistingBugEditor extends AbstractBugEditor {
 			// styledText.setFont(COMMENT_FONT);
 			// System.err.println(comment.getNumber()+" "+comment.getText());
 			TextViewer viewer = addRepositoryText(repository, ecComposite, comment.getText());
-			styledText = viewer.getTextWidget();			
+			styledText = viewer.getTextWidget();
 			GridDataFactory.fillDefaults().hint(DESCRIPTION_WIDTH, SWT.DEFAULT).applyTo(styledText);
-			
-			
+
 			// line wrapping
 			// GridData styledTextData = new GridData(GridData.FILL_HORIZONTAL);
 			// styledTextData.widthHint = DESCRIPTION_WIDTH;
@@ -632,9 +632,9 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		newCommentsComposite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		addCommentsText = toolkit.createText(newCommentsComposite, taskData.getNewComment(), SWT.MULTI | SWT.V_SCROLL
 				| SWT.WRAP);
-		
+
 		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
-		Font newCommnetFont = themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID);		
+		Font newCommnetFont = themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID);
 		addCommentsText.setFont(newCommnetFont);
 		toolkit.paintBordersFor(newCommentsComposite);
 		GridData addCommentsTextData = new GridData(GridData.FILL_HORIZONTAL);
@@ -657,18 +657,15 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		});
 		addCommentsText.addListener(SWT.FocusIn, new NewCommentListener());
 		addCommentsTextBox = addCommentsText;
-		
+
 		sectionAdditionalComments.setClient(newCommentsComposite);
-		
-		
-		
+
 		// if they aren't already on the cc list create an add self check box
-		
-		
+
 		RepositoryTaskAttribute owner = taskData.getAttribute(BugzillaReportElement.ASSIGNED_TO.getKeyString());
 
 		// Don't add addselfcc check box if the user is the bug owner
-		if (owner != null && owner.getValue().indexOf(repository.getUserName()) != -1) {			
+		if (owner != null && owner.getValue().indexOf(repository.getUserName()) != -1) {
 			return;
 		}
 		// Don't add addselfcc if already there
@@ -678,25 +675,28 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		}
 		RepositoryTaskAttribute addselfcc = taskData.getAttribute(BugzillaReportElement.ADDSELFCC.getKeyString());
 		if (addselfcc == null) {
-			addselfcc = BugzillaRepositoryUtil.makeNewAttribute(BugzillaReportElement.ADDSELFCC);			
+			addselfcc = BugzillaRepositoryUtil.makeNewAttribute(BugzillaReportElement.ADDSELFCC);
 			taskData.addAttribute(BugzillaReportElement.ADDSELFCC.getKeyString(), addselfcc);
-		} 
-		
+		}
+
 		addselfcc.setValue("0");
-		
-		
-		final Button addSelfButton = toolkit.createButton(newCommentsComposite, "Add "+repository.getUserName()+" to CC list", SWT.CHECK);
-		
+
+		final Button addSelfButton = toolkit.createButton(newCommentsComposite, "Add " + repository.getUserName()
+				+ " to CC list", SWT.CHECK);
+
 		addSelfButton.addSelectionListener(new SelectionAdapter() {
 
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				if(addSelfButton.getSelection()) {
-					connector.getAttributeFactory().setAttributeValue(taskData, BugzillaReportElement.ADDSELFCC.getKeyString(), "1");					
+				if (addSelfButton.getSelection()) {
+					taskData.setAttributeValue(BugzillaReportElement.ADDSELFCC.getKeyString(), "1");
+					// connector.getAttributeFactory().setAttributeValue(taskData,
+					// BugzillaReportElement.ADDSELFCC.getKeyString(), "1");
 				} else {
-					connector.getAttributeFactory().setAttributeValue(taskData, BugzillaReportElement.ADDSELFCC.getKeyString(), "0");
+					taskData.setAttributeValue(BugzillaReportElement.ADDSELFCC.getKeyString(), "0");
 				}
-			}});		
+			}
+		});
 	}
 
 	@Override
@@ -725,11 +725,12 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		keyWordsList.setLayoutData(keyWordsTextData);
 
 		// initialize the keywords list with valid values
-		
+
 		java.util.List<String> validKeywords = new ArrayList<String>();
 		try {
 			validKeywords = BugzillaPlugin.getDefault().getRepositoryConfiguration(repository.getUrl(),
-					MylarTaskListPlugin.getDefault().getProxySettings(), repository.getUserName(), repository.getPassword(), repository.getCharacterEncoding()).getKeywords();
+					MylarTaskListPlugin.getDefault().getProxySettings(), repository.getUserName(),
+					repository.getPassword(), repository.getCharacterEncoding()).getKeywords();
 		} catch (Exception e) {
 			// ignore
 		}
@@ -780,8 +781,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 		ccText.addModifyListener(new ModifyListener() {
 
 			public void modifyText(ModifyEvent e) {
-				changeDirtyStatus(true);				
-				connector.getAttributeFactory().setAttributeValue(taskData, BugzillaReportElement.NEWCC.getKeyString(), ccText.getText());				
+				changeDirtyStatus(true);
+				taskData.setAttributeValue(BugzillaReportElement.NEWCC.getKeyString(), ccText.getText());
 			}
 
 		});
@@ -887,7 +888,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 				TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(
 						BugzillaPlugin.REPOSITORY_KIND, taskData.getRepositoryUrl());
 				serverBug = BugzillaRepositoryUtil.getBug(repository.getUrl(), repository.getUserName(), repository
-						.getPassword(), bugzillaInput.getProxySettings(), repository.getCharacterEncoding(), taskData.getId());
+						.getPassword(), bugzillaInput.getProxySettings(), repository.getCharacterEncoding(), taskData
+						.getId());
 				// If no bug was found on the server, throw an exception so that
 				// the
 				// user gets the same message that appears when there is a
@@ -898,7 +900,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 					public void run() {
 						MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-								"Could not open bug.", "Bug #" + taskData.getId() + " could not be read from the server.");
+								"Could not open bug.", "Bug #" + taskData.getId()
+										+ " could not be read from the server.");
 					}
 				});
 				return new Status(IStatus.OK, BugzillaUiPlugin.PLUGIN_ID, IStatus.OK,
@@ -947,7 +950,7 @@ public class ExistingBugEditor extends AbstractBugEditor {
 				}
 			}
 
-			connector.getAttributeFactory().setAttributeValue(taskData, BugzillaReportElement.KEYWORDS.getKeyString(), keywords.toString());
+			taskData.setAttributeValue(BugzillaReportElement.KEYWORDS.getKeyString(), keywords.toString());
 
 			// update the keywords text field
 			keywordsText.setText(keywords.toString());
@@ -968,8 +971,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 	protected class DescriptionListener implements Listener {
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(), LABEL_SECTION_DESCRIPTION, true,
-							taskData.getSummary()))));
+					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(),
+							LABEL_SECTION_DESCRIPTION, true, taskData.getSummary()))));
 		}
 	}
 
@@ -993,8 +996,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(), comment.getCreated().toString(),
-							comment, taskData.getSummary()))));
+					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(), comment.getCreated()
+							.toString(), comment, taskData.getSummary()))));
 		}
 	}
 
@@ -1005,8 +1008,8 @@ public class ExistingBugEditor extends AbstractBugEditor {
 	protected class NewCommentListener implements Listener {
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(), "New Comment", false, taskData
-							.getSummary()))));
+					new BugzillaReportSelection(taskData.getId(), taskData.getRepositoryUrl(), "New Comment", false,
+							taskData.getSummary()))));
 		}
 	}
 

@@ -47,7 +47,8 @@ public class Comment extends AttributeContainer implements Serializable {
 
 	private int attachmentId;
 
-	public Comment(RepositoryTaskData report, int num) {
+	public Comment(AbstractAttributeFactory attributeFactory, RepositoryTaskData report, int num) {
+		super(attributeFactory);
 		this.bug = report;
 		this.number = num;
 	}

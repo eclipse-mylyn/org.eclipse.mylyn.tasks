@@ -60,7 +60,8 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	/** The repositoryOperations that can be done on the report */
 	protected List<RepositoryOperation> repositoryOperations = new ArrayList<RepositoryOperation>();
 
-//	private static final RepositoryTaskAttributeFactory attributeFactory = new BugzillaAttributeFactory();
+	// private static final RepositoryTaskAttributeFactory attributeFactory =
+	// new BugzillaAttributeFactory();
 
 	/** Parser for dates in the report */
 	private static SimpleDateFormat delta_ts_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -79,9 +80,12 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	/** Modification timestamp */
 	protected Date lastModified = null;
 
-	public RepositoryTaskData(String repositoryURL, int id) {
-		super();
+	protected String repositoryKind;
+
+	public RepositoryTaskData(AbstractAttributeFactory factory, String repositoryKind, String repositoryURL, int id) {
+		super(factory);
 		this.reportID = id;
+		this.repositoryKind = repositoryKind;
 		this.repositoryURL = repositoryURL;
 	}
 
@@ -97,14 +101,15 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 		}
 	}
 
-//	public void addCC(String email) {
-//		addAttributeValue(RepositoryTaskAttribute.KEY_CC, email);
-//		addAttributeValue(BugzillaReportElement.CC.getKeyString(), email);
-//	}
+	// public void addCC(String email) {
+	// addAttributeValue(RepositoryTaskAttribute.KEY_CC, email);
+	// addAttributeValue(BugzillaReportElement.CC.getKeyString(), email);
+	// }
 
 	public String getLabel() {
 		return getSummary();
-//		return getId() + ": " + getAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString());
+		// return getId() + ": " +
+		// getAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString());
 	}
 
 	/**
@@ -114,7 +119,8 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	 */
 	public String getResolution() {
 		return getAttributeValue(RepositoryTaskAttribute.RESOLUTION);
-//		return getAttributeValue(BugzillaReportElement.RESOLUTION.getKeyString());
+		// return
+		// getAttributeValue(BugzillaReportElement.RESOLUTION.getKeyString());
 	}
 
 	/**
@@ -124,14 +130,16 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	 */
 	public String getStatus() {
 		return getAttributeValue(RepositoryTaskAttribute.STATUS);
-//		return getAttributeValue(BugzillaReportElement.BUG_STATUS.getKeyString());
+		// return
+		// getAttributeValue(BugzillaReportElement.BUG_STATUS.getKeyString());
 	}
 
 	// XXX: fix to not parse
 	public Date getLastModified(TimeZone timeZone) {
 		if (lastModified == null) {
 			String dateString = getAttributeValue(RepositoryTaskAttribute.DATE_MODIFIED);
-//			String dateString = getAttributeValue(BugzillaReportElement.DELTA_TS.getKeyString());
+			// String dateString =
+			// getAttributeValue(BugzillaReportElement.DELTA_TS.getKeyString());
 			try {
 				if (timeZone != null) {
 					delta_ts_format.setTimeZone(timeZone);
@@ -151,13 +159,13 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 		// this.description = decodeStringFromCharset(description);
 	}
 
-//	public void setKeywords(List<String> keywords) {
-//		this.validKeywords = keywords;
-//	}
+	// public void setKeywords(List<String> keywords) {
+	// this.validKeywords = keywords;
+	// }
 
-	public void setOfflineState(boolean newOfflineState) {
-		savedOffline = newOfflineState;
-	}
+	// public void setOfflineState(boolean newOfflineState) {
+	// savedOffline = newOfflineState;
+	// }
 
 	public void setSelectedOperation(RepositoryOperation o) {
 		selectedOperation = o;
@@ -167,10 +175,10 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 		return selectedOperation;
 	}
 
-//	@Override
-//	public RepositoryTaskAttributeFactory getAttributeFactory() {
-//		return attributeFactory;
-//	}
+	// @Override
+	// public RepositoryTaskAttributeFactory getAttributeFactory() {
+	// return attributeFactory;
+	// }
 
 	/**
 	 * Get all of the repositoryOperations that can be done to the bug
@@ -188,7 +196,8 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	 */
 	public String getReporter() {
 		return getAttributeValue(RepositoryTaskAttribute.USER_REPORTER);
-//		return getAttributeValue(BugzillaReportElement.REPORTER.getKeyString());
+		// return
+		// getAttributeValue(BugzillaReportElement.REPORTER.getKeyString());
 	}
 
 	/**
@@ -218,18 +227,21 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	 */
 	public String getSummary() {
 		return getAttributeValue(RepositoryTaskAttribute.SUMMARY);
-//		return getAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString());
+		// return
+		// getAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString());
 	}
 
 	public void setSummary(String summary) {
 		throw new NullPointerException("not impelmented");
-//		setAttributeValue(RepositoryTaskAttribute.SHORT_DESC, summary);	
-//		setAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString(), summary);
+		// setAttributeValue(RepositoryTaskAttribute.SHORT_DESC, summary);
+		// setAttributeValue(BugzillaReportElement.SHORT_DESC.getKeyString(),
+		// summary);
 	}
 
 	public String getProduct() {
 		return getAttributeValue(RepositoryTaskAttribute.PRODUCT);
-//		return getAttributeValue(BugzillaReportElement.PRODUCT.getKeyString());
+		// return
+		// getAttributeValue(BugzillaReportElement.PRODUCT.getKeyString());
 	}
 
 	public boolean isLocallyCreated() {
@@ -237,13 +249,14 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	}
 
 	public boolean isResolved() {
-//		RepositoryTaskAttribute status = getAttribute(BugzillaReportElement.BUG_STATUS.getKeyString());
+		// RepositoryTaskAttribute status =
+		// getAttribute(BugzillaReportElement.BUG_STATUS.getKeyString());
 		return isResolvedStatus(getStatus());
 	}
 
-	public boolean isSavedOffline() {
-		return savedOffline;
-	}
+	// public boolean isSavedOffline() {
+	// return savedOffline;
+	// }
 
 	/**
 	 * Get the date that the bug was created
@@ -253,7 +266,8 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	public Date getCreated() {
 		if (created == null) {
 			String dateString = getAttributeValue(RepositoryTaskAttribute.DATE_CREATION);
-//			String dateString = getAttributeValue(BugzillaReportElement.CREATION_TS.getKeyString());
+			// String dateString =
+			// getAttributeValue(BugzillaReportElement.CREATION_TS.getKeyString());
 			try {
 				created = creation_ts_format.parse(dateString);
 			} catch (ParseException e) {
@@ -271,8 +285,7 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 	public List<String> getKeywords() {
 
 		// get the selected keywords for the bug
-		StringTokenizer st = new StringTokenizer(getAttributeValue(RepositoryTaskAttribute.KEYWORDS), ",",
-				false);
+		StringTokenizer st = new StringTokenizer(getAttributeValue(RepositoryTaskAttribute.KEYWORDS), ",", false);
 		List<String> keywords = new ArrayList<String>();
 		while (st.hasMoreTokens()) {
 			String s = st.nextToken().trim();
@@ -294,12 +307,12 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 
 	public List<String> getCC() {
 		return getAttributeValues(RepositoryTaskAttribute.USER_CC);
-//		return getAttributeValues(BugzillaReportElement.CC.getKeyString());
+		// return getAttributeValues(BugzillaReportElement.CC.getKeyString());
 	}
-	
+
 	public void removeCC(String email) {
 		removeAttributeValue(RepositoryTaskAttribute.USER_CC, email);
-//		removeAttributeValue(BugzillaReportElement.CC.getKeyString(), email);
+		// removeAttributeValue(BugzillaReportElement.CC.getKeyString(), email);
 	}
 
 	public String getAssignedTo() {
@@ -388,5 +401,20 @@ public class RepositoryTaskData extends AttributeContainer implements Serializab
 		}
 	}
 
-//	public abstract RepositoryTaskAttributeFactory getAttributeFactory();
+	public String getRepositoryKind() {
+		return repositoryKind;
+	}
+
+	@Override
+	public void setAttributeFactory(AbstractAttributeFactory factory) {
+		super.setAttributeFactory(factory);
+		for (Comment comment : comments) {
+			comment.setAttributeFactory(factory);
+		}
+		for (RepositoryAttachment attachment : attachments) {
+			attachment.setAttributeFactory(factory);
+		}
+	}
+
+	// public abstract RepositoryTaskAttributeFactory getAttributeFactory();
 }

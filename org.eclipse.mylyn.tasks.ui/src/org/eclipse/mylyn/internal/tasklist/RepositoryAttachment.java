@@ -22,6 +22,10 @@ import java.util.Date;
  */
 public class RepositoryAttachment extends AttributeContainer implements Serializable {
 
+	public RepositoryAttachment(AbstractAttributeFactory attributeFactory) {
+		super(attributeFactory);		
+	}
+
 	private static final long serialVersionUID = -9123545810321250785L;
 	
 	/** Parser for dates in the report */
@@ -49,7 +53,7 @@ public class RepositoryAttachment extends AttributeContainer implements Serializ
 		if(created == null) {
 			//created = Calendar.getInstance().getTime();
 			try {
-				created = creation_ts_date_format.parse(getAttributeValue(RepositoryTaskAttribute.DATE_CREATION));
+				created = creation_ts_date_format.parse(getAttributeValue(RepositoryTaskAttribute.ATTACHMENT_DATE));
 			} catch (Exception e) {
 			}			
 		}

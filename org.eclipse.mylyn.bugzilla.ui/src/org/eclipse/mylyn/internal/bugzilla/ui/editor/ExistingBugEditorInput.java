@@ -77,7 +77,7 @@ public class ExistingBugEditorInput extends AbstractBugEditorInput {
 				// }
 				// });
 			}
-		} else {
+		} else {			
 			bug = getCurrentBug(repository, proxySettings, bugId);
 		}
 	}

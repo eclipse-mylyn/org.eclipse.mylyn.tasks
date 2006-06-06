@@ -29,6 +29,8 @@ import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 public class RepositoryReportFactory extends AbstractReportFactory {
 
 	private static RepositoryReportFactory instance;
+	
+	private static BugzillaAttributeFactory bugzillaAttributeFactory = new BugzillaAttributeFactory();
 
 	private static final String SHOW_BUG_CGI_XML = "/show_bug.cgi?ctype=xml&id=";
 
@@ -47,7 +49,7 @@ public class RepositoryReportFactory extends AbstractReportFactory {
 			String password, String characterEncoding) throws LoginException, KeyManagementException,
 			NoSuchAlgorithmException, IOException {
 
-		SaxBugReportContentHandler contentHandler = new SaxBugReportContentHandler(bugReport);
+		SaxBugReportContentHandler contentHandler = new SaxBugReportContentHandler(bugzillaAttributeFactory, bugReport);
 
 		String xmlBugReportUrl = repositoryUrl + SHOW_BUG_CGI_XML + bugReport.getId();
 		xmlBugReportUrl = BugzillaRepositoryUtil.addCredentials(xmlBugReportUrl, userName, password);

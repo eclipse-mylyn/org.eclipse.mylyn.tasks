@@ -81,6 +81,33 @@ public class TaskList {
 		}
 	}
 	
+	void refactorRepositoryUrl(Object oldUrl, String newUrl)	{
+		for (ITask task : new ArrayList<ITask>(tasks.values())) {
+			if (task instanceof AbstractRepositoryTask) {
+				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask)task;
+				if (oldUrl.equals(AbstractRepositoryTask.getRepositoryUrl(repositoryTask.getHandleIdentifier()))) {
+					tasks.remove(repositoryTask.getHandleIdentifier());
+					String id = AbstractRepositoryTask.getTaskId(repositoryTask.getHandleIdentifier());
+					String newHandle = AbstractRepositoryTask.getHandle(newUrl, id);
+					repositoryTask.setHandleIdentifier(newHandle);
+					tasks.put(newHandle, repositoryTask);
+				}
+			}
+		}
+		
+		for (AbstractRepositoryQuery query : queries) {
+			if (query.getRepositoryUrl().equals(oldUrl)) {
+				query.setRepositoryUrl(newUrl);
+				for (AbstractQueryHit hit : query.getHits()) {
+					hit.setRepositoryUrl(newUrl);
+				}
+				for (ITaskListChangeListener listener : changeListeners) {
+					listener.containerInfoChanged(query);
+				}
+			}
+		}
+	}
+	
 	public void moveToRoot(ITask task) {
 		moveToContainer(rootCategory, task);
 	}
@@ -172,6 +199,9 @@ public class TaskList {
 	}
 
 	public void deleteCategory(AbstractTaskContainer category) {
+		for (ITask task : category.getChildren()) {
+			rootCategory.add(task);
+		}
 		categories.remove(category);
 		for (ITaskListChangeListener listener : changeListeners) {
 			listener.containerDeleted(category);
@@ -437,6 +467,24 @@ public class TaskList {
 			}
 		}
 		return repositoryQueries;
+	}
+	
+	/**
+	 *  return all tasks for the given repository url
+	 */
+	public Set<AbstractRepositoryTask> getRepositoryTasks(String repositoryUrl) {
+		Set<AbstractRepositoryTask> repositoryTasks = new HashSet<AbstractRepositoryTask>();
+		if (repositoryUrl != null) {
+			for (ITask task : tasks.values()) {
+				if (task instanceof AbstractRepositoryTask) {
+					AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask)task;
+					if(repositoryTask.getRepositoryUrl().equals(repositoryUrl)) {
+						repositoryTasks.add(repositoryTask);
+					}
+				}
+			}
+		}
+		return repositoryTasks;
 	}
 
 	/** if handle == null or no query hits found an empty set is returned **/

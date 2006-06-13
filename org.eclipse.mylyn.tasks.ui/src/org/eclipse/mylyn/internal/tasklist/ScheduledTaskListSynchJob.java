@@ -17,9 +17,10 @@ import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
@@ -32,7 +33,9 @@ import org.eclipse.mylar.provisional.tasklist.TaskRepository;
  */
 public class ScheduledTaskListSynchJob extends Job {
 
-	private static final String JOB_NAME = "Scheduled Tasklist Refresh Job";
+	private static final String LABEL_TASK = "Task Repository Synchronization";
+
+	private static final String JOB_NAME = "Synchronizing repository tasks";
 
 	private long scheduleDelay = 1000 * 60 * 20;// 20 minutes default
 
@@ -41,7 +44,7 @@ public class ScheduledTaskListSynchJob extends Job {
 	private long count = 0;
 
 	private TaskListManager taskListManager;
-	
+
 	public ScheduledTaskListSynchJob(long schedule, TaskListManager taskListManager) {
 		super(JOB_NAME);
 		this.scheduleDelay = schedule;
@@ -58,27 +61,47 @@ public class ScheduledTaskListSynchJob extends Job {
 	}
 
 	public IStatus run(IProgressMonitor monitor) {
-		if (TaskListView.getDefault() != null) {
-			try {
-				taskList = taskListManager.getTaskList();
-				List<TaskRepository>repositories  = MylarTaskListPlugin.getRepositoryManager().getAllRepositories();
-				
-				for (TaskRepository repository : repositories) {
-					Set<AbstractRepositoryQuery> queries = Collections.unmodifiableSet(taskList.getRepositoryQueries(repository.getUrl()));
-					if(queries.size() > 0) {
-						AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(repository.getKind());
-						if(connector != null) {
-							connector.synchronize(queries, null, Job.DECORATE, 0);							
-						}
-					}
-				} 
-			} finally {
-				count++;
-				if (count == Long.MAX_VALUE)
-					count = 0;
-				if (scheduleDelay != -1) {
-					schedule(scheduleDelay);
+		try {
+			if (monitor == null) {
+				monitor = new NullProgressMonitor();
+			}
+
+			taskList = taskListManager.getTaskList();
+			List<TaskRepository> repositories = MylarTaskListPlugin.getRepositoryManager().getAllRepositories();
+			monitor.beginTask(LABEL_TASK, repositories.size());
+
+			for (TaskRepository repository : repositories) {
+				if (monitor.isCanceled()) {
+					scheduleDelay = -1;
+					throw new OperationCanceledException();
 				}
+				AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager()
+						.getRepositoryConnector(repository.getKind());
+				if (connector == null) {
+					monitor.worked(1);
+					continue;
+				}
+
+				Set<AbstractRepositoryQuery> queries = Collections.unmodifiableSet(taskList
+						.getRepositoryQueries(repository.getUrl()));
+				if (queries.size() > 0) {
+					if (connector != null) {
+						connector.synchronize(queries, null, Job.DECORATE, 0, false);
+					}
+				}
+
+				connector.synchronizeChanged(repository);
+				monitor.worked(1);
+			}
+		} finally {
+			count++;
+			if (count == Long.MAX_VALUE)
+				count = 0;
+			if (scheduleDelay != -1) {
+				schedule(scheduleDelay);
+			}
+			if (monitor != null) {
+				monitor.done();
 			}
 		}
 		return Status.OK_STATUS;

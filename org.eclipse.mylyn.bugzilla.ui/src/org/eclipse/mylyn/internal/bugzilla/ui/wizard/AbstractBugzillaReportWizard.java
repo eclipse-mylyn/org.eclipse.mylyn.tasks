@@ -29,8 +29,8 @@ import org.eclipse.mylar.internal.bugzilla.core.NewBugzillaReport;
 import org.eclipse.mylar.internal.bugzilla.core.PossibleBugzillaFailureException;
 import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylar.internal.bugzilla.ui.WebBrowserDialog;
-import org.eclipse.mylar.internal.bugzilla.ui.editor.ExistingBugEditorInput;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.ui.editors.ExistingBugEditorInput;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
@@ -78,7 +78,7 @@ public abstract class AbstractBugzillaReportWizard extends Wizard implements INe
 	public AbstractBugzillaReportWizard(TaskRepository repository) {
 		super();
 		this.repository = repository;
-		model = new NewBugzillaReport(repository.getUrl(), BugzillaUiPlugin.getDefault().getOfflineReportsFile()
+		model = new NewBugzillaReport(repository.getUrl(), MylarTaskListPlugin.getDefault().getOfflineReportsFile()
 				.getNextOfflineBugId());		
 		id = null; // Since there is no bug posted yet.
 		super.setDefaultPageImageDescriptor(BugzillaUiPlugin.imageDescriptorFromPlugin(

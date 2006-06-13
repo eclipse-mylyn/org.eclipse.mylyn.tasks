@@ -13,34 +13,43 @@ package org.eclipse.mylar.internal.tasklist.ui;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
-import org.eclipse.core.runtime.jobs.IJobChangeListener;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasklist.ui.editors.CategoryEditorInput;
+import org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor;
 import org.eclipse.mylar.internal.tasklist.ui.editors.TaskEditorInput;
+import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.DateRangeActivityDelegate;
 import org.eclipse.mylar.provisional.tasklist.ITask;
-import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
 import org.eclipse.mylar.provisional.tasklist.ITaskListElement;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.Task;
 import org.eclipse.mylar.provisional.tasklist.TaskCategory;
+import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorPart; 
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.browser.IWebBrowser;
+import org.eclipse.ui.browser.IWorkbenchBrowserSupport;
+import org.eclipse.ui.internal.browser.WebBrowserPreference;
 import org.eclipse.ui.internal.browser.WorkbenchBrowserSupport;
 
 /**
@@ -56,7 +65,7 @@ public class TaskUiUtil {
 			return null;
 		}
 		switch (priorityLevel) {
-		case P1: 
+		case P1:
 			return TaskListImages.getImage(TaskListImages.PRIORITY_1);
 		case P2:
 			return TaskListImages.getImage(TaskListImages.PRIORITY_2);
@@ -70,9 +79,13 @@ public class TaskUiUtil {
 			return null;
 		}
 	}
-	
+
 	public static void closeEditorInActivePage(ITask task) {
-		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window == null) {
+			return;
+		}
+		IWorkbenchPage page = window.getActivePage();
 		if (page == null) {
 			return;
 		}
@@ -89,15 +102,15 @@ public class TaskUiUtil {
 	public static boolean openRepositoryTask(String repositoryUrl, String taskId, String fullUrl) {
 		boolean opened = false;
 		String handle = AbstractRepositoryTask.getHandle(repositoryUrl, taskId);
-		ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle); 
-		if (task == null) { 
+		ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
+		if (task == null) {
 			// search for it
 			for (ITask currTask : MylarTaskListPlugin.getTaskListManager().getTaskList().getAllTasks()) {
 				if (currTask instanceof AbstractRepositoryTask) {
-					String currUrl = ((AbstractRepositoryTask)currTask).getUrl();
+					String currUrl = ((AbstractRepositoryTask) currTask).getUrl();
 					if (currUrl != null && currUrl.equals(fullUrl)) {
 						task = currTask;
-						break; 
+						break;
 					}
 				}
 			}
@@ -106,19 +119,20 @@ public class TaskUiUtil {
 			TaskUiUtil.refreshAndOpenTaskListElement(task);
 			opened = true;
 		} else {
-			AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryForTaskUrl(fullUrl);
+			AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryForTaskUrl(
+					fullUrl);
 			if (connector != null) {
 				connector.openRemoteTask(repositoryUrl, taskId);
 				opened = true;
 			}
-		} 
-		if (!opened) { 
-			TaskUiUtil.openUrl("Web Browser", "Web Browser", fullUrl);
+		}
+		if (!opened) {
+			TaskUiUtil.openUrl(fullUrl);
 			opened = true;
 		}
 		return opened;
 	}
-	
+
 	public static void refreshAndOpenTaskListElement(ITaskListElement element) {
 		if (element instanceof ITask || element instanceof AbstractQueryHit
 				|| element instanceof DateRangeActivityDelegate) {
@@ -131,42 +145,39 @@ public class TaskUiUtil {
 				task = (ITask) element;
 			}
 
-			boolean forceUpdate = false;
 			if (task instanceof AbstractRepositoryTask) {
+				final AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
+				String repositoryKind = repositoryTask.getRepositoryKind();
 				final AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager()
-						.getRepositoryConnector(((AbstractRepositoryTask) task).getRepositoryKind());
-				if (connector != null) {
-					Job refreshJob = connector.synchronize((AbstractRepositoryTask) task, forceUpdate,
-							new IJobChangeListener() {
+						.getRepositoryConnector(repositoryKind);
 
-								public void done(IJobChangeEvent event) {
-									TaskUiUtil.openEditor(task, false);
-								}
-
-								public void aboutToRun(IJobChangeEvent event) {
-									// ignore
-								}
-
-								public void awake(IJobChangeEvent event) {
-									// ignore
-								}
-
-								public void running(IJobChangeEvent event) {
-									// ignore
-								}
-
-								public void scheduled(IJobChangeEvent event) {
-									// ignore
-								}
-
-								public void sleeping(IJobChangeEvent event) {
-									// ignore
-								}
-							});
-					if (refreshJob == null) {
-						TaskUiUtil.openEditor(task, false);
-					}
+				TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(repositoryKind,
+						repositoryTask.getRepositoryUrl());
+				if (!repository.hasCredentials()) {
+					MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+							MylarTaskListPlugin.TITLE_DIALOG, "Repository does not have credentials set, verify via "
+									+ TaskRepositoriesView.NAME + " view");
 				}
+				if (connector != null)
+					if (repositoryTask.getTaskData() != null) {
+						TaskUiUtil.openEditor(task, false);
+						// TODO: Eventually will need to check that this task
+						// isn't a new report awaiting submission if so
+						// don't synchronize
+						connector.synchronize((AbstractRepositoryTask) task, false, null);
+					} else {
+						Job refreshJob = connector.synchronize((AbstractRepositoryTask) task, true,
+								new JobChangeAdapter() {
+									public void done(IJobChangeEvent event) {
+//										if (repositoryTask.getTaskData() != null) {
+										TaskUiUtil.openEditor(task, false);
+//										}
+									}
+								});
+						if (refreshJob == null) {
+							TaskUiUtil.openEditor(task, false);
+						}
+					}
 			} else {
 				TaskUiUtil.openEditor(task, false);
 			}
@@ -179,7 +190,7 @@ public class TaskUiUtil {
 			client.openEditQueryDialog(query);
 		}
 	}
-	
+
 	public static void openEditor(final ITask task, boolean newTask) {
 		openEditor(task, true, newTask);
 	}
@@ -223,26 +234,54 @@ public class TaskUiUtil {
 		});
 	}
 
-	public static void openUrl(String title, String tooltip, String url) {
+	public static void openUrl(String url) {
 		try {
-			IWebBrowser browser = null;
-			int flags = 0;
-			if (WorkbenchBrowserSupport.getInstance().isInternalWebBrowserAvailable()) {
-				flags = WorkbenchBrowserSupport.AS_EDITOR | WorkbenchBrowserSupport.LOCATION_BAR
-						| WorkbenchBrowserSupport.NAVIGATION_BAR;
-
+			if (WebBrowserPreference.getBrowserChoice() == WebBrowserPreference.EXTERNAL) {
+				try {
+					IWorkbenchBrowserSupport support = PlatformUI.getWorkbench().getBrowserSupport();
+					support.getExternalBrowser().openURL(new URL(url));
+				} catch (Exception e) {
+					MylarStatusHandler.fail(e, "could not open task url", true);
+				}
 			} else {
-				flags = WorkbenchBrowserSupport.AS_EXTERNAL | WorkbenchBrowserSupport.LOCATION_BAR
-						| WorkbenchBrowserSupport.NAVIGATION_BAR;
+				IWebBrowser browser = null;
+				int flags = 0;
+				if (WorkbenchBrowserSupport.getInstance().isInternalWebBrowserAvailable()) {
+					flags = WorkbenchBrowserSupport.AS_EDITOR | WorkbenchBrowserSupport.LOCATION_BAR
+							| WorkbenchBrowserSupport.NAVIGATION_BAR;
+
+				} else {
+					flags = WorkbenchBrowserSupport.AS_EXTERNAL | WorkbenchBrowserSupport.LOCATION_BAR
+							| WorkbenchBrowserSupport.NAVIGATION_BAR;
+				}
+				String title = "Browser";
+				browser = WorkbenchBrowserSupport.getInstance().createBrowser(flags,
+						MylarTaskListPlugin.PLUGIN_ID + title, null, null);
+				browser.openURL(new URL(url));
 			}
-			browser = WorkbenchBrowserSupport.getInstance().createBrowser(flags, MylarTaskListPlugin.PLUGIN_ID + title,
-					title, tooltip);
-			browser.openURL(new URL(url));
 		} catch (PartInitException e) {
 			MessageDialog.openError(Display.getDefault().getActiveShell(), "Browser init error",
 					"Browser could not be initiated");
 		} catch (MalformedURLException e) {
 			MessageDialog.openError(Display.getDefault().getActiveShell(), "URL not found", "URL Could not be opened");
 		}
+	}
+
+	public static List<MylarTaskEditor> getActiveRepositoryTaskEditors() {
+		List<MylarTaskEditor> repositoryTaskEditors = new ArrayList<MylarTaskEditor>();
+		IWorkbenchWindow[] windows = PlatformUI.getWorkbench().getWorkbenchWindows();
+		for (IWorkbenchWindow window : windows) {
+			IEditorReference[] editorReferences = window.getActivePage().getEditorReferences();
+			for (int i = 0; i < editorReferences.length; i++) {
+				IEditorPart editor = editorReferences[i].getEditor(false);
+				if (editor instanceof MylarTaskEditor) {
+					TaskEditorInput input = (TaskEditorInput) ((MylarTaskEditor) editor).getEditorInput();
+					if (input.getTask() instanceof AbstractRepositoryTask) {
+						repositoryTaskEditors.add((MylarTaskEditor) editor);
+					}
+				}
+			}
+		}
+		return repositoryTaskEditors;
 	}
 }

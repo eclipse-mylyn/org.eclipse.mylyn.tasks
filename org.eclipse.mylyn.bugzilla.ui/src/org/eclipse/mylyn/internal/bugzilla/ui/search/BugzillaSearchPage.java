@@ -23,6 +23,7 @@ import java.util.Set;
 import javax.security.auth.login.LoginException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
@@ -32,7 +33,6 @@ import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.AbstractBugzillaQueryPage;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryQuery;
-import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.mylar.provisional.tasklist.TaskRepositoryManager;
@@ -72,10 +72,6 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 	private static final String MAX_HITS_GREATER = "Max hits shown must be greater than 0 or enter -1 for all results found.";
 
 	private static final String NUM_DAYS_POSITIVE = "Number of days must be a positive integer. ";
-
-	private static final String TITLE = "New Bugzilla Query";
-
-	private static final String DESCRIPTION = "Enter query parameters. If attributes are blank or stale press the Update button.";
 
 	private static final String TITLE_BUGZILLA_QUERY = "Bugzilla Query";
 
@@ -137,26 +133,27 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 
 	public BugzillaSearchPage() {
 		super(TITLE_BUGZILLA_QUERY);
-		setTitle(TITLE);
-		setDescription(DESCRIPTION);
-		setPageComplete(false);
+//		setTitle(TITLE);
+//		setDescription(DESCRIPTION);
+//		setPageComplete(false);
 	}
 
 	public BugzillaSearchPage(TaskRepository repository) {
 		super(TITLE_BUGZILLA_QUERY);
-		setTitle(TITLE);
-		setDescription(DESCRIPTION);
 		this.repository = repository;
-		setPageComplete(false);
+//		setTitle(TITLE);
+//		setDescription(DESCRIPTION);
+//		setImageDescriptor(TaskListImages.BANNER_REPOSITORY);
+//		setPageComplete(false);
 	}
 
 	public BugzillaSearchPage(TaskRepository repository, BugzillaRepositoryQuery origQuery) {
 		super(TITLE_BUGZILLA_QUERY, origQuery.getDescription());
 		originalQuery = origQuery;
 		this.repository = repository;
-		setTitle(TITLE);
-		setDescription(DESCRIPTION);
-		setPageComplete(false);
+//		setTitle(TITLE);
+//		setDescription(DESCRIPTION);
+//		setPageComplete(false);
 	}
 
 	public void createControl(Composite parent) {
@@ -198,7 +195,7 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 		// // ignore
 		// }
 		// }
-		setControl(control);		
+		setControl(control);
 		WorkbenchHelpSystem.getInstance().setHelp(control, BugzillaUiPlugin.SEARCH_PAGE_CONTEXT);
 	}
 
@@ -609,7 +606,7 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 		gd.widthHint = 30;
 		maxHitsText.setLayoutData(gd);
 		label = new Label(group, SWT.LEFT);
-		label.setText(" hits.");
+		label.setText(" hits. (-1 returns all)");
 
 		maxHits = MAX_HITS;
 		maxHitsText.setText(maxHits);
@@ -838,7 +835,7 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 
 			@Override
 			public void mouseUp(MouseEvent e) {
-				if (repository != null) {					
+				if (repository != null) {
 					updateAttributesFromRepository(repository.getUrl(), null, true);
 				} else {
 					MessageDialog.openInformation(Display.getCurrent().getActiveShell(),
@@ -913,7 +910,7 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 
 		Proxy proxySettings = MylarTaskListPlugin.getDefault().getProxySettings();
 		IBugzillaSearchOperation op = new BugzillaSearchOperation(repository, queryUrl, proxySettings, collector,
-				maxHits);
+				getMaxHits());
 
 		BugzillaSearchQuery searchQuery = new BugzillaSearchQuery(op);
 		NewSearchUI.runQueryInBackground(searchQuery);
@@ -998,8 +995,10 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 			if (scontainer != null) {
 				scontainer.setPerformActionEnabled(canQuery());
 			}
-			summaryPattern.setFocus();
-
+			if (getWizard() == null) {
+				 // TODO: wierd check
+				summaryPattern.setFocus();
+			}
 		}
 		super.setVisible(visible);
 	}
@@ -1098,17 +1097,20 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 		}
 		sb.append("buglist.cgi?");
 
-		// use the username and password if we have it
-		if (repository.hasCredentials()) {
-			try {
-				sb.append("GoAheadAndLogIn=1&Bugzilla_login="
-						+ URLEncoder.encode(repository.getUserName(), BugzillaPlugin.ENCODING_UTF_8)
-						+ "&Bugzilla_password="
-						+ URLEncoder.encode(repository.getPassword(), BugzillaPlugin.ENCODING_UTF_8) + "&");
-			} catch (UnsupportedEncodingException e) {
-				MylarStatusHandler.fail(e, "unsupported encoding", false);
-			}
-		}
+		// NOTE: authentication now added in BugzillaSsearchEngine constructor
+		// // use the username and password if we have it
+		// if (repository.hasCredentials()) {
+		// try {
+		// sb.append("GoAheadAndLogIn=1&Bugzilla_login="
+		// + URLEncoder.encode(repository.getUserName(),
+		// BugzillaPlugin.ENCODING_UTF_8)
+		// + "&Bugzilla_password="
+		// + URLEncoder.encode(repository.getPassword(),
+		// BugzillaPlugin.ENCODING_UTF_8) + "&");
+		// } catch (UnsupportedEncodingException e) {
+		// MylarStatusHandler.fail(e, "unsupported encoding", false);
+		//			}
+		//		}
 
 		return sb;
 	}
@@ -1116,8 +1118,9 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 	/**
 	 * Goes through the query form and builds up the query parameters.
 	 * 
-	 * Example: short_desc_type=substring&amp;short_desc=bla&amp; ...
-	 * TODO: The encoding here should match TaskRepository.getCharacterEncoding()
+	 * Example: short_desc_type=substring&amp;short_desc=bla&amp; ... TODO: The
+	 * encoding here should match TaskRepository.getCharacterEncoding()
+	 * 
 	 * @throws UnsupportedEncodingException
 	 */
 	protected StringBuffer getQueryParameters() throws UnsupportedEncodingException {
@@ -1294,85 +1297,81 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 	}
 
 	private void updateAttributesFromRepository(String repositoryUrl, String[] selectedProducts, boolean connect) {
-		monitorDialog.open();
-		IProgressMonitor monitor = monitorDialog.getProgressMonitor();
-		monitor.beginTask("Updating search options...", 55);
 
-		try {
-			// TaskRepository repository =
-			// MylarTaskListPlugin.getRepositoryManager().getDefaultRepository(
-			// BugzillaPlugin.REPOSITORY_KIND);
-			// String repositoryUrl = repository.getUrl();
-			if (connect) {
+		if (connect) {
+			// TODO: make cancelable (bug 143011)
+			monitorDialog.setCancelable(false);
+			monitorDialog.open();			
+			IProgressMonitor monitor = monitorDialog.getProgressMonitor();
+			try {
+				monitor.beginTask("Updating search options...", 55);
 				BugzillaUiPlugin.updateQueryOptions(repository, monitor);
+			} catch (LoginException exception) {
+				// we had a problem that seems to have been caused from bad
+				// login info
+				MessageDialog
+						.openError(
+								null,
+								"Login Error",
+								"Bugzilla could not log you in to get the information you requested since login name or password is incorrect.\nPlease check your settings in the bugzilla preferences. ");
+				// BugzillaPlugin.log(exception);
+				return;
+			} catch (IOException e) {
+				MessageDialog.openError(null, "Connection Error", e.getMessage()
+						+ "\nPlease check your settings in the bugzilla preferences. ");
+				return;
+			} catch (OperationCanceledException exception) {				
+				return;
+			} catch (Exception e) {
+				MessageDialog.openError(null, "Error updating search options", "Error was : "+e.getMessage());				
+				return;
+			} finally {
+			
+				monitor.done();
+				monitorDialog.close();				
 			}
+		}
 
-			if (selectedProducts == null) {
-				String[] productsList = BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT, null,
-						repositoryUrl);
-				Arrays.sort(productsList, String.CASE_INSENSITIVE_ORDER);
-				product.setItems(productsList);
-				monitor.worked(1);
-			}
+		if (selectedProducts == null) {
+			String[] productsList = BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRODUCT, null,
+					repositoryUrl);
+			Arrays.sort(productsList, String.CASE_INSENSITIVE_ORDER);
+			product.setItems(productsList);
+		}
 
-			String[] componentsList = BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_COMPONENT,
-					selectedProducts, repositoryUrl);
-			Arrays.sort(componentsList, String.CASE_INSENSITIVE_ORDER);
-			component.setItems(componentsList);
-			monitor.worked(1);
+		String[] componentsList = BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_COMPONENT,
+				selectedProducts, repositoryUrl);
+		Arrays.sort(componentsList, String.CASE_INSENSITIVE_ORDER);
+		component.setItems(componentsList);
 
-			version.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_VERSION, selectedProducts,
+		version.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_VERSION, selectedProducts,
+				repositoryUrl));
+
+		target.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_TARGET, selectedProducts,
+				repositoryUrl));
+
+		if (selectedProducts == null) {
+			status.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_STATUS, selectedProducts,
 					repositoryUrl));
-			monitor.worked(1);
 
-			target.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_TARGET, selectedProducts,
+			// status.setSelection(BugzillaRepositoryUtil.getQueryOptions(IBugzillaConstants.VALUSE_STATUS_PRESELECTED,
+			// repositoryUrl));
+
+			resolution.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_RESOLUTION,
+					selectedProducts, repositoryUrl));
+
+			severity.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_SEVERITY, selectedProducts,
 					repositoryUrl));
-			monitor.worked(1);
 
-			if (selectedProducts == null) {
-				status.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_STATUS, selectedProducts,
-						repositoryUrl));
-				monitor.worked(1);
+			priority.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRIORITY, selectedProducts,
+					repositoryUrl));
 
-				// status.setSelection(BugzillaRepositoryUtil.getQueryOptions(IBugzillaConstants.VALUSE_STATUS_PRESELECTED,
-				// repositoryUrl));
-				monitor.worked(1);
+			hardware.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_HARDWARE, selectedProducts,
+					repositoryUrl));
 
-				resolution.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_RESOLUTION,
-						selectedProducts, repositoryUrl));
-				monitor.worked(1);
-
-				severity.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_SEVERITY,
-						selectedProducts, repositoryUrl));
-				monitor.worked(1);
-
-				priority.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_PRIORITY,
-						selectedProducts, repositoryUrl));
-				monitor.worked(1);
-
-				hardware.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_HARDWARE,
-						selectedProducts, repositoryUrl));
-				monitor.worked(1);
-
-				os.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_OS, selectedProducts,
-						repositoryUrl));
-				monitor.worked(1);
-			}
-		} catch (LoginException exception) {
-			// we had a problem that seems to have been caused from bad
-			// login info
-			MessageDialog
-					.openError(
-							null,
-							"Login Error",
-							"Bugzilla could not log you in to get the information you requested since login name or password is incorrect.\nPlease check your settings in the bugzilla preferences. ");
-			// BugzillaPlugin.log(exception);
-		} catch (IOException e) {
-			MessageDialog.openError(null, "Connection Error", e.getMessage()
-					+ "\nPlease check your settings in the bugzilla preferences. ");
-		} finally {
-			monitor.done();
-			monitorDialog.close();
+			os
+					.setItems(BugzillaUiPlugin.getQueryOptions(IBugzillaConstants.VALUES_OS, selectedProducts,
+							repositoryUrl));
 		}
 	}
 
@@ -1464,7 +1463,7 @@ public class BugzillaSearchPage extends AbstractBugzillaQueryPage implements ISe
 				selList = new ArrayList<String>(selList);
 				selList.add(value);
 				sel = new String[selList.size()];
-				product.setSelection(selList.toArray(sel));				
+				product.setSelection(selList.toArray(sel));
 				updateAttributesFromRepository(repository.getUrl(), selList.toArray(sel), false);
 			} else if (key.equals("component")) {
 				String[] sel = component.getSelection();

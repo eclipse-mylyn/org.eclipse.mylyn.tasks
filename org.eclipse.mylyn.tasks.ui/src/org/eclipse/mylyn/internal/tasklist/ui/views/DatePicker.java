@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 
 import org.eclipse.mylar.internal.tasklist.planner.ui.DateSelectionDialog;
-import org.eclipse.mylar.internal.tasklist.planner.ui.ReminderCellEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
@@ -49,6 +48,8 @@ import org.eclipse.ui.PlatformUI;
  */
 public class DatePicker extends Composite {
 
+	public final static String TITLE_DIALOG = "Choose Date";
+	
 	public static final String LABEL_CHOOSE = "<choose date>";
 
 	private Text dateText = null;
@@ -57,13 +58,9 @@ public class DatePicker extends Composite {
 
 	private Calendar date = null;
 
-//	private Shell pickerShell = null;
-//
-//	private DatePickerPanel datePickerPanel = null;
-
 	private List<SelectionListener> pickerListeners = new LinkedList<SelectionListener>();
 	
-	SimpleDateFormat simpleDateFormat = (SimpleDateFormat) SimpleDateFormat.getDateInstance(SimpleDateFormat.LONG, Locale.ENGLISH);
+	private SimpleDateFormat simpleDateFormat = (SimpleDateFormat) SimpleDateFormat.getDateInstance(SimpleDateFormat.LONG, Locale.ENGLISH);
 	
 	private String initialText = "Select Date";
 	
@@ -128,7 +125,7 @@ public class DatePicker extends Composite {
 				if(date != null) {
 					newCalendar.setTime(date.getTime());
 				}
-				DateSelectionDialog dialog = new DateSelectionDialog(new Shell(PlatformUI.getWorkbench().getDisplay()), newCalendar, ReminderCellEditor.REMINDER_DIALOG_TITLE);
+				DateSelectionDialog dialog = new DateSelectionDialog(new Shell(PlatformUI.getWorkbench().getDisplay()), newCalendar, DatePicker.TITLE_DIALOG);
 				pickButton.setEnabled(false);
 				dateText.setEnabled(false);
 				
@@ -248,7 +245,7 @@ public class DatePicker extends Composite {
 			dateText.setText(initialText);
 			dateText.setEnabled(true);
 		}
-		notifyPickerListeners();
+		//notifyPickerListeners();
 	}
 
 	public void setEnabled(boolean enabled) {

@@ -14,7 +14,6 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
-import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaTask;
 import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
@@ -63,8 +62,8 @@ public class NewBugzillaReportWizard extends AbstractBugzillaReportWizard {
 
 	@Override
 	protected void saveBugOffline() {
-		BugzillaRepositoryConnector client = (BugzillaRepositoryConnector)MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(BugzillaPlugin.REPOSITORY_KIND);
-		client.saveOffline(model, true);
+		AbstractRepositoryConnector client = (AbstractRepositoryConnector)MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(BugzillaPlugin.REPOSITORY_KIND);
+		client.saveOffline(model);
 	}
 
 	@Override
@@ -106,8 +105,8 @@ public class NewBugzillaReportWizard extends AbstractBugzillaReportWizard {
 			BugzillaTask newTask = new BugzillaTask(AbstractRepositoryTask.getHandle(repository.getUrl(), bugId),
 					"<bugzilla info>", true);
 			Object selectedObject = null;
-			if (TaskListView.getDefault() != null)
-				selectedObject = ((IStructuredSelection) TaskListView.getDefault().getViewer().getSelection())
+			if (TaskListView.getFromActivePerspective() != null)
+				selectedObject = ((IStructuredSelection) TaskListView.getFromActivePerspective().getViewer().getSelection())
 						.getFirstElement();
 
 			// MylarTaskListPlugin.getTaskListManager().getTaskList().addTask(newTask);
@@ -120,14 +119,8 @@ public class NewBugzillaReportWizard extends AbstractBugzillaReportWizard {
 						MylarTaskListPlugin.getTaskListManager().getTaskList().getRootCategory());
 			}
 
-			AbstractRepositoryConnector client = MylarTaskListPlugin.getRepositoryManager().getRepositoryConnector(
-					BugzillaPlugin.REPOSITORY_KIND);
-			// client.addTaskToArchive(newTask);
-			TaskUiUtil.openEditor(newTask, true);
-
-			if (!newTask.isDownloaded()) {
-				client.synchronize(newTask, true, null);
-			}
+			TaskUiUtil.refreshAndOpenTaskListElement(newTask);
+			MylarTaskListPlugin.getSynchronizationManager().synchNow(0);
 
 			return true;
 		}

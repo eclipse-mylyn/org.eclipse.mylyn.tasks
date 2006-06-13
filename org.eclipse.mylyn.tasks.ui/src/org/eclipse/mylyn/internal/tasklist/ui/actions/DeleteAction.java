@@ -42,7 +42,7 @@ public class DeleteAction extends Action {
 
 	@Override
 	public void run() {
-		ISelection selection = TaskListView.getDefault().getViewer().getSelection();
+		ISelection selection = TaskListView.getFromActivePerspective().getViewer().getSelection();
 		for (Object selectedObject : ((IStructuredSelection) selection).toList()) {
 			if (selectedObject instanceof ITask || selectedObject instanceof AbstractQueryHit) {
 				ITask task = null;
@@ -59,7 +59,7 @@ public class DeleteAction extends Action {
 
 				if (task.isActive()) {
 					MylarTaskListPlugin.getTaskListManager().deactivateTask(task);
-					TaskListView.getDefault().refreshAndFocus();
+					TaskListView.getFromActivePerspective().refreshAndFocus(false);
 					TaskUiUtil.closeEditorInActivePage(task);					
 				}
 
@@ -82,7 +82,7 @@ public class DeleteAction extends Action {
 				}
 			} else if (selectedObject instanceof TaskCategory) {
 				boolean deleteConfirmed = MessageDialog.openQuestion(PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-						.getShell(), "Confirm Delete", "Delete the selected category and all contained tasks?");
+						.getShell(), "Confirm Delete", "Delete the selected category?  Contained tasks will be moved to the root.");
 				if (!deleteConfirmed)
 					return;
 

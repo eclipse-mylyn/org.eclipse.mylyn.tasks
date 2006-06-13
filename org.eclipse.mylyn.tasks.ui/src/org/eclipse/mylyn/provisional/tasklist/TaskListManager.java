@@ -14,6 +14,7 @@
 package org.eclipse.mylar.provisional.tasklist;
 
 import java.io.File;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -49,7 +50,7 @@ public class TaskListManager {
 
 	// TODO: refactor into configurable intervals
 	private static final int HOUR_DAY_START = 8;
-	
+
 	private static final int HOUR_DAY_END = 23;
 
 	private static final int NUM_WEEKS_PREVIOUS = -1;
@@ -132,15 +133,7 @@ public class TaskListManager {
 		}
 
 		public void contextDeactivated(IMylarContext context) {
-
-		}
-
-		public void interestChanged(IMylarElement element) {
-			// String taskHandle = element.getHandleIdentifier();
-			List<InteractionEvent> events = MylarPlugin.getContextManager().getActivityHistoryMetaContext()
-					.getInteractionHistory();
-			InteractionEvent event = events.get(events.size() - 1);
-			parseInteractionEvent(event);
+			// ignore
 		}
 
 		public void presentationSettingsChanging(UpdateKind kind) {
@@ -152,7 +145,10 @@ public class TaskListManager {
 		}
 
 		public void interestChanged(List<IMylarElement> elements) {
-			// ignore
+			List<InteractionEvent> events = MylarPlugin.getContextManager().getActivityHistoryMetaContext()
+					.getInteractionHistory();
+			InteractionEvent event = events.get(events.size() - 1);
+			parseInteractionEvent(event);
 		}
 
 		public void nodeDeleted(IMylarElement element) {
@@ -417,16 +413,16 @@ public class TaskListManager {
 		cal.set(Calendar.MILLISECOND, cal.getMaximum(Calendar.MILLISECOND));
 		cal.getTime();
 	}
-	
+
 	public Calendar setSecheduledIn(Calendar calendar, int days) {
 		calendar.add(Calendar.DAY_OF_MONTH, days);
 		calendar.set(Calendar.HOUR_OF_DAY, HOUR_DAY_START);
 		calendar.set(Calendar.MINUTE, 0);
 		calendar.set(Calendar.SECOND, 0);
-		calendar.set(Calendar.MILLISECOND, 0);	
+		calendar.set(Calendar.MILLISECOND, 0);
 		return calendar;
 	}
-	
+
 	public Calendar setScheduledToday(Calendar calendar) {
 		calendar.set(Calendar.HOUR_OF_DAY, HOUR_DAY_END);
 		calendar.set(Calendar.MINUTE, 0);
@@ -442,6 +438,44 @@ public class TaskListManager {
 
 	public String genUniqueTaskHandle() {
 		return TaskRepositoryManager.PREFIX_LOCAL + nextLocalTaskId++;
+	}
+
+	public void refactorRepositoryUrl(Object oldUrl, String newUrl) {
+		if (oldUrl == null || newUrl == null || oldUrl.equals(newUrl)) {
+			return;
+		} 
+		List<ITask> activeTasks = taskList.getActiveTasks();
+		for (ITask task : new ArrayList<ITask>(activeTasks)) {
+			deactivateTask(task);
+		}
+		taskList.refactorRepositoryUrl(oldUrl, newUrl);
+
+		File dataDir = new File(MylarPlugin.getDefault().getDataDirectory());
+		if (dataDir.exists() && dataDir.isDirectory()) {
+			for (File file : dataDir.listFiles()) {
+				int dotIndex = file.getName().lastIndexOf('.');
+				if (dotIndex != -1) {
+					String storedHandle;
+					try {
+						storedHandle = URLDecoder.decode(file.getName().substring(0, dotIndex),
+								MylarContextManager.CONTEXT_FILENAME_ENCODING);
+						int delimIndex = storedHandle.lastIndexOf(AbstractRepositoryTask.HANDLE_DELIM);
+						if (delimIndex != -1) {
+							String storedUrl = storedHandle.substring(0, delimIndex);
+							if (oldUrl.equals(storedUrl)) {
+								String id = AbstractRepositoryTask.getTaskId(storedHandle);
+								String newHandle = AbstractRepositoryTask.getHandle(newUrl, id);
+								File newFile = MylarPlugin.getContextManager().getFileForContext(newHandle);
+								file.renameTo(newFile);
+							}
+						}
+					} catch (Exception e) {
+						MylarStatusHandler.fail(e, "Could not move context file: " + file.getName(), false);
+					}
+				}
+			}
+		}
+		saveTaskList();
 	}
 
 	public boolean readExistingOrCreateNewList() {
@@ -466,7 +500,7 @@ public class TaskListManager {
 			parseFutureReminders();
 			taskListInitialized = true;
 			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
-				listener.tasklistRead();
+				listener.taskListRead();
 			}
 
 			// only activate the first task to avoid confusion of mutliple
@@ -489,11 +523,9 @@ public class TaskListManager {
 	public void saveTaskList() {
 		try {
 			if (taskListInitialized) {
-				if (!taskList.isEmpty()) {
-					taskListWriter.writeTaskList(taskList, taskListFile);
-					MylarPlugin.getDefault().getPreferenceStore().setValue(TaskListPreferenceConstants.TASK_ID,
-							nextLocalTaskId);
-				}
+				taskListWriter.writeTaskList(taskList, taskListFile);
+				MylarPlugin.getDefault().getPreferenceStore().setValue(TaskListPreferenceConstants.TASK_ID,
+						nextLocalTaskId);
 			} else {
 				MylarStatusHandler.log("task list save attempted before initialization", this);
 			}
@@ -593,56 +625,69 @@ public class TaskListManager {
 		}
 		return false;
 	}
-	
+
 	public boolean isCompletedToday(ITask task) {
-		Date completionDate = task.getCompletionDate();
-		if (completionDate == null) {
-			return false;
-		} else {
-			Calendar tomorrow = Calendar.getInstance();
-			MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
+		if (task != null) {
+			Date completionDate = task.getCompletionDate();
+			if (completionDate != null) {
+				Calendar tomorrow = Calendar.getInstance();
+				MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
 
-			Calendar yesterday = Calendar.getInstance();
-			yesterday.set(Calendar.HOUR_OF_DAY, 0);
-			yesterday.set(Calendar.MINUTE, 0);
-			yesterday.set(Calendar.SECOND, 0);
-			yesterday.set(Calendar.MILLISECOND, 0);
+				Calendar yesterday = Calendar.getInstance();
+				yesterday.set(Calendar.HOUR_OF_DAY, 0);
+				yesterday.set(Calendar.MINUTE, 0);
+				yesterday.set(Calendar.SECOND, 0);
+				yesterday.set(Calendar.MILLISECOND, 0);
 
-			return completionDate.compareTo(yesterday.getTime()) == 1
-					&& completionDate.compareTo(tomorrow.getTime()) == -1;
+				return completionDate.compareTo(yesterday.getTime()) == 1
+						&& completionDate.compareTo(tomorrow.getTime()) == -1;
+			}
 		}
+		return false;
 	}
 
 	public boolean isReminderAfterThisWeek(ITask task) {
-		Date reminder = task.getReminderDate();
-		if (reminder != null) {
-			return reminder.compareTo(activityNextWeek.getStart().getTime()) > -1;
-		} else {
-			return false;
+		if (task != null) {
+			Date reminder = task.getReminderDate();
+			if (reminder != null) {
+				return reminder.compareTo(activityNextWeek.getStart().getTime()) > -1;
+			}
 		}
+		return false;
 	}
-	
-//	public boolean isReminderThisWeek(ITask task) {
-//		Date reminder = task.getReminderDate();
-//		if (reminder != null) {
-//			Date now = new Date();
-//			Calendar nextWeekStart = activityNextWeek.getStart();
-//			return (reminder.compareTo(now) == 1 && reminder.compareTo(nextWeekStart.getTime()) == -1);
-//		} else {
-//			return false;
-//		}
-//	}
+
+	public boolean isReminderLater(ITask task) {
+		if (task != null) {
+			Date reminder = task.getReminderDate();
+			if (reminder != null) {
+				return reminder.compareTo(activityFuture.getStart().getTime()) > -1;
+			}
+		}
+		return false;
+	}
+
+	public boolean isReminderThisWeek(ITask task) {
+		if (task != null) {
+			Date reminder = task.getReminderDate();
+			if (reminder != null) {
+				Date now = new Date();
+				return (reminder.compareTo(now) == 1 && reminder.compareTo(activityThisWeek.getEnd().getTime()) == -1);
+			}
+		}
+		return false;
+	}
 
 	public boolean isReminderToday(ITask task) {
-		Date reminder = task.getReminderDate();
-		if (reminder != null) {
-			Date now = new Date();
-			Calendar tomorrow = GregorianCalendar.getInstance();
-			MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
-			return (reminder.compareTo(now) == 1 && reminder.compareTo(tomorrow.getTime()) == -1);
-		} else {
-			return false;
+		if (task != null) {
+			Date reminder = task.getReminderDate();
+			if (reminder != null) {
+				Date now = new Date();
+				Calendar tomorrow = GregorianCalendar.getInstance();
+				MylarTaskListPlugin.getTaskListManager().setSecheduledIn(tomorrow, 1);
+				return (reminder.compareTo(now) == 1 && reminder.compareTo(tomorrow.getTime()) == -1);
+			}
 		}
+		return false;
 	}
 
 	/**

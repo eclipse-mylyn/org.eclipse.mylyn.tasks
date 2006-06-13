@@ -43,9 +43,9 @@ public class GoIntoAction extends Action implements IViewActionDelegate {
 	}
 
 	public void run() {
-		if (TaskListView.getDefault() != null) {
+		if (TaskListView.getFromActivePerspective() != null) {
 //			TaskListView.getDefault().getFilteredTree().setFilterText("");
-			TaskListView.getDefault().goIntoCategory();
+			TaskListView.getFromActivePerspective().goIntoCategory();
 		}
 	}
 

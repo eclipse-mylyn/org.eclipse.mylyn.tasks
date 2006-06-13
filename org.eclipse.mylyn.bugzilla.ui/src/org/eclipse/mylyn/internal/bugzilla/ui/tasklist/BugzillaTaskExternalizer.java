@@ -13,11 +13,10 @@ package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
 import java.util.Date;
 
-import org.eclipse.mylar.internal.bugzilla.ui.OfflineReportsFile;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
+import org.eclipse.mylar.internal.tasklist.OfflineTaskManager;
 import org.eclipse.mylar.internal.tasklist.TaskExternalizationException;
-import org.eclipse.mylar.provisional.bugzilla.core.BugzillaReport;
-import org.eclipse.mylar.provisional.bugzilla.core.IBugzillaBug;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 import org.eclipse.mylar.provisional.tasklist.AbstractTaskContainer;
@@ -105,29 +104,6 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 		}
 	}
 
-//	public void readRegistry(Node node, TaskList taskList) throws TaskExternalizationException {
-//		boolean hasCaughtException = false;
-//		NodeList list = node.getChildNodes();
-//		for (int i = 0; i < list.getLength(); i++) {
-//			try {
-//				Node child = list.item(i);
-//				ITask task = readTask(child, taskList, null, null);
-//				if (task instanceof AbstractRepositoryTask) {
-//					taskList.addTaskToArchive((AbstractRepositoryTask)task);
-//				}
-//			} catch (TaskExternalizationException e) {
-//				hasCaughtException = true;
-//			}
-//		}
-//
-//		if (hasCaughtException)
-//			throw new TaskExternalizationException("Failed to restore all tasks");
-//	}
-
-//	public boolean canCreateElementFor(ITaskContainer cat) {
-//		return false;
-//	}
-
 	public boolean canCreateElementFor(AbstractRepositoryQuery category) {
 		return category instanceof BugzillaRepositoryQuery;
 	}
@@ -139,8 +115,8 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	public Element createTaskElement(ITask task, Document doc, Element parent) {
 		Element node = super.createTaskElement(task, doc, parent);
 		BugzillaTask bugzillaTask = (BugzillaTask) task;
-		if (bugzillaTask.getLastRefresh() != null) {
-			node.setAttribute(LAST_DATE, new Long(bugzillaTask.getLastRefresh().getTime()).toString());
+		if (bugzillaTask.getLastSynchronized() != null) {
+			node.setAttribute(LAST_DATE, new Long(bugzillaTask.getLastSynchronized().getTime()).toString());
 		} else {
 			node.setAttribute(LAST_DATE, new Long(new Date().getTime()).toString());
 		}
@@ -180,7 +156,7 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 		readTaskInfo(task, taskList, element, parent, category);
 
 		task.setCurrentlyDownloading(false);
-		task.setLastRefresh(new Date(new Long(element.getAttribute("LastDate")).longValue()));
+		task.setLastSynchronized(new Date(new Long(element.getAttribute("LastDate")).longValue()));
 
 		if (element.getAttribute("Dirty").compareTo("true") == 0) {
 			task.setDirty(true);
@@ -207,9 +183,6 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 				task.setSyncState(RepositoryTaskSyncState.CONFLICT);
 			}
 		}
-
-		// TODO: put back, checking for null category?
-//		taskList.internalAddTask(task, category);
 		return task;
 	}
 
@@ -217,14 +190,14 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	 * TODO: move?
 	 */
 	public boolean readBugReport(BugzillaTask bugzillaTask) {		
-		IBugzillaBug tempBug = OfflineReportsFile.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
+		RepositoryTaskData tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
 		if (tempBug == null) {
-			bugzillaTask.setBugReport(null);
+			bugzillaTask.setTaskData(null);
 			return true;
 		}
-		bugzillaTask.setBugReport((BugzillaReport)tempBug);
+		bugzillaTask.setTaskData((RepositoryTaskData)tempBug);
 
-		if (bugzillaTask.getBugReport().hasChanges())
+		if (bugzillaTask.getTaskData().hasChanges())
 			bugzillaTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
 		return true;
 	}

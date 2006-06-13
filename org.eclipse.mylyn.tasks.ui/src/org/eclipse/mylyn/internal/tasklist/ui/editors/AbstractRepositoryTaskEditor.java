@@ -25,7 +25,6 @@ import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.TextViewer;
@@ -51,6 +50,7 @@ import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
+import org.eclipse.mylar.internal.tasklist.util.GridDataFactory;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
@@ -1011,7 +1011,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		});
 
 		ImageHyperlink hyperlink = toolkit.createImageHyperlink(section, SWT.NONE);
-		hyperlink.setBackgroundMode(SWT.INHERIT_NONE);
+//		hyperlink.setBackgroundMode(SWT.INHERIT_NONE);
 		hyperlink.setBackground(section.getTitleBarBackground());
 		hyperlink.setImage(TaskListImages.getImage(TaskListImages.EXPAND_ALL));
 		hyperlink.addHyperlinkListener(new HyperlinkAdapter() {

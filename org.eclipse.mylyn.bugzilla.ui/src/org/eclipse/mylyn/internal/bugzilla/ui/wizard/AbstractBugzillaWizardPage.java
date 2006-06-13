@@ -22,9 +22,9 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.NewBugzillaReport;
-import org.eclipse.mylar.internal.bugzilla.ui.editor.AbstractBugEditor;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
-import org.eclipse.mylar.provisional.bugzilla.core.AbstractRepositoryReportAttribute;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
+import org.eclipse.mylar.internal.tasklist.ui.editors.AbstractRepositoryTaskEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -312,8 +312,8 @@ public abstract class AbstractBugzillaWizardPage extends WizardPage implements L
 
 		// go through each of the attributes and sync their values with the
 		// combo boxes
-		for (Iterator<AbstractRepositoryReportAttribute> it = nbm.getAttributes().iterator(); it.hasNext();) {
-			AbstractRepositoryReportAttribute attribute = it.next();
+		for (Iterator<RepositoryTaskAttribute> it = nbm.getAttributes().iterator(); it.hasNext();) {
+			RepositoryTaskAttribute attribute = it.next();
 			String key = attribute.getName();
 			Map<String, String> values = attribute.getOptionValues();
 
@@ -418,8 +418,8 @@ public abstract class AbstractBugzillaWizardPage extends WizardPage implements L
 		newLayout(attributesComposite, 1, nbm.getProduct(), VALUE);
 
 		// Populate Attributes
-		for (Iterator<AbstractRepositoryReportAttribute> it = nbm.getAttributes().iterator(); it.hasNext();) {
-			AbstractRepositoryReportAttribute attribute = it.next();
+		for (Iterator<RepositoryTaskAttribute> it = nbm.getAttributes().iterator(); it.hasNext();) {
+			RepositoryTaskAttribute attribute = it.next();
 			String key = attribute.getID();
 			String name = attribute.getName();
 			String value = checkText(attribute.getValue());
@@ -605,7 +605,7 @@ public abstract class AbstractBugzillaWizardPage extends WizardPage implements L
 
 		
 		IThemeManager themeManager = PlatformUI.getWorkbench().getThemeManager();
-		Font repositoryFont = themeManager.getCurrentTheme().getFontRegistry().get(AbstractBugEditor.REPOSITORY_TEXT_ID);
+		Font repositoryFont = themeManager.getCurrentTheme().getFontRegistry().get(AbstractRepositoryTaskEditor.REPOSITORY_TEXT_ID);
 		
 		// add the summary text field
 		newLayout(textComposite, 1, BugzillaReportElement.SHORT_DESC.toString(), PROPERTY);
@@ -633,12 +633,12 @@ public abstract class AbstractBugzillaWizardPage extends WizardPage implements L
 		// add the description text field
 		descriptionText = new Text(attributesComposite, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.WRAP);
 
-		//descriptionText.setFont(AbstractBugEditor.COMMENT_FONT);
+		//descriptionText.setFont(AbstractRepositoryTaskEditor.COMMENT_FONT);
 		descriptionText.setFont(repositoryFont);
 		GridData descriptionTextData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
 		descriptionTextData.horizontalSpan = 4;
-		descriptionTextData.widthHint = AbstractBugEditor.DESCRIPTION_WIDTH;
-		descriptionTextData.heightHint = AbstractBugEditor.DESCRIPTION_HEIGHT;
+		descriptionTextData.widthHint = AbstractRepositoryTaskEditor.DESCRIPTION_WIDTH;
+		descriptionTextData.heightHint = AbstractRepositoryTaskEditor.DESCRIPTION_HEIGHT;
 		descriptionText.setLayoutData(descriptionTextData);
 		descriptionText.addListener(SWT.Modify, this);
 
@@ -726,8 +726,8 @@ public abstract class AbstractBugzillaWizardPage extends WizardPage implements L
 
 			// Get OS Lookup Map
 			// Check that the result is in Values, if it is not, set it to other
-			AbstractRepositoryReportAttribute opSysAttribute = newBugModel.getAttribute(BugzillaReportElement.OP_SYS);
-			AbstractRepositoryReportAttribute platformAttribute = newBugModel.getAttribute(BugzillaReportElement.REP_PLATFORM);
+			RepositoryTaskAttribute opSysAttribute = newBugModel.getAttribute(BugzillaReportElement.OP_SYS.getKeyString());
+			RepositoryTaskAttribute platformAttribute = newBugModel.getAttribute(BugzillaReportElement.REP_PLATFORM.getKeyString());
 
 			String OS = Platform.getOS();
 			String platform = Platform.getOSArch();

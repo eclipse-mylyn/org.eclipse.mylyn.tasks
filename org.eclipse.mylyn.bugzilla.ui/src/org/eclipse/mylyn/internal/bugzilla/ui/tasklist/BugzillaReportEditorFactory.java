@@ -49,16 +49,18 @@ public class BugzillaReportEditorFactory implements ITaskEditorFactory {
 	public IEditorInput createEditorInput(ITask task) {
 		if (task instanceof BugzillaTask) {
 			BugzillaTask bugzillaTask = (BugzillaTask) task;
+			final TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(
+					BugzillaPlugin.REPOSITORY_KIND, bugzillaTask.getRepositoryUrl());
 			try {
-				TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(BugzillaPlugin.REPOSITORY_KIND, bugzillaTask.getRepositoryUrl());
 				BugzillaTaskEditorInput input = new BugzillaTaskEditorInput(repository, bugzillaTask, true);
-				input.setOfflineBug(bugzillaTask.getBugReport()); 
-				return input;	
+				//input.setOfflineBug(bugzillaTask.getTaskData());
+				return input;
 			} catch (final LoginException e) {
 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 					public void run() {
 						MessageDialog.openError(Display.getDefault().getActiveShell(), "Report Download Failed",
-								"Ensure proper repository configuration in " + TaskRepositoriesView.NAME + ".");
+								"Ensure proper repository configuration in " + TaskRepositoriesView.NAME + ".\n"
+								+ "Repository set to: " + repository.getUrl() + ", username: " + repository.getUserName());
 					}
 				});
 			} catch (Exception e) {

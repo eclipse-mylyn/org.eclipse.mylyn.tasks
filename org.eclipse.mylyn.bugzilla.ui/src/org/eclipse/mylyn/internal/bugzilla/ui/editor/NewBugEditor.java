@@ -24,8 +24,11 @@ import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportSubmitForm;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.bugzilla.core.NewBugzillaReport;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryConnector;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
+import org.eclipse.mylar.internal.tasklist.ui.editors.AbstractRepositoryTaskEditor;
+import org.eclipse.mylar.internal.tasklist.ui.editors.RepositoryTaskOutlineNode;
+import org.eclipse.mylar.internal.tasklist.ui.editors.RepositoryTaskSelection;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
-import org.eclipse.mylar.provisional.bugzilla.core.IBugzillaBug;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
 import org.eclipse.swt.SWT;
@@ -40,8 +43,6 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.forms.events.ExpansionEvent;
-import org.eclipse.ui.forms.events.IExpansionListener;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
@@ -52,7 +53,7 @@ import org.eclipse.ui.themes.IThemeManager;
  * An editor used to view a locally created bug that does not yet exist on a
  * server. It uses a <code>NewBugModel</code> object to store the data.
  */
-public class NewBugEditor extends AbstractBugEditor {
+public class NewBugEditor extends AbstractRepositoryTaskEditor {
 
 	protected NewBugzillaReport bug;
 
@@ -70,39 +71,39 @@ public class NewBugEditor extends AbstractBugEditor {
 	}
 
 	@Override
-	public IBugzillaBug getBug() {
+	public RepositoryTaskData getRepositoryTaskData() {
 		return bug;
 	}
 
-	@Override
-	protected void addKeywordsList(FormToolkit toolkit, String keywords, Composite attributesComposite) {
-		// Since NewBugModels have no keywords, there is no
-		// GUI for them.
-	}
+//	@Override
+//	protected void addKeywordsList(FormToolkit toolkit, String keywords, Composite attributesComposite) {
+//		// Since NewBugModels have no keywords, there is no
+//		// GUI for them.
+//	}
 
 	@Override
-	protected void createDescriptionLayout(FormToolkit toolkit, final ScrolledForm form) {
-
-		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+	protected void createDescriptionLayout(Composite composite) {
+		FormToolkit toolkit = new FormToolkit(composite.getDisplay());
+		Section section = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_DESCRIPTION);
 		section.setExpanded(true);
 		section.setLayout(new GridLayout());
 		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		section.addExpansionListener(new IExpansionListener() {
-			public void expansionStateChanging(ExpansionEvent e) {
-				form.reflow(true);
-			}
-
-			public void expansionStateChanged(ExpansionEvent e) {
-				form.reflow(true);
-			}
-		});
+		// section.addExpansionListener(new IExpansionListener() {
+		// public void expansionStateChanging(ExpansionEvent e) {
+		// form.reflow(true);
+		// }
+		//
+		// public void expansionStateChanged(ExpansionEvent e) {
+		// form.reflow(true);
+		//			}
+		//		});
 		
 		
 		
 		// Description Area
-		Composite descriptionComposite = toolkit.createComposite(form.getBody());
+		Composite descriptionComposite = toolkit.createComposite(composite);
 		GridLayout descriptionLayout = new GridLayout();
 		descriptionLayout.numColumns = 4;
 		descriptionComposite.setLayout(descriptionLayout);
@@ -130,7 +131,7 @@ public class NewBugEditor extends AbstractBugEditor {
 		descriptionText = new Text(descriptionComposite, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.WRAP);
 		//descriptionText.setFont(COMMENT_FONT);
 		IThemeManager themeManager = PlatformUI.getWorkbench().getThemeManager();
-		Font descriptionFont = themeManager.getCurrentTheme().getFontRegistry().get(AbstractBugEditor.REPOSITORY_TEXT_ID);
+		Font descriptionFont = themeManager.getCurrentTheme().getFontRegistry().get(AbstractRepositoryTaskEditor.REPOSITORY_TEXT_ID);
 		descriptionText.setFont(descriptionFont);
 		GridData descriptionTextData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
 		descriptionTextData.horizontalSpan = 4;
@@ -225,8 +226,8 @@ public class NewBugEditor extends AbstractBugEditor {
 	protected void updateBug() {
 		// go through all of the attributes and update the main values to the
 		// new ones
-//		for (Iterator<AbstractRepositoryReportAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
-//			AbstractRepositoryReportAttribute a = it.next();
+//		for (Iterator<AbstractRepositoryTaskAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
+//			AbstractRepositoryTaskAttribute a = it.next();
 //			a.setValue(a.getNewValue());
 //		}
 
@@ -235,17 +236,16 @@ public class NewBugEditor extends AbstractBugEditor {
 		bug.setDescription(newDescription);
 	}
 
-	@Override
-	protected void restoreBug() {
+//	@Override
+//	protected void restoreBug() {
 		// go through all of the attributes and restore the new values to the
 		// main ones
-//		for (Iterator<AbstractRepositoryReportAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
-//			AbstractRepositoryReportAttribute a = it.next();
+//		for (Iterator<AbstractRepositoryTaskAttribute> it = bug.getAttributes().iterator(); it.hasNext();) {
+//			AbstractRepositoryTaskAttribute a = it.next();
 //			a.setNewValue(a.getValue());
 //		}
-	}
+//	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
 		if (!(input instanceof NewBugEditorInput))
@@ -253,12 +253,12 @@ public class NewBugEditor extends AbstractBugEditor {
 		NewBugEditorInput ei = (NewBugEditorInput) input;
 		setSite(site);
 		setInput(input);
-		bugzillaInput = ei;
-		bugzillaOutlineModel = BugzillaOutlineNode.parseBugReport(bugzillaInput.getBug());
-		bug = ei.getBug();
+		editorInput = ei;
+		taskOutlineModel = RepositoryTaskOutlineNode.parseBugReport(editorInput.getRepositoryTaskData());
+		bug = ei.getRepositoryTaskData();
 		newSummary = bug.getSummary();
 		newDescription = bug.getDescription();
-		restoreBug();
+		//restoreBug();
 		isDirty = false;
 		updateEditorTitle();
 	}
@@ -269,7 +269,7 @@ public class NewBugEditor extends AbstractBugEditor {
 	protected class DescriptionListener implements Listener {
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new BugzillaReportSelection(bug.getId(), bug.getRepositoryUrl(), "New Description", false, bug
+					new RepositoryTaskSelection(bug.getId(), bug.getRepositoryUrl(), "New Description", false, bug
 							.getSummary()))));
 		}
 	}
@@ -283,9 +283,26 @@ public class NewBugEditor extends AbstractBugEditor {
 		}
 	}
 
+//	@Override
+//	protected void addCCList(FormToolkit toolkit, String value, Composite attributesComposite) {
+//		// do nothing here right now
+//	}
+
 	@Override
-	protected void addCCList(FormToolkit toolkit, String value, Composite attributesComposite) {
-		// do nothing here right now
+	public void createCustomAttributeLayout() {
+		// ignore
+		
+	}
+
+	@Override
+	protected void validateInput() {
+		// ignore
+		
+	}
+
+	@Override
+	protected void createCustomAttributeLayout(Composite composite) {
+		// ignore
 	}
 }
 

@@ -20,7 +20,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredViewer;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListUiUtil;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
-import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
+import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryClient;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.mylar.provisional.tasklist.ITaskContainer;
@@ -58,10 +58,10 @@ public class OpenTaskListElementAction extends Action {
 			//element instanceof IQueryHit;
 			boolean forceUpdate = false;
 
-			final AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+			final AbstractRepositoryClient client = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
 					task.getRepositoryKind());
-			if (!task.isLocal() && connector != null) {
-				Job refreshJob = connector.synchronize(task, forceUpdate, new IJobChangeListener() {
+			if (!task.isLocal() && client != null) {
+				Job refreshJob = client.synchronize(task, forceUpdate, new IJobChangeListener() {
 
 					public void done(IJobChangeEvent event) {
 						TaskListUiUtil.openEditor(task);
@@ -97,7 +97,7 @@ public class OpenTaskListElementAction extends Action {
 			TaskListUiUtil.openEditor((ITaskContainer) element);
 		} else if (element instanceof AbstractRepositoryQuery) {
 			AbstractRepositoryQuery query = (AbstractRepositoryQuery) element;
-			AbstractRepositoryConnector client = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
+			AbstractRepositoryClient client = MylarTaskListPlugin.getRepositoryManager().getRepositoryClient(
 					query.getRepositoryKind());
 			client.openEditQueryDialog(query);
 		}

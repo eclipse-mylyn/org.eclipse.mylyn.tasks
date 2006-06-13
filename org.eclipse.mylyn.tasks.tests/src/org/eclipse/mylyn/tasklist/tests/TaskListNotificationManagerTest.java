@@ -20,6 +20,7 @@ import junit.framework.TestCase;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskListNotification;
 import org.eclipse.mylar.internal.tasklist.ui.ITaskListNotificationProvider;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListNotificationManager;
+import org.eclipse.mylar.internal.tasklist.ui.TaskListNotificationPopup;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListNotificationReminder;
 import org.eclipse.mylar.provisional.tasklist.Task;
 import org.eclipse.swt.SWT;
@@ -27,7 +28,7 @@ import org.eclipse.swt.widgets.Shell;
 
 public class TaskListNotificationManagerTest extends TestCase {
 
-//	TaskListNotificationPopup popup;
+	TaskListNotificationPopup popup;
 
 	Shell dialogShell;
 

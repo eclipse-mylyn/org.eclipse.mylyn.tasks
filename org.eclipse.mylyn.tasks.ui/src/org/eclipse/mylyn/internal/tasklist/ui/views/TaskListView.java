@@ -103,6 +103,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.dialogs.FilteredTree;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.PluginTransfer;
 import org.eclipse.ui.part.ViewPart;
@@ -1325,7 +1326,7 @@ public class TaskListView extends ViewPart {
 	}
 
 	
-	public TaskListFilteredTree getFilteredTree() {
+	public FilteredTree getFilteredTree() {
 		return filteredTree;
 	}
 	

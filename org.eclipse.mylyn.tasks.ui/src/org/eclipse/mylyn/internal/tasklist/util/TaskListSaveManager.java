@@ -40,8 +40,6 @@ public class TaskListSaveManager implements ITaskActivityListener, DisposeListen
 	private static final String FILE_SUFFIX_BACKUP = "-backup.xml";
 
 	private BackgroundSaveTimer saveTimer = null;
-	
-	private boolean initializationWarningDialogShow = false;
 
 	/**
 	 * Fort testing.
@@ -51,13 +49,23 @@ public class TaskListSaveManager implements ITaskActivityListener, DisposeListen
 	public TaskListSaveManager() {
 		saveTimer = new BackgroundSaveTimer(this);
 		saveTimer.setSaveIntervalMillis(DEFAULT_SAVE_INTERVAL);
-		saveTimer.start();
+		saveTimer.start(); 
 	}
 
 	/**
 	 * Called periodically by the save timer
 	 */
 	public void saveRequested() {
+		if (!MylarTaskListPlugin.getDefault().isInitialized()) {
+			if (PlatformUI.getWorkbench() != null && PlatformUI.getWorkbench().getDisplay() != null) {
+				MessageDialog.openInformation(PlatformUI.getWorkbench().getDisplay().getActiveShell(), MylarTaskListPlugin.TITLE_DIALOG,
+						"If task list is blank, Mylar Task List may have failed to initialize.\n\n" +
+						"First, try restarting to see if that corrects the problem.\n\n" +
+						"Then, check the Error Log view for messages, and the FAQ for solutions.\n\n" +
+						MylarTaskListPlugin.URL_HOMEPAGE);
+			}
+		} 
+		 
 		if (MylarTaskListPlugin.getDefault() != null && MylarTaskListPlugin.getDefault().isShellActive()
 				|| forceBackgroundSave) {
 			try {
@@ -68,33 +76,15 @@ public class TaskListSaveManager implements ITaskActivityListener, DisposeListen
 		}
 	}
 
-	public void saveTaskListAndContexts() { 
-		if (MylarTaskListPlugin.getDefault() != null && MylarTaskListPlugin.getDefault().isInitialized()) {
+	public void saveTaskListAndContexts() {
+		if (MylarTaskListPlugin.getDefault() != null) {
 			MylarTaskListPlugin.getTaskListManager().saveTaskList();
-			for (ITask task : new ArrayList<ITask>(MylarTaskListPlugin.getTaskListManager().getTaskList()
-					.getActiveTasks())) {
+			for (ITask task : new ArrayList<ITask>(MylarTaskListPlugin.getTaskListManager().getTaskList().getActiveTasks())) {
 				MylarPlugin.getContextManager().saveContext(task.getHandleIdentifier());
-			}
-		} else {
-			MylarStatusHandler.log("Possible task list initialization failure, not saving list.", this);
-			if (PlatformUI.getWorkbench() != null && !initializationWarningDialogShow) {
-				initializationWarningDialogShow = true;
-				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						if (PlatformUI.getWorkbench() != null && PlatformUI.getWorkbench().getDisplay() != null) {
-							MessageDialog.openInformation(PlatformUI.getWorkbench().getDisplay().getActiveShell(),
-									MylarTaskListPlugin.TITLE_DIALOG,
-									"If task list is blank, Mylar Task List may have failed to initialize.\n\n"
-											+ "First, try restarting to see if that corrects the problem.\n\n"
-											+ "Then, check the Error Log view for messages, and the FAQ for solutions.\n\n"
-											+ MylarTaskListPlugin.URL_HOMEPAGE);
-						}
-					}
-				});
 			}
 		}
 	}
-   
+
 	/**
 	 * Copies all files in the current data directory to the specified folder.
 	 * Will overwrite.
@@ -173,9 +163,9 @@ public class TaskListSaveManager implements ITaskActivityListener, DisposeListen
 	}
 
 	public void repositoryInfoChanged(ITask task) {
-		// ignore
+		// ignore	
 	}
-
+	
 	public void tasklistRead() {
 		// ignore
 	}

@@ -1,0 +1,106 @@
+/*******************************************************************************
+ * Copyright (c) 2004 - 2006 University Of British Columbia and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     University Of British Columbia - initial API and implementation
+ *******************************************************************************/
+
+package org.eclipse.mylar.internal.bugzilla.core;
+
+import java.io.IOException;
+import java.net.Proxy;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+
+import javax.security.auth.login.LoginException;
+
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+
+/**
+ * Reads bugzilla product configuration from config.cgi on server in RDF format.
+ * 
+ * @author Rob Elves
+ */
+public class RepositoryConfigurationFactory extends AbstractReportFactory {
+
+	private static final String CONFIG_RDF_URL = "/config.cgi?ctype=rdf";
+
+	private static RepositoryConfigurationFactory instance;
+
+	private RepositoryConfigurationFactory() {
+		// no initial setup needed
+	}
+
+	public static RepositoryConfigurationFactory getInstance() {
+		if (instance == null) {
+			instance = new RepositoryConfigurationFactory();
+		}
+		instance.setClean(true);
+		return instance;
+	}
+
+	public RepositoryConfiguration getConfiguration(String repositoryUrl, Proxy proxySettings, String userName,
+			String password, String encoding) throws IOException, KeyManagementException, LoginException,
+			NoSuchAlgorithmException {
+		String configUrlStr = repositoryUrl + CONFIG_RDF_URL;
+		configUrlStr = BugzillaRepositoryUtil.addCredentials(configUrlStr, userName, password);
+		URL url = new URL(configUrlStr);
+		SaxConfigurationContentHandler contentHandler = new SaxConfigurationContentHandler();
+		collectResults(url, proxySettings, encoding, contentHandler);
+		return contentHandler.getConfiguration();
+
+	}
+
+	// public RepositoryConfiguration getConfiguration(String server) throws
+	// IOException {
+	// URL serverURL = new URL(server + CONFIG_RDF_URL);
+	// BugzillaRepositoryUtil.addCredentials(repository, serverURL)
+	// URLConnection c = serverURL.openConnection();
+	// BufferedReader in = new BufferedReader(new
+	// InputStreamReader(c.getInputStream()));
+	//
+	// SaxConfigurationContentHandler contentHandler = new
+	// SaxConfigurationContentHandler();
+	//
+	// try {
+	// StringBuffer result = XmlCleaner.clean(in);
+	// StringReader strReader = new StringReader(result.toString());
+	// XMLReader reader = XMLReaderFactory.createXMLReader();
+	// reader.setErrorHandler(new SaxErrorHandler());
+	// reader.setContentHandler(contentHandler);
+	// reader.parse(new InputSource(strReader));
+	// } catch (SAXException e) {
+	// throw new IOException("Unable to read server configuration.");
+	// }
+	// return contentHandler.getConfiguration();
+	//
+	// }
+
+	class SaxErrorHandler implements ErrorHandler {
+
+		public void error(SAXParseException exception) throws SAXException {
+			throw exception;
+			// MylarStatusHandler.fail(exception, "ServerConfigurationFactory: "
+			// + exception.getLocalizedMessage(), false);
+		}
+
+		public void fatalError(SAXParseException exception) throws SAXException {
+			throw exception;
+			// MylarStatusHandler.fail(exception, "ServerConfigurationFactory: "
+			// + exception.getLocalizedMessage(), false);
+		}
+
+		public void warning(SAXParseException exception) throws SAXException {
+			// ignore
+		}
+
+	}
+
+}

@@ -10,7 +10,13 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.tasklist.ui.editors;
 
-import java.text.SimpleDateFormat;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.GroupMarker;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -42,25 +49,29 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
+import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasklist.Comment;
 import org.eclipse.mylar.internal.tasklist.LocalAttachment;
 import org.eclipse.mylar.internal.tasklist.RepositoryAttachment;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
+import org.eclipse.mylar.internal.tasklist.ui.GridDataFactory;
+import org.eclipse.mylar.internal.tasklist.ui.TaskListColorsAndFonts;
 import org.eclipse.mylar.internal.tasklist.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasklist.ui.TaskUiUtil;
-import org.eclipse.mylar.internal.tasklist.util.GridDataFactory;
+import org.eclipse.mylar.internal.tasklist.ui.actions.CopyToClipboardAction;
+import org.eclipse.mylar.internal.tasklist.ui.actions.SaveRemoteFileAction;
+import org.eclipse.mylar.internal.tasklist.ui.wizards.NewAttachmentWizard;
+import org.eclipse.mylar.internal.tasklist.ui.wizards.NewAttachmentWizardDialog;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryConnector;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
+import org.eclipse.mylar.provisional.tasklist.IOfflineTaskHandler;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.mylar.provisional.tasklist.TaskRepository;
-import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask.RepositoryTaskSyncState;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -77,6 +88,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.Text;
@@ -110,9 +122,23 @@ import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
  */
 public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
-	protected static final String CONTEXT_MENU_ID = "#BugEditor";
+	private static final String ATTACHMENT_DEFAULT_NAME = "attachment";
 
-	public static final String REPOSITORY_TEXT_ID = "org.eclipse.mylar.tasklist.ui.fonts.task.editor.comment";
+	private static final String CTYPE_ZIP = "zip";
+
+	private static final String CTYPE_OCTET_STREAM = "octet-stream";
+
+	private static final String CTYPE_TEXT = "text";
+
+	private static final String ATTR_FILENAME = "filename";
+
+	private static final String CTYPE_HTML = "html";
+
+	private static final String LABEL_OPEN_IN_BROWSER = "Open in Browser";
+
+	private static final String ATTACHMENT_URL_SUFFIX = "/attachment.cgi?id=";
+
+	protected static final String CONTEXT_MENU_ID = "#MylarRepositoryEditor";
 
 	public static final String HYPERLINK_TYPE_TASK = "task";
 
@@ -146,30 +172,17 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 	public static final Font TEXT_FONT = JFaceResources.getDefaultFont();
 
-	// public static final Font COMMENT_FONT =
-	// JFaceResources.getFontRegistry().get(JFaceResources.TEXT_FONT);
-
 	public static final Font HEADER_FONT = JFaceResources.getDefaultFont();
 
 	public static final int DESCRIPTION_WIDTH = 79 * 8; // 500;
 
 	public static final int DESCRIPTION_HEIGHT = 10 * 14;
 
-	// protected Color background;
-	//
-	// protected Color foreground;
-
 	protected AbstractBugEditorInput editorInput;
 
 	private MylarTaskEditor parentEditor = null;
 
 	protected RepositoryTaskOutlineNode taskOutlineModel = null;
-
-	// private static int MARGIN = 0;// 5
-
-	protected SimpleDateFormat simpleDateFormat = new SimpleDateFormat("E MMM dd, yyyy hh:mm aa");
-
-	// "yyyy-MM-dd HH:mm"
 
 	/**
 	 * Style option for function <code>newLayout</code>. This will create a
@@ -194,32 +207,12 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 	protected CCombo attributeCombo;
 
-	// protected CCombo versionCombo;
-	//
-	// protected CCombo platformCombo;
-	//
-	// protected CCombo priorityCombo;
-	//
-	// protected CCombo severityCombo;
-	//
-	// protected CCombo milestoneCombo;
-	//
-	// protected CCombo componentCombo;
-
 	protected Button addSelfToCCCheck;
-
-	// protected Text urlText;
 
 	protected Text summaryText;
 
 	protected Text addCommentsText;
-
-	// protected Text assignedTo;
-
-	protected Text attachmentDesc;
-
-	protected Text attachmentComment;
-
+	
 	protected Button submitButton;
 
 	protected Table attachmentsTable;
@@ -253,51 +246,9 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 	protected RepositoryTaskEditorCopyAction copyAction;
 
-	// private Action revealAllAction;
-
 	protected RetargetAction pasteAction;
 
 	protected Composite editorComposite;
-
-	// protected CLabel titleLabel;
-
-	// protected ScrolledComposite scrolledComposite;
-
-	// protected Composite scrolledComposite;
-
-	// protected Composite infoArea;
-
-	// protected Hyperlink linkToBug;
-
-	// protected StyledText generalTitleText;
-
-	// private static List<String> contentTypes;
-
-	private static Map<String, String> extensions2Types;
-
-	static {
-		/* For possible UI */
-		// contentTypes = new LinkedList<String>();
-		// contentTypes.add("text/plain");
-		// contentTypes.add("text/html");
-		// contentTypes.add("application/xml");
-		// contentTypes.add("image/gif");
-		// contentTypes.add("image/jpeg");
-		// contentTypes.add("image/png");
-		// contentTypes.add("application/octet-stream");
-		extensions2Types = new HashMap<String, String>();
-		extensions2Types.put("txt", "text/plain");
-		extensions2Types.put("html", "text/html");
-		extensions2Types.put("htm", "text/html");
-		extensions2Types.put("jpg", "image/jpeg");
-		extensions2Types.put("jpeg", "image/jpeg");
-		extensions2Types.put("gif", "image/gif");
-		extensions2Types.put("png", "image/png");
-		extensions2Types.put("xml", "application/xml");
-		extensions2Types.put("zip", "application/octet-stream");
-		extensions2Types.put("tar", "application/octet-stream");
-		extensions2Types.put("gz", "application/octet-stream");
-	}
 
 	private List<IRepositoryTaskAttributeListener> attributesListeners = new ArrayList<IRepositoryTaskAttributeListener>();
 
@@ -357,6 +308,8 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		}
 	};
 
+	private TableViewer attachmentsTableViewer;
+
 	private class ComboSelectionListener extends SelectionAdapter {
 
 		private CCombo combo;
@@ -399,6 +352,10 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		scrollVertPageIncrement = 0;
 		scrollHorzPageIncrement = 0;
 
+		makeContextMenuActions();
+	}
+
+	private void makeContextMenuActions() {
 		// set up actions for the context menu
 		cutAction = new RetargetAction(ActionFactory.CUT.getId(), WorkbenchMessages.Workbench_cut);
 		cutAction.setToolTipText(WorkbenchMessages.Workbench_cutToolTip);// WorkbenchMessages.getString("Workbench.cutToolTip"));
@@ -410,8 +367,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		cutAction.setActionDefinitionId(cutActionDefId);
 
 		pasteAction = new RetargetAction(ActionFactory.PASTE.getId(), WorkbenchMessages.Workbench_paste);
-		pasteAction.setToolTipText(WorkbenchMessages.Workbench_pasteToolTip);// WorkbenchMessages.getString("Workbench.pasteToolTip"));
-		// //$NON-NLS-1$
+		pasteAction.setToolTipText(WorkbenchMessages.Workbench_pasteToolTip);
 		pasteAction.setImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_PASTE));
 		pasteAction.setHoverImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_PASTE));
 		pasteAction.setDisabledImageDescriptor(WorkbenchImages
@@ -427,18 +383,6 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		copyAction.setAccelerator(SWT.CTRL | 'c');
 
 		copyAction.setEnabled(false);
-
-		//		
-		// revealAllAction = new ExpandCommentsAction(this);
-		// revealAllAction.setText("Reveal Comments");//
-		// WorkbenchMessages.getString("Workbench.copy"));
-		// revealAllAction.setImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_COPY));
-		// revealAllAction.setHoverImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_COPY));
-		// revealAllAction.setDisabledImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_COPY_DISABLED));
-		// revealAllAction.setAccelerator(SWT.CTRL | 'r');
-		//
-		// revealAllAction.setEnabled(true);
-
 	}
 
 	/**
@@ -467,111 +411,67 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 	@Override
 	public void createPartControl(Composite parent) {
-
 		if (getRepositoryTaskData() == null) {
 			Composite composite = new Composite(parent, SWT.NULL);
 			composite.setLayout(new GridLayout());
 			Label noBugLabel = new Label(composite, SWT.NULL);
-			noBugLabel.setText("Could not resolve bug");
+			noBugLabel.setText("Could not download task data, possibly due to timeout or connectivity problem.\n"
+					+ "Please check connection and try again.");
 			return;
 		}
 
 		toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createScrolledForm(parent);
-		// String truncatedSummary = getBug().getSummary();
-		// int maxLength = 50;
-		// if (truncatedSummary.length() > maxLength) {
-		// truncatedSummary = truncatedSummary.substring(0, maxLength) + "...";
-		// }
-		// form.setFont(COMMENT_FONT);
 
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
-
-		// Header information
-
-		Composite summaryComposite = toolkit.createComposite(editorComposite);
-		summaryComposite.setLayout(new GridLayout(2, false));
-		GridDataFactory.fillDefaults().grab(true, false).applyTo(summaryComposite);
-		addSummaryText(summaryComposite);
-		toolkit.paintBordersFor(summaryComposite);
-		Composite headerInfoComposite = toolkit.createComposite(editorComposite);
-		headerInfoComposite.setLayout(new GridLayout(6, false));
-		toolkit.createLabel(headerInfoComposite, "Task# ").setFont(TITLE_FONT);
-		toolkit.createText(headerInfoComposite, "" + getRepositoryTaskData().getId(), SWT.FLAT | SWT.READ_ONLY);
-
-		toolkit.createLabel(headerInfoComposite, " Opened: ").setFont(TITLE_FONT);
-		String openedDateString = "";
-		if (getRepositoryTaskData().getCreated() != null) {
-			openedDateString = simpleDateFormat.format(getRepositoryTaskData().getCreated());
-		}
-		toolkit.createText(headerInfoComposite, openedDateString, SWT.FLAT | SWT.READ_ONLY);
-
-		toolkit.createLabel(headerInfoComposite, " Modified: ").setFont(TITLE_FONT);
-		String lastModifiedDateString = "";		
-		if (getRepositoryTaskData().getLastModified(repository.getTimeZoneId()) != null) {
-			lastModifiedDateString = simpleDateFormat.format(getRepositoryTaskData().getLastModified(repository.getTimeZoneId()));
-		}
-		toolkit.createText(headerInfoComposite, lastModifiedDateString, SWT.FLAT | SWT.READ_ONLY);
-
-		// openedText.setFont(TITLE_FONT);
-		// display = parent.getDisplay();
-		// background = JFaceColors.getBannerBackground(display);
-		// foreground = JFaceColors.getBannerForeground(display);
-
-		// createInfoArea(editorComposite);
 		createContextMenu();
-		Composite attribComp = createAttributeLayout();
+		
+		createReportHeaderLayout(editorComposite);
+		Composite attribComp = createAttributeLayout(editorComposite);
 		createCustomAttributeLayout(attribComp);
-		createDescriptionLayout(form.getBody());
-		createAttachmentLayout();
-		createCommentLayout(toolkit, form);
-		createButtonLayouts(toolkit, form.getBody());
-
-		// WorkbenchHelpSystem.getInstance().setHelp(parent,
-
-		editorComposite.setMenu(contextMenuManager.createContextMenu(editorComposite));
+		createDescriptionLayout(editorComposite);
+		createAttachmentLayout(editorComposite);
+		createCommentLayout(editorComposite, form);
+		createButtonLayouts(editorComposite);
+		
+//		editorComposite.setMenu(contextMenuManager.createContextMenu(editorComposite));
+		
 		form.reflow(true);
 		getSite().getPage().addSelectionListener(selectionListener);
 		getSite().setSelectionProvider(selectionProvider);
 	}
 
-	public abstract void createCustomAttributeLayout();
-
 	/**
-	 * Create a context menu for this editor.
+	 * By default puts task number, date opened and date modified in header
 	 */
-	protected void createContextMenu() {
-		contextMenuManager = new MenuManager(CONTEXT_MENU_ID);
-		contextMenuManager.setRemoveAllWhenShown(true);
-		contextMenuManager.addMenuListener(new IMenuListener() {
-			public void menuAboutToShow(IMenuManager manager) {
-				manager.add(cutAction);
-				manager.add(copyAction);
-				manager.add(pasteAction);
-				// manager.add(revealAllAction);
-				manager.add(new Separator());
-				manager.add(new GroupMarker(IWorkbenchActionConstants.MB_ADDITIONS));
-				if (currentSelectedText == null || currentSelectedText.getSelectionText().length() == 0) {
+	protected void createReportHeaderLayout(Composite composite) {
+		addSummaryText(composite);
 
-					copyAction.setEnabled(false);
-				} else {
-					copyAction.setEnabled(true);
-				}
-			}
-		});
-		getSite().registerContextMenu(CONTEXT_MENU_ID, contextMenuManager, getSite().getSelectionProvider());
+		Composite headerInfoComposite = toolkit.createComposite(composite);
+		headerInfoComposite.setLayout(new GridLayout(6, false));
+		toolkit.createLabel(headerInfoComposite, "ID: ").setFont(TITLE_FONT);
+		toolkit.createText(headerInfoComposite, "" + getRepositoryTaskData().getId(), SWT.FLAT | SWT.READ_ONLY);
+
+		toolkit.createLabel(headerInfoComposite, " Opened: ").setFont(TITLE_FONT);
+		String openedDateString = "";
+		if (getRepositoryTaskData().getCreated() != null) {
+			openedDateString = getRepositoryTaskData().getCreated();
+		}
+		toolkit.createText(headerInfoComposite, openedDateString, SWT.FLAT | SWT.READ_ONLY);
+		toolkit.createLabel(headerInfoComposite, " Modified: ").setFont(TITLE_FONT);
+		toolkit.createText(headerInfoComposite, getRepositoryTaskData().getLastModified(), SWT.FLAT | SWT.READ_ONLY);
 	}
 
 	/**
 	 * Creates the attribute layout, which contains most of the basic attributes
 	 * of the bug (some of which are editable).
 	 */
-	protected Composite createAttributeLayout() {
+	protected Composite createAttributeLayout(Composite composite) {
 
 		String title = getTitleString();
-		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+		Section section = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_ATTRIBUTES);
 		section.setExpanded(true);
 		section.setLayout(new GridLayout());
@@ -604,20 +504,9 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		int currentCol = 1;
 
 		for (RepositoryTaskAttribute attribute : getRepositoryTaskData().getAttributes()) {
-
-			// String key = attribute.getID();
 			String name = attribute.getName();
 			String value = "";
-			// try {
 			value = checkText(attribute.getValue());
-			// value =
-			// checkText(BugzillaRepositoryUtil.decodeStringFromCharset(attribute.getValue(),
-			// getReport().getCharset()));
-			// } catch (UnsupportedEncodingException e1) {
-			// // ignore
-			// }
-			// "+name+"
-			// key:"+key+" value:"+value+" is hidden"+attribute.isHidden());
 			if (attribute.isHidden())
 				continue;
 			Map<String, String> values = attribute.getOptionValues();
@@ -630,7 +519,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 			if (attribute.hasOptions() && !attribute.isReadOnly()) {
 				toolkit.createLabel(attributesComposite, name);
-				attributeCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
+				attributeCombo = new CCombo(attributesComposite, SWT.BORDER | SWT.READ_ONLY);
 				toolkit.adapt(attributeCombo, true, true);
 				attributeCombo.setFont(TEXT_FONT);
 				attributeCombo.setLayoutData(data);
@@ -696,6 +585,29 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		return attributesComposite;
 	}
 
+	public abstract void createCustomAttributeLayout();
+
+	protected void createContextMenu() {
+		contextMenuManager = new MenuManager(CONTEXT_MENU_ID);
+		contextMenuManager.setRemoveAllWhenShown(true);
+		contextMenuManager.addMenuListener(new IMenuListener() {
+			public void menuAboutToShow(IMenuManager manager) {
+				manager.add(cutAction);
+				manager.add(copyAction);
+				manager.add(pasteAction);
+				if (currentSelectedText == null || currentSelectedText.getSelectionText().length() == 0) {
+					copyAction.setEnabled(false);
+				} else {
+					copyAction.setEnabled(true);
+				}
+				// manager.add(revealAllAction);
+				manager.add(new Separator());
+				manager.add(new GroupMarker(IWorkbenchActionConstants.MB_ADDITIONS));
+			} 
+		});
+//		getSite().registerContextMenu(CONTEXT_MENU_ID, contextMenuManager, getSite().getSelectionProvider());
+	}
+
 	/**
 	 * Adds a text field to display and edit the bug's summary.
 	 * 
@@ -703,11 +615,15 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 	 *            The composite to add the text field to.
 	 */
 	protected void addSummaryText(Composite attributesComposite) {
-		// newLayout(attributesComposite, 1, "Summary:", PROPERTY);
-		toolkit.createLabel(attributesComposite, "Summary:").setFont(TITLE_FONT);
-		summaryText = toolkit.createText(attributesComposite, getRepositoryTaskData().getSummary(), SWT.FLAT);
+
+		Composite summaryComposite = toolkit.createComposite(attributesComposite);
+		summaryComposite.setLayout(new GridLayout(2, false));
+		GridDataFactory.fillDefaults().grab(true, false).applyTo(summaryComposite);
+
+		toolkit.createLabel(summaryComposite, "Summary:").setFont(TITLE_FONT);
+		summaryText = toolkit.createText(summaryComposite, getRepositoryTaskData().getSummary(), SWT.FLAT);
 		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
-		Font summaryFont = themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID);
+		Font summaryFont = themeManager.getCurrentTheme().getFontRegistry().get(TaskListColorsAndFonts.TASK_EDITOR_FONT);
 		summaryText.setFont(summaryFont);
 		GridData summaryTextData = new GridData(GridData.FILL_HORIZONTAL);// HORIZONTAL_ALIGN_FILL
 		summaryTextData.horizontalSpan = 1;
@@ -716,17 +632,18 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		summaryText.setLayoutData(summaryTextData);
 		summaryText.addListener(SWT.KeyUp, new SummaryListener());
 		summaryText.addListener(SWT.FocusIn, new GenericListener());
+		toolkit.paintBordersFor(summaryComposite);
 	}
 
-	protected void createAttachmentLayout() {
-		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+	protected void createAttachmentLayout(Composite composite) {
+		Section section = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_ATTACHMENTS);
 		section.setExpanded(getRepositoryTaskData().getAttachments().size() > 0);
 		section.setLayout(new GridLayout());
 		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
 		final Composite attachmentsComposite = toolkit.createComposite(section);
-		attachmentsComposite.setLayout(new GridLayout());
+		attachmentsComposite.setLayout(new GridLayout(2, false));
 		attachmentsComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 		section.setClient(attachmentsComposite);
 
@@ -736,7 +653,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 			attachmentsTable.setLinesVisible(true);
 			attachmentsTable.setHeaderVisible(true);
 			attachmentsTable.setLayout(new GridLayout());
-			GridData tableGridData = new GridData(GridData.FILL_BOTH);
+			GridData tableGridData = new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1);
 			// tableGridData.heightHint = 100;
 			tableGridData.widthHint = DESCRIPTION_WIDTH;
 			attachmentsTable.setLayoutData(tableGridData);
@@ -747,23 +664,34 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 				column.setWidth(attachmentsColumnWidths[i]);
 			}
 
-			TableViewer attachmentsTableViewer = new TableViewer(attachmentsTable);
+			attachmentsTableViewer = new TableViewer(attachmentsTable);
 			attachmentsTableViewer.setUseHashlookup(true);
 			attachmentsTableViewer.setColumnProperties(attachmentsColumns);
 
-			attachmentsTableViewer.setSorter(new ViewerSorter() {
-				public int compare(Viewer viewer, Object e1, Object e2) {
-					RepositoryAttachment attachment1 = (RepositoryAttachment) e1;
-					RepositoryAttachment attachment2 = (RepositoryAttachment) e2;
-					Date created1 = attachment1.getDateCreated();
-					Date created2 = attachment2.getDateCreated();
-					if (created1 != null && created2 != null) {
-						return attachment1.getDateCreated().compareTo(attachment2.getDateCreated());
-					} else {
-						return 0;
-					}
+			final AbstractRepositoryConnector connector = MylarTaskListPlugin.getRepositoryManager()
+					.getRepositoryConnector(getRepositoryTaskData().getRepositoryKind());
+
+			if (connector != null) {
+				final IOfflineTaskHandler offlineHandler = connector.getOfflineTaskHandler();
+				if (offlineHandler != null) {
+					attachmentsTableViewer.setSorter(new ViewerSorter() {
+						public int compare(Viewer viewer, Object e1, Object e2) {
+							RepositoryAttachment attachment1 = (RepositoryAttachment) e1;
+							RepositoryAttachment attachment2 = (RepositoryAttachment) e2;
+							Date created1 = offlineHandler.getDateForAttributeType(
+									RepositoryTaskAttribute.ATTACHMENT_DATE, attachment1.getDateCreated());
+							Date created2 = offlineHandler.getDateForAttributeType(
+									RepositoryTaskAttribute.ATTACHMENT_DATE, attachment2.getDateCreated());
+							if (created1 != null && created2 != null) {
+								return attachment1.getDateCreated().compareTo(attachment2.getDateCreated());
+							} else {
+								return 0;
+							}
+						}
+					});
 				}
-			});
+
+			}
 
 			attachmentsTableViewer.setContentProvider(new IStructuredContentProvider() {
 				public Object[] getElements(Object inputElement) {
@@ -775,7 +703,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 				}
 
 				public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-					// ignore
+					viewer.refresh();
 				}
 			});
 
@@ -793,11 +721,15 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 					case 0:
 						return attachment.getDescription();
 					case 1:
-						return attachment.getContentType();
+						if (attachment.isPatch()) {
+							return "patch";
+						} else {
+							return attachment.getContentType();
+						}
 					case 2:
 						return attachment.getCreator();
 					case 3:
-						return attachment.getDateCreated().toString();
+						return attachment.getDateCreated();
 					}
 					return "unrecognized column";
 				}
@@ -826,7 +758,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 			attachmentsTableViewer.addDoubleClickListener(new IDoubleClickListener() {
 				public void doubleClick(DoubleClickEvent event) {
-					String address = repository.getUrl() + "/attachment.cgi?id=";
+					String address = repository.getUrl() + ATTACHMENT_URL_SUFFIX;
 					if (!event.getSelection().isEmpty()) {
 						StructuredSelection selection = (StructuredSelection) event.getSelection();
 						RepositoryAttachment attachment = (RepositoryAttachment) selection.getFirstElement();
@@ -839,109 +771,177 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 			attachmentsTableViewer.setInput(getRepositoryTaskData());
 
+			final MenuManager popupMenu = new MenuManager();
+			popupMenu.add(new Action(LABEL_OPEN_IN_BROWSER) {
+				public void run() {
+					RepositoryAttachment att = (RepositoryAttachment) (((StructuredSelection) attachmentsTableViewer
+							.getSelection()).getFirstElement());
+					String url = repository.getUrl() + ATTACHMENT_URL_SUFFIX + att.getId();
+					TaskUiUtil.openUrl(url);
+				}
+			});
+
+			popupMenu.add(new Action(SaveRemoteFileAction.TITLE) {
+				public void run() {
+					RepositoryAttachment att = (RepositoryAttachment) (((StructuredSelection) attachmentsTableViewer
+							.getSelection()).getFirstElement());
+					/* Launch Browser */
+					FileDialog fileChooser = new FileDialog(attachmentsTable.getShell(), SWT.SAVE);
+					String fname = att.getAttributeValue(ATTR_FILENAME);
+					// Default name if none is found
+					if (fname.equals("")) {
+						String ctype = att.getContentType();
+						if (ctype.endsWith(CTYPE_HTML)) {
+							fname = ATTACHMENT_DEFAULT_NAME + ".html";
+						} else if (ctype.startsWith(CTYPE_TEXT)) {
+							fname = ATTACHMENT_DEFAULT_NAME + ".txt";
+						} else if (ctype.endsWith(CTYPE_OCTET_STREAM)) {
+							fname = ATTACHMENT_DEFAULT_NAME;
+						} else if (ctype.endsWith(CTYPE_ZIP)) {
+							fname = ATTACHMENT_DEFAULT_NAME + "." + CTYPE_ZIP;
+						} else {
+							fname = ATTACHMENT_DEFAULT_NAME + "." + ctype.substring(ctype.indexOf("/") + 1);
+						}
+					}
+					fileChooser.setFileName(fname);
+					String file = fileChooser.open();
+
+					// Check if the dialog was canceled or an error occured
+					if (file == null) {
+						return;
+					}
+					SaveRemoteFileAction save = new SaveRemoteFileAction();
+					save.setDestinationFilePath(file);
+					save.setInputStream(getAttachmentInputStream(repository.getUrl() + ATTACHMENT_URL_SUFFIX
+							+ att.getId()));
+					save.run();
+				}
+			});
+			final Action copyToClip = new Action(CopyToClipboardAction.TITLE) {
+				public void run() {
+					RepositoryAttachment att = (RepositoryAttachment) (((StructuredSelection) attachmentsTableViewer
+							.getSelection()).getFirstElement());
+					CopyToClipboardAction copyToClip = new CopyToClipboardAction();
+					copyToClip.setContents(getAttachmentContents(repository.getUrl() + ATTACHMENT_URL_SUFFIX
+							+ att.getId()));
+					copyToClip.setControl(attachmentsTable.getParent());
+					copyToClip.run();
+				}
+			};
+			copyToClip.setId("ID_COPY_TO_CLIPBOARD");
+
+			final Action applyPatch = new Action("Apply Patch...") {
+				public void run() {
+					// RepositoryAttachment att =
+					// (RepositoryAttachment)(((StructuredSelection)attachmentsTableViewer.getSelection()).getFirstElement());
+					// implementation pending bug 98707
+				}
+			};
+			applyPatch.setId("ID_APPLY_PATCH");
+			applyPatch.setEnabled(false); // pending bug 98707
+
+			popupMenu.add(new Separator());
+			Menu menu = popupMenu.createContextMenu(attachmentsTable);
+			attachmentsTable.setMenu(menu);
+
+			/*
+			 * Add the apply patch option if the attachment is a patch. Add the
+			 * copy to clipboard option if the attachment is text or xml
+			 */
+			attachmentsTableViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+				public void selectionChanged(SelectionChangedEvent e) {
+					RepositoryAttachment att = (RepositoryAttachment) (((StructuredSelection) e.getSelection())
+							.getFirstElement());
+					popupMenu.remove("ID_APPLY_PATCH");
+					popupMenu.remove("ID_COPY_TO_CLIPBOARD");
+					if (att.getContentType().startsWith(CTYPE_TEXT) || att.getContentType().endsWith("xml")) {
+						popupMenu.add(copyToClip);
+					}
+					if (att.isPatch()) {
+						popupMenu.add(applyPatch);
+					}
+				}
+			});
+
 		} else {
 			toolkit.createLabel(attachmentsComposite, "No attachments");
+			toolkit.createLabel(attachmentsComposite, "");
 		}
 
-		/* Add a file chooser to add new attachments */
-		Composite addAttachmentComposite = toolkit.createComposite(attachmentsComposite);
-		addAttachmentComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		addAttachmentComposite.setLayout(new GridLayout(2, false));
-
-		Button addAttachmentButton = toolkit.createButton(addAttachmentComposite, "Add an Attachment...", SWT.PUSH);
-		final Text fname = new Text(addAttachmentComposite, SWT.LEFT);// toolkit.createText(addAttachmentComposite,
-		// "");
-		fname.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-		final Composite addAttachmentInfo = toolkit.createComposite(addAttachmentComposite);
-		addAttachmentInfo.setSize(2, 1);
-		addAttachmentInfo.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
-		addAttachmentInfo.setLayout(new GridLayout(3, false));
-
-		toolkit.createLabel(addAttachmentInfo, "Description: ");
-		attachmentDesc = toolkit.createText(addAttachmentInfo, "");
-		attachmentDesc.setEnabled(false);
-		attachmentDesc.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
-
-		toolkit.createLabel(addAttachmentInfo, "Comment: ");
-		attachmentComment = toolkit.createText(addAttachmentInfo, "");
-		attachmentComment.setEnabled(false);
-		attachmentComment.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
-
-		final Button isPatchButton = toolkit.createButton(addAttachmentInfo, "Patch", SWT.CHECK);
-
-		addAttachmentInfo.setVisible(false);
-
-		/* File Chooser listener */
+		/* Launch a NewAttachemntWizard */
+		Button addAttachmentButton = toolkit.createButton(attachmentsComposite, "Add...", SWT.PUSH);
+		final Text newAttachment = new Text(attachmentsComposite, SWT.LEFT);
+		newAttachment.setEditable(false);
+		newAttachment.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		newAttachment.setBackground(form.getBackground());
+		
 		addAttachmentButton.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
 				// ignore
 			}
 
 			public void widgetSelected(SelectionEvent e) {
-				FileDialog fileChooser = new FileDialog(attachmentsComposite.getShell(), SWT.OPEN);
-				String file = fileChooser.open();
-
-				// Check if the dialog was canceled or an error occured
-				if (file == null) {
-					return;
-				}
-				// update UI
-				fname.setText(file);
-			}
-		});
-
-		/*
-		 * Attachment file name listener, update the local attachment
-		 * accordingly
-		 */
-		fname.addModifyListener(new ModifyListener() {
-			public void modifyText(ModifyEvent e) {
-				LocalAttachment att = getRepositoryTaskData().getNewAttachment();
-				if (att == null) {
-					att = new LocalAttachment();
+				NewAttachmentWizard naw = new NewAttachmentWizard();
+				NewAttachmentWizardDialog dialog = new NewAttachmentWizardDialog(attachmentsComposite.getShell(), naw);
+				naw.setDialog(dialog);
+				dialog.create();
+				dialog.open();
+				if (dialog.getReturnCode() == WizardDialog.CANCEL) {
+					getRepositoryTaskData().setNewAttachment(null);
+				} else {
+					final LocalAttachment att = naw.getAttachment();
 					att.setReport(getRepositoryTaskData());
-				}
-				if ("".equals(fname.getText())) {
-					attachmentDesc.setEnabled(false);
-					attachmentComment.setEnabled(false);
-				} else {
-					addAttachmentInfo.setVisible(true);
-					attachmentDesc.setEnabled(true);
-					attachmentComment.setEnabled(true);
-				}
-				att.setFilePath(fname.getText());
-				getRepositoryTaskData().setNewAttachment(att);
+					getRepositoryTaskData().setNewAttachment(att);
 
-				/* TODO jpound - UI for content type */
-				// Determine type by extension
-				int index = fname.getText().lastIndexOf(".");
-				if (index < 0) {
-					att.setContentType("text/plain");
-				} else {
-					String ext = fname.getText().substring(index + 1);
-					String type = extensions2Types.get(ext.toLowerCase());
-					if (type != null) {
-						att.setContentType(type);
-					} else {
-						att.setContentType("text/plain");
-					}
+					// TODO: Add row to table
+					// RepositoryTaskData data = getRepositoryTaskData();
+					// data.addAttachment(new DisplayableLocalAttachment(att));
+					// attachmentsTableViewer.setInput(data);
+					newAttachment.setText((new File(att.getFilePath())).getName() + " <not yet submitted>");
 				}
 			}
 		});
+	}
 
-		/* Listener for isPatch */
-		isPatchButton.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-				// ignore
+	public static InputStream getAttachmentInputStream(String url) {
+		URLConnection urlConnect;
+		InputStream stream = null;
+		try {
+			urlConnect = (new URL(url)).openConnection();
+			urlConnect.connect();
+			stream = urlConnect.getInputStream();
+
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return stream;
+	}
+
+	public static String getAttachmentContents(String url) {
+		URLConnection urlConnect;
+		StringBuffer contents = new StringBuffer();
+		try {
+			urlConnect = (new URL(url)).openConnection();
+			urlConnect.connect();
+			BufferedInputStream stream = new BufferedInputStream(urlConnect.getInputStream());
+			int c;
+			while ((c = stream.read()) != -1) {
+				/* TODO jpound - handle non-text */
+				contents.append((char) c);
 			}
-
-			public void widgetSelected(SelectionEvent e) {
-				LocalAttachment att = getRepositoryTaskData().getNewAttachment();
-				att.setPatch(isPatchButton.getSelection());
-			}
-		});
-
+			stream.close();
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return contents.toString();
 	}
 
 	protected abstract void createCustomAttributeLayout(Composite composite);
@@ -993,9 +993,8 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		}
 	}
 
-	protected void createCommentLayout(FormToolkit toolkit, final ScrolledForm form) {
-
-		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+	protected void createCommentLayout(Composite composite, final ScrolledForm form) {
+		Section section = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_COMMENTS);
 		section.setExpanded(true);
 		section.setLayout(new GridLayout());
@@ -1036,9 +1035,8 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		// ExistingBugEditorInput input =
 		// (ExistingBugEditorInput)this.getEditorInput();
 		// lastSynced = input.getRepositoryTask().getLastSynchronized();
-		//		}
-		
-		
+		// }
+
 		StyledText styledText = null;
 		for (Iterator<Comment> it = getRepositoryTaskData().getComments().iterator(); it.hasNext();) {
 			final Comment comment = it.next();
@@ -1050,13 +1048,13 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 			ExpandableComposite expandableComposite = toolkit.createExpandableComposite(addCommentsComposite,
 					ExpandableComposite.TREE_NODE);
 
-			//if (comment.getCreated().after(lastSynced)) {
+			// if (comment.getCreated().after(lastSynced)) {
 			if (!it.hasNext()) {
 				expandableComposite.setExpanded(true);
 			}
 
 			expandableComposite.setText(comment.getNumber() + ": " + comment.getAuthorName() + ", "
-					+ simpleDateFormat.format(comment.getCreated()));
+					+ comment.getCreated());
 
 			expandableComposite.addExpansionListener(new ExpansionAdapter() {
 				public void expansionStateChanged(ExpansionEvent e) {
@@ -1127,7 +1125,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 			textsindex++;
 		}
 
-		Section sectionAdditionalComments = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR
+		Section sectionAdditionalComments = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR
 				| Section.TWISTIE);
 		sectionAdditionalComments.setText(LABEL_SECTION_NEW_COMMENT);
 		sectionAdditionalComments.setExpanded(true);
@@ -1150,7 +1148,7 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 				| SWT.V_SCROLL | SWT.WRAP);
 
 		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
-		Font newCommnetFont = themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID);
+		Font newCommnetFont = themeManager.getCurrentTheme().getFontRegistry().get(TaskListColorsAndFonts.TASK_EDITOR_FONT);
 		addCommentsText.setFont(newCommnetFont);
 		toolkit.paintBordersFor(newCommentsComposite);
 		GridData addCommentsTextData = new GridData(GridData.FILL_HORIZONTAL);
@@ -1234,9 +1232,8 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 	 * Creates the button layout. This displays options and buttons at the
 	 * bottom of the editor to allow actions to be performed on the bug.
 	 */
-	protected void createButtonLayouts(FormToolkit toolkit, Composite formComposite) {
-
-		Section section = toolkit.createSection(form.getBody(), ExpandableComposite.TITLE_BAR | Section.TWISTIE);
+	protected void createButtonLayouts(Composite formComposite) {
+		Section section = toolkit.createSection(formComposite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
 		section.setText(LABEL_SECTION_ACTIONS);
 		section.setExpanded(true);
 		section.setLayout(new GridLayout());
@@ -1407,29 +1404,24 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 
 		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
 
-		commentViewer.getTextWidget().setFont(themeManager.getCurrentTheme().getFontRegistry().get(REPOSITORY_TEXT_ID));
+		commentViewer.getTextWidget().setFont(themeManager.getCurrentTheme().getFontRegistry().get(TaskListColorsAndFonts.TASK_EDITOR_FONT));
 
 		commentViewer.setEditable(false);
 		commentViewer.getTextWidget().addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				StyledText c = (StyledText) e.widget;
-				if (c != null && !c.getSelectionText().equals("")) {
-					if (currentSelectedText != null && !currentSelectedText.equals(c)) {
+				StyledText styledText = (StyledText) e.widget;
+				if (styledText != null && !styledText.getSelectionText().equals("")) {
+					if (currentSelectedText != null && !currentSelectedText.equals(styledText)) {
 						currentSelectedText.setSelectionRange(0, 0);
 					}
-					currentSelectedText = c;
+					currentSelectedText = styledText;
 				}
-
 			}
 		});
 
 		commentViewer.getTextWidget().setMenu(contextMenuManager.createContextMenu(commentViewer.getTextWidget()));
-
-		// textViewer.getControl().setFont(COMMENT_FONT);
 		commentViewer.setDocument(new Document(text));
-		// commentViewer.activatePlugins();
-		// textViewer.refresh();
 		return commentViewer;
 	}
 
@@ -1530,16 +1522,20 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 				AbstractRepositoryTask repositoryTask = existingInput.getRepositoryTask();
 				// AbstractRepositoryTask repositoryTask = getRepositoryTask();
 				if (repositoryTask != null) {
-					if (getRepositoryTaskData().hasChanges()) {
-						repositoryTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
-					} else {
-						repositoryTask.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+					// if (getRepositoryTaskData().hasChanges()) {
+					// repositoryTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
+					// } else {
+					// repositoryTask.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+					// }
+					if (getRepositoryTaskData().hasLocalChanges() == true) {
+						repositoryClient.updateOfflineState(repositoryTask, getRepositoryTaskData(), false);
 					}
 					MylarTaskListPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(repositoryTask);
 				}
-			}
 
-			repositoryClient.saveOffline(getRepositoryTaskData());
+				// For new bug reports something along these lines...
+				// repositoryClient.saveOffline(getRepositoryTaskData());
+			}
 			changeDirtyStatus(false);
 			if (parentEditor != null) {
 				parentEditor.notifyTaskChanged();
@@ -1911,6 +1907,10 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 		}
 	}
 
+	public Control getControl() {
+		return form;
+	}
+	
 	// private void addHyperlinks(final StyledText styledText, Composite
 	// composite) {
 	//
@@ -2001,5 +2001,45 @@ public abstract class AbstractRepositoryTaskEditor extends EditorPart {
 	// style.metrics = new GlyphMetrics(ascent + MARGIN, descent + MARGIN,
 	// rect.width + 2 * MARGIN);
 	// styledText.setStyleRange(style);
+	// }
+
+	// private class DisplayableLocalAttachment extends RepositoryAttachment {
+	// private static final long serialVersionUID = 900218036143022422L;
+	//		
+	// private Date date;
+	// private String description;
+	// private String creator;
+	// private String name;
+	//		
+	// public String getCreator() {
+	// return creator;
+	// }
+	// public void setCreator(String creator) {
+	// this.creator = creator;
+	// }
+	// public Date getDateCreated() {
+	// return date;
+	// }
+	// public void setDateCreated(Date date) {
+	// this.date = date;
+	// }
+	// public String getDescription() {
+	// return description;
+	// }
+	// public void setDescription(String description) {
+	// this.description = description;
+	// }
+	// public String getName() {
+	// return name;
+	// }
+	// public void setName(String name) {
+	// this.name = name;
+	// }
+	// public DisplayableLocalAttachment(LocalAttachment att) {
+	// super(null);
+	// setName(att.getFilePath());
+	// setDescription(att.getDescription());
+	// setDateCreated(new Date());
+	// }
 	// }
 }

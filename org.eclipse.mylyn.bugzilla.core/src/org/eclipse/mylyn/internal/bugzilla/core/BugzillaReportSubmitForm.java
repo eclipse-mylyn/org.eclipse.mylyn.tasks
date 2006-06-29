@@ -12,6 +12,7 @@ package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -35,9 +36,9 @@ import javax.security.auth.login.LoginException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.mylar.internal.tasklist.LocalAttachment;
-import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.RepositoryOperation;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.util.HtmlStreamTokenizer;
 import org.eclipse.mylar.internal.tasklist.util.HtmlTag;
 import org.eclipse.mylar.internal.tasklist.util.HtmlStreamTokenizer.Token;
@@ -85,8 +86,9 @@ public class BugzillaReportSubmitForm {
 	private static final String VAL_NONE = "none";
 
 	private static final String KEY_KNOB = "knob";
-
-	private static final String KEY_COMMENT = "comment";
+	
+//	 TODO change to BugzillaReportElement.ADD_COMMENT
+	private static final String KEY_COMMENT = "comment";  
 
 	private static final String KEY_SHORT_DESC = "short_desc";
 
@@ -131,7 +133,7 @@ public class BugzillaReportSubmitForm {
 	}
 
 	public static BugzillaReportSubmitForm makeNewBugPost(String repositoryUrl, String userName, String password,
-			Proxy proxySettings, String characterEncoding, NewBugzillaReport model, boolean wrapDescription)
+			Proxy proxySettings, String characterEncoding, RepositoryTaskData model, boolean wrapDescription)
 			throws UnsupportedEncodingException {
 
 		BugzillaReportSubmitForm form;
@@ -324,6 +326,7 @@ public class BugzillaReportSubmitForm {
 			postConnection.setRequestProperty(REQUEST_PROPERTY_CONTENT_TYPE, contentTypeString);
 			// get the url for the update with all of the changed values
 
+			//System.err.println(">>> "+getPostBody());
 			byte[] body = getPostBody().getBytes();
 			postConnection.setRequestProperty(REQUEST_PROPERTY_CONTENT_LENGTH, String.valueOf(body.length));
 
@@ -348,11 +351,11 @@ public class BugzillaReportSubmitForm {
 
 			String aString = in.readLine();
 
-			// Used to debug reponse from bugzilla server
+			 //Used to debug reponse from bugzilla server
 			// while (aString != null) {
 			// System.err.println(aString);
 			// aString = in.readLine();
-			// }
+			//			 }
 
 			boolean possibleFailure = true;
 			error = "";
@@ -439,6 +442,12 @@ public class BugzillaReportSubmitForm {
 					String password = URLDecoder.decode(fields.get(KEY_BUGZILLA_PASSWORD), this.charset);
 					if (!attachmentHandler.uploadAttachment(attachment, uname, password, proxySettings)) {
 						throw new BugzillaException("Could not upload attachment.");
+					}
+					if (attachment.getDeleteAfterUpload()) {
+						File file = new File(attachment.getFilePath());
+						if (!file.delete()) {
+							// TODO: Hanlde bad clean up
+						}
 					}
 							
 				}

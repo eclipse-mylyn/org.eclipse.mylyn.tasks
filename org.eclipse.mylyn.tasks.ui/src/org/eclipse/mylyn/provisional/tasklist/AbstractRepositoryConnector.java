@@ -14,6 +14,7 @@ package org.eclipse.mylar.provisional.tasklist;
 import java.io.File;
 import java.io.IOException;
 import java.net.Proxy;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -27,15 +28,15 @@ import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.core.runtime.jobs.IJobChangeListener;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
-import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.ZipFileUtil;
-import org.eclipse.mylar.internal.tasklist.OfflineTaskManager;
 import org.eclipse.mylar.internal.tasklist.RepositoryAttachment;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.ui.wizards.AbstractRepositorySettingsPage;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
@@ -67,6 +68,8 @@ public abstract class AbstractRepositoryConnector {
 	protected boolean forceSyncExecForTesting = false;
 
 	private boolean updateLocalCopy = false;
+	
+	private final MutexRule rule = new MutexRule();
 
 	/**
 	 * @return null if not supported
@@ -83,6 +86,11 @@ public abstract class AbstractRepositoryConnector {
 	public abstract boolean canCreateTaskFromKey();
 
 	public abstract boolean canCreateNewTask();
+
+	public String[] repositoryPropertyNames() {
+		return new String[] { TaskRepositoryManager.PROPERTY_VERSION, TaskRepositoryManager.PROPERTY_TIMEZONE,
+				TaskRepositoryManager.PROPERTY_ENCODING };
+	}
 
 	/**
 	 * Implementors must execute query synchronously.
@@ -180,9 +188,12 @@ public abstract class AbstractRepositoryConnector {
 
 					IAttachmentHandler handler = getAttachmentHandler();
 					if (handler != null) {
+						// TODO: 'faking' outgoing state 
+						task.setSyncState(RepositoryTaskSyncState.OUTGOING);
 						handler.uploadAttachment(repository, task, longComment, MYLAR_CONTEXT_DESCRIPTION,
 								destinationFile, APPLICATION_OCTET_STREAM, false, null);
-						synchronize(task, false, null);
+						task.setTaskData(null);
+						synchronize(task, true, null);
 					} else {
 						MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
 								MylarTaskListPlugin.TITLE_DIALOG, MESSAGE_ATTACHMENTS_NOT_SUPPORTED + getLabel());
@@ -226,94 +237,152 @@ public abstract class AbstractRepositoryConnector {
 
 	// Precondition of note: offline file is removed upon submit to repository
 	// resulting in a synchronized state.
-	void updateOfflineState(final AbstractRepositoryTask repositoryTask, boolean forceSync) {
-		IOfflineTaskHandler offlineTaskHandler = getOfflineTaskHandler();
-		if (offlineTaskHandler == null) {
-			return;
-		}
+	/**
+	 * @return true if call results in change of syc state
+	 */
+	public synchronized boolean updateOfflineState(final AbstractRepositoryTask repositoryTask,
+			final RepositoryTaskData newTaskData, boolean forceSync) {
+		RepositoryTaskSyncState startState = repositoryTask.getSyncState();
 		RepositoryTaskSyncState status = repositoryTask.getSyncState();
-		RepositoryTaskData downloadedTaskData = null;
 
-		final TaskRepository repository = MylarTaskListPlugin.getRepositoryManager().getRepository(
-				repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
-
-		if (repository == null) {
-			MylarStatusHandler.log("No repository associated with task " + repositoryTask.getDescription()
-					+ ". Unable to retrieve timezone information.", this);
-			return;
-		}
-
-		try {
-			downloadedTaskData = offlineTaskHandler.downloadTaskData(repositoryTask);
-		} catch (final CoreException e) {
-			if (forceSync) {
-				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						ErrorDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(),
-								"Error Downloading Report", "Unable to synchronize " + repositoryTask.getDescription()
-										+ " on " + repository.getUrl(), e.getStatus());
-					}
-				});
-			}
-			return;
-		}
-
-		if (downloadedTaskData == null) {
+		if (newTaskData == null) {
 			MylarStatusHandler.log("Download of " + repositoryTask.getDescription() + " from "
 					+ repositoryTask.getRepositoryUrl() + " failed.", this);
-			return;
+			return false;
 		}
 
-		RepositoryTaskData offlineTaskData = OfflineTaskManager.findBug(downloadedTaskData.getRepositoryUrl(),
-				downloadedTaskData.getId());
+		RepositoryTaskData offlineTaskData = repositoryTask.getTaskData();
+		// loadOfflineTaskData(repositoryTask)
 
-		if (offlineTaskData != null) {
+		if (newTaskData.hasLocalChanges()) {
+			// Special case for saving changes to local task data
+			status = RepositoryTaskSyncState.OUTGOING;
+		} else {
+
 			switch (status) {
 			case OUTGOING:
-				// Should not occur if forceSync = false
+				if (!forceSync) {
+					// Never overwrite local task data unless forced
+					return false;
+				}
 			case CONFLICT:
-				// Should not occur if forceSync = false
-				PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
-					public void run() {
-						updateLocalCopy = MessageDialog
-								.openQuestion(
-										null,
-										"Update Local Copy",
-										"Local copy of Report "
-												+ repositoryTask.getDescription()
-												+ " on "
-												+ repositoryTask.getRepositoryUrl()
-												+ " has changes.\nWould you like to override local changes? \n\nNote: if you select No, only the new comment will be saved with the updated bug, all other changes will be lost.");
+				// use a parameter rather than this null check
+				if (offlineTaskData != null) {
+					// TODO: pull this ui out of here
+					if (!forceSyncExecForTesting) {
+						PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
+							public void run() {
+								updateLocalCopy = MessageDialog
+										.openQuestion(
+												null,
+												"Update Local Copy",
+												"Local copy of Report "
+														+ repositoryTask.getDescription()
+														+ " on "
+														+ repositoryTask.getRepositoryUrl()
+														+ " has changes.\nWould you like to override local changes? \n\nNote: if you select No, only the new comment will be saved with the updated bug, all other changes will be lost.");
+							}
+						});
+					} else {
+						updateLocalCopy = true;
 					}
-				});
-				if (!updateLocalCopy) {
-					downloadedTaskData.setNewComment(offlineTaskData.getNewComment());
-					downloadedTaskData.setHasChanged(true);
-					status = RepositoryTaskSyncState.CONFLICT;
+					if (!updateLocalCopy) {
+						newTaskData.setNewComment(offlineTaskData.getNewComment());
+						newTaskData.setHasLocalChanges(true);
+						status = RepositoryTaskSyncState.CONFLICT;
+					} else {
+						newTaskData.setHasLocalChanges(false);
+						if (checkHasIncoming(repositoryTask, newTaskData)) {
+							status = RepositoryTaskSyncState.INCOMING;
+						} else {
+							status = RepositoryTaskSyncState.SYNCHRONIZED;
+						}
+					}
 				} else {
-					downloadedTaskData.setHasChanged(false);
+					newTaskData.setHasLocalChanges(false);
 					status = RepositoryTaskSyncState.SYNCHRONIZED;
 				}
 				break;
 			case INCOMING:
-				status = RepositoryTaskSyncState.SYNCHRONIZED;
+				if (!forceSync && checkHasIncoming(repositoryTask, newTaskData)) {
+					status = RepositoryTaskSyncState.INCOMING;
+				} else {
+					status = RepositoryTaskSyncState.SYNCHRONIZED;
+				}
 				break;
 			case SYNCHRONIZED:
-				if (repositoryTask.getLastSynchronized() == null
-						|| downloadedTaskData.getLastModified(repository.getTimeZoneId()).compareTo(
-								repositoryTask.getLastSynchronized()) > 0) {
+				if (checkHasIncoming(repositoryTask, newTaskData)) {
 					status = RepositoryTaskSyncState.INCOMING;
+				} else {
+					status = RepositoryTaskSyncState.SYNCHRONIZED;
 				}
 				break;
 			}
-			removeOfflineTaskData(offlineTaskData);
-		} else {
-			status = RepositoryTaskSyncState.SYNCHRONIZED;
+
+			repositoryTask.setModifiedDateStamp(newTaskData.getLastModified());
 		}
-		repositoryTask.setLastSynchronized(downloadedTaskData.getLastModified(repository.getTimeZoneId()));
-		repositoryTask.setTaskData(downloadedTaskData);
+		// if (offlineTaskData != null) {
+		// removeOfflineTaskData(offlineTaskData);
+		// }
+
+		repositoryTask.setTaskData(newTaskData);
 		repositoryTask.setSyncState(status);
-		saveOffline(downloadedTaskData);
+		saveOffline(newTaskData);
+		if(status == RepositoryTaskSyncState.INCOMING) {
+			repositoryTask.setNotified(false);
+		}
+		return startState == repositoryTask.getSyncState();
+		// } catch (final CoreException e) {
+		// if (forceSync) {
+		// PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+		// public void run() {
+		// ErrorDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(),
+		// "Error Downloading Report", "Unable to synchronize " +
+		// repositoryTask.getDescription(),
+		// e.getStatus());
+		// }
+		// });
+		// }
+		// // else {
+		// // MylarStatusHandler.fail(e, "Unable to synchronize " +
+		// // repositoryTask.getDescription()
+		// // + " on " + repository.getUrl(), false);
+		// // }
+		// return;
+		// }
+	}
+
+	/** public for testing purposes */
+	public boolean checkHasIncoming(AbstractRepositoryTask repositoryTask, RepositoryTaskData newData) {
+
+		RepositoryTaskAttribute modifiedDateAttribute = newData.getAttribute(RepositoryTaskAttribute.DATE_MODIFIED);
+		if (repositoryTask.getLastModifiedDateStamp() != null && modifiedDateAttribute != null
+				&& modifiedDateAttribute.getValue() != null) {
+			Date newModifiedDate = getOfflineTaskHandler().getDateForAttributeType(
+					RepositoryTaskAttribute.DATE_MODIFIED, modifiedDateAttribute.getValue());
+			Date oldModifiedDate = getOfflineTaskHandler().getDateForAttributeType(
+					RepositoryTaskAttribute.DATE_MODIFIED, repositoryTask.getLastModifiedDateStamp());
+			if (oldModifiedDate != null && newModifiedDate != null) {
+				if (newModifiedDate.compareTo(oldModifiedDate) <= 0) {
+					// leave in SYNCHRONIZED state
+					return false;
+				}
+			}
+		}
+		return true;
+
+		// THE FOLLOWING CODE CAN BE USED AFTER MIGRATION TO 0.6.0 IS COMPLETE
+		// RepositoryTaskAttribute modifiedDateAttribute =
+		// newData.getAttribute(RepositoryTaskAttribute.DATE_MODIFIED);
+		// if (repositoryTask.getLastModifiedDateStamp() != null &&
+		// modifiedDateAttribute != null && modifiedDateAttribute.getValue() !=
+		// null) {
+		// if(repositoryTask.getLastModifiedDateStamp().trim().compareTo(modifiedDateAttribute.getValue().trim())
+		// == 0) {
+		// return false;
+		// }
+		// }
+		// return true;
 	}
 
 	/**
@@ -334,11 +403,13 @@ public abstract class AbstractRepositoryConnector {
 	 * @param listener
 	 *            can be null
 	 */
-	private Job synchronize(Set<AbstractRepositoryTask> repositoryTasks, boolean forceSynch, IJobChangeListener listener) {
+	private Job synchronize(Set<AbstractRepositoryTask> repositoryTasks, boolean forceSynch,
+			final IJobChangeListener listener) {
 
 		final SynchronizeTaskJob synchronizeJob = new SynchronizeTaskJob(this, repositoryTasks);
 		synchronizeJob.setForceSynch(forceSynch);
 		synchronizeJob.setPriority(Job.DECORATE);
+		synchronizeJob.setRule(rule);
 		if (listener != null) {
 			synchronizeJob.addJobChangeListener(listener);
 		}
@@ -349,6 +420,9 @@ public abstract class AbstractRepositoryConnector {
 			PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
 				public void run() {
 					synchronizeJob.run(new NullProgressMonitor());
+					if (listener != null) {
+						listener.done(null);
+					}
 				}
 			});
 		}
@@ -381,7 +455,7 @@ public abstract class AbstractRepositoryConnector {
 	/**
 	 * Synchronizes only those tasks that have changed since the last time the
 	 * given repository was synchronized. Calls to this method set
-	 * TaskRepository.syncTime to now.
+	 * TaskRepository.syncTime to now if sync was successful for all tasks.
 	 */
 	public final void synchronizeChanged(final TaskRepository repository) {
 		TaskList taskList = MylarTaskListPlugin.getTaskListManager().getTaskList();
@@ -396,9 +470,12 @@ public abstract class AbstractRepositoryConnector {
 			attempts++;
 			try {
 				changedTasks = getChangedSinceLastSync(repository, repositoryTasks);
+			} catch (UnknownHostException e) { 
+				// ignore, indicates working offline
+				return;
 			} catch (Exception e) {
 				if (attempts == MAX_QUERY_ATTEMPTS) {
-					Date now = new Date();
+					Date now = new Date(); 
 					MylarStatusHandler.log(e, "Could not determine modified tasks for " + repository.getUrl() + ". ["
 							+ now.toString() + "]");
 					return;
@@ -414,19 +491,40 @@ public abstract class AbstractRepositoryConnector {
 		for (AbstractRepositoryTask task : changedTasks) {
 			if (task.getSyncState() == RepositoryTaskSyncState.SYNCHRONIZED) {
 				tasksToSync.add(task);
+				// MylarStatusHandler.log("Changed: "+repository.getUrl()+" **
+				// "+task.getDescription(), this);
 			}
+		}
+
+		if (tasksToSync.size() == 0) {
+			return;
 		}
 
 		synchronize(tasksToSync, false, new JobChangeAdapter() {
 
 			@Override
 			public void done(IJobChangeEvent event) {
-				for (AbstractRepositoryTask task : Collections.unmodifiableSet(tasksToSync)) {
-					if (repository.getSyncTime().after(task.getLastSynchronized())) {
-						return;
+				Date mostRecent = new Date(0);
+				String mostRecentTimeStamp = repository.getSyncTimeStamp();
+				for (AbstractRepositoryTask task : tasksToSync) {
+					Date taskModifiedDate;
+
+					if (getOfflineTaskHandler() != null && task.getTaskData() != null
+							&& task.getTaskData().getLastModified() != null) {
+						taskModifiedDate = getOfflineTaskHandler().getDateForAttributeType(
+								RepositoryTaskAttribute.DATE_MODIFIED, task.getTaskData().getLastModified());
+					} else {
+						continue;
+					}
+
+					if (taskModifiedDate != null && taskModifiedDate.after(mostRecent)) {
+						mostRecent = taskModifiedDate;
+						mostRecentTimeStamp = task.getTaskData().getLastModified();
 					}
 				}
-				MylarTaskListPlugin.getRepositoryManager().setSyncTime(repository, new Date());
+				// TODO: Get actual time stamp of query from repository rather
+				// than above hack
+				MylarTaskListPlugin.getRepositoryManager().setSyncTime(repository, mostRecentTimeStamp);
 			}
 		});
 	}
@@ -447,17 +545,34 @@ public abstract class AbstractRepositoryConnector {
 		this.forceSyncExecForTesting = forceSyncExec;
 	}
 
-	protected final void removeOfflineTaskData(RepositoryTaskData bug) {
+	/** non-final for testing purposes */
+	protected void removeOfflineTaskData(RepositoryTaskData bug) {
 		if (bug == null)
 			return;
-		// bug.setOfflineState(false);
-		// offlineStatusChange(bug, RepositoryTaskSyncState.SYNCHRONIZED);
+
 		ArrayList<RepositoryTaskData> bugList = new ArrayList<RepositoryTaskData>();
 		bugList.add(bug);
 		MylarTaskListPlugin.getDefault().getOfflineReportsFile().remove(bugList);
 	}
 
-	public final void saveOffline(RepositoryTaskData taskData) {
+	// /** non-final for testing purposes */
+	// protected RepositoryTaskData loadOfflineTaskData(AbstractRepositoryTask
+	// repositoryTask) {
+	//
+	// String url =
+	// AbstractRepositoryTask.getRepositoryUrl(repositoryTask.getHandleIdentifier());
+	// String id =
+	// AbstractRepositoryTask.getTaskId(repositoryTask.getHandleIdentifier());
+	// try {
+	// return OfflineTaskManager.findBug(url, Integer.parseInt(id));
+	// } catch (Exception e) {
+	// return null;
+	// }
+	//
+	// }
+
+	/** non-final for testing purposes */
+	public void saveOffline(RepositoryTaskData taskData) {
 		try {
 			MylarTaskListPlugin.getDefault().getOfflineReportsFile().add(taskData);
 		} catch (CoreException e) {
@@ -468,5 +583,15 @@ public abstract class AbstractRepositoryConnector {
 	public void openRemoteTask(String repositoryUrl, String idString) {
 		MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
 				MylarTaskListPlugin.TITLE_DIALOG, "Not supported by connector: " + getLabel());
+	}
+	
+	private class MutexRule implements ISchedulingRule {
+		public boolean isConflicting(ISchedulingRule rule) {
+			return rule == this;
+		}
+
+		public boolean contains(ISchedulingRule rule) {
+			return rule == this;
+		}
 	}
 }

@@ -11,72 +11,62 @@
 
 package org.eclipse.mylar.internal.tasklist.ui;
 
+import org.eclipse.jface.viewers.DecoratingLabelProvider;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskElementLabelProvider;
 import org.eclipse.mylar.provisional.tasklist.ITask;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.PlatformUI;
 
+/**
+ * @author Rob Elves
+ */
 public class TaskListNotificationReminder implements ITaskListNotification {
 
 	private final ITask task;
 
-	private TaskElementLabelProvider labelProvider = new TaskElementLabelProvider();
-	
+	private DecoratingLabelProvider labelProvider = new DecoratingLabelProvider(new TaskElementLabelProvider(),
+			PlatformUI.getWorkbench().getDecoratorManager().getLabelDecorator());
+
 	public TaskListNotificationReminder(ITask task) {
 		this.task = task;
 	}
 
-	private Image getIcon() {
-		return labelProvider.getImage(task);
-//		return task.getIcon();
-	}
-
 	public String getDescription() {
-		if (task.getDescription().length() > 40) {
-			String truncated = task.getDescription().substring(0, 35);
-			return truncated + "...";
-		}
-		return task.getDescription();
-
-	}
-
-	public String getToolTip() {
 		return null;
 	}
 
-	public void openResource() {
-		
+	public String getLabel() {
+		if (labelProvider.getText(task).length() > 40) {
+			String truncated = labelProvider.getText(task).substring(0, 35);
+			return truncated + "...";
+		}
+		return labelProvider.getText(task);
+	}
+
+	public void openTask() {
+
 		PlatformUI.getWorkbench().getDisplay().syncExec(new Runnable() {
 			public void run() {
-				TaskUiUtil.openEditor(task, false);
+				TaskUiUtil.refreshAndOpenTaskListElement(task);
 			}
 		});
 
 	}
 
 	public Image getNotificationIcon() {
-		Image taskImage = getIcon();
-		// TODO: overlay with REMINDER decorator
-		return taskImage;
+		return labelProvider.getImage(task);
 	}
 
-	public synchronized void setNotified(boolean notified) {
-		task.setReminded(true);
+	public Image getOverlayIcon() {
+		return TaskListImages.getImage(TaskListImages.CALENDAR);
 	}
 
-	public synchronized boolean isNotified() {
-		return task.hasBeenReminded();
-	}
-
-	/**
-	 * equality based on tasks' equality (handle)
-	 */
 	public boolean equals(Object o) {
 		if (!(o instanceof TaskListNotificationReminder)) {
 			return false;
 		}
 		TaskListNotificationReminder notification = (TaskListNotificationReminder) o;
-		return notification.getTask().equals(task);		
+		return notification.getTask().equals(task);
 	}
 
 	private ITask getTask() {

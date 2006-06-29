@@ -12,8 +12,6 @@
 package org.eclipse.mylar.internal.tasklist;
 
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
  * @author Rob Elves
@@ -26,15 +24,18 @@ public class RepositoryAttachment extends AttributeContainer implements Serializ
 
 	private static final long serialVersionUID = -9123545810321250785L;
 
-	/** Parser for dates in the report */
-	// TODO: this is repository specific so need to pull out
-	private static SimpleDateFormat creation_ts_date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+	// /** Parser for dates in the report */
+	// // TODO: this is repository specific so need to pull out
+	// private static SimpleDateFormat creation_ts_date_format = new
+	// SimpleDateFormat("yyyy-MM-dd HH:mm");
 
 	private boolean isObsolete = false;
 
-	private Date created;
+	// private Date created;
 
 	private String creator = "";
+
+	private boolean isPatch = false;
 
 	public boolean isObsolete() {
 		return isObsolete;
@@ -45,17 +46,21 @@ public class RepositoryAttachment extends AttributeContainer implements Serializ
 	}
 
 	/**
-	 * may return null if date is unknown/unparseable
+	 * Get the time that this attachment was posted
+	 * 
+	 * @return The attachment's creation timestamp
 	 */
-	public Date getDateCreated() {
-		if (created == null) {
-			// created = Calendar.getInstance().getTime();
-			try {
-				created = creation_ts_date_format.parse(getAttributeValue(RepositoryTaskAttribute.ATTACHMENT_DATE));
-			} catch (Exception e) {
-			}
-		}
-		return created;
+	public String getDateCreated() {
+		return getAttributeValue(RepositoryTaskAttribute.ATTACHMENT_DATE);
+		// if (created == null) {
+		// // created = Calendar.getInstance().getTime();
+		// try {
+		// created =
+		// creation_ts_date_format.parse(getAttributeValue(RepositoryTaskAttribute.ATTACHMENT_DATE));
+		// } catch (Exception e) {
+		// }
+		// }
+		// return created;
 	}
 
 	public String getCreator() {
@@ -87,4 +92,11 @@ public class RepositoryAttachment extends AttributeContainer implements Serializ
 		}
 	}
 
+	public boolean isPatch() {
+		return isPatch;
+	}
+
+	public void setPatch(boolean b) {
+		isPatch = b;
+	}
 }

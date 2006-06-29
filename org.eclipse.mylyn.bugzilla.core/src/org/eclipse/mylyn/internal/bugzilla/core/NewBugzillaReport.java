@@ -11,7 +11,6 @@
 package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.io.Serializable;
-import java.util.Date;
 
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 
@@ -162,16 +161,16 @@ public class NewBugzillaReport extends RepositoryTaskData implements Serializabl
 //		savedOffline = newOfflineState;
 //	}
 
-	public boolean hasChanges() {
+	public boolean hasLocalChanges() {
 		return true;
 	}
 
 	/** returns null */
-	public Date getCreated() {
+	public String getCreated() {
 		return null;
 	}
 
-	public Date getLastModified() {
+	public String getLastModified() {
 		return null;
 	}
 }

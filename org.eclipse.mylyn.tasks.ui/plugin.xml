@@ -36,11 +36,18 @@
             id="org.eclipse.mylar.tasklist.report.ui.planningGameWizard"
             name="Task Activity Report (Experimental)">
       </wizard>
+      <wizard
+            canFinishEarly="true"
+            category="org.eclipse.mylar.wizards"
+            class="org.eclipse.mylar.internal.tasklist.ui.wizards.NewLocalTaskWizard"
+            icon="icons/etool16/task-new.gif"
+            id="org.eclipse.mylar.tasklist.wizard.new.task"
+            name="New Local Task"/>
 	  <wizard
             category="org.eclipse.mylar.wizards"
             class="org.eclipse.mylar.internal.tasklist.ui.wizards.NewRepositoryTaskWizard"
             icon="icons/etool16/task-repository-new.gif"
-            id="org.eclipse.mylar.tasklist.wizard.new.query"
+            id="org.eclipse.mylar.tasklist.wizard.new.repository.task"
             name="New Repository Task"/>
       <wizard
             category="org.eclipse.mylar.wizards"
@@ -121,10 +128,11 @@
   	<extension
         point="org.eclipse.ui.editors">
      <editor
-           icon="icons/etool16/task.gif"
            class="org.eclipse.mylar.internal.tasklist.ui.editors.MylarTaskEditor"
-           name="Task Viewer"
-           id="org.eclipse.mylar.tasklist.ui.taskEditor"/>
+           contributorClass="org.eclipse.mylar.internal.tasklist.ui.editors.TaskEditorActionContributor"
+           icon="icons/etool16/task.gif"
+           id="org.eclipse.mylar.tasklist.ui.taskEditor"
+           name="Task Editor"/>
 	    <editor
            icon="icons/etool16/task.gif"
            class="org.eclipse.mylar.internal.tasklist.ui.editors.CategoryEditor"
@@ -140,23 +148,29 @@
       <extension point="org.eclipse.ui.perspectiveExtensions">
           <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
-               <view id="org.eclipse.mylar.tasks.ui.views.TaskListView"
-                    relative="org.eclipse.ui.views.ContentOutline"
-                    relationship="top"/>
+               <view
+                     closeable="true"
+                     id="org.eclipse.mylar.tasks.ui.views.TaskListView"
+                     moveable="true"
+                     ratio="0.5"
+                     relationship="top"
+                     relative="org.eclipse.ui.views.ContentOutline"
+                     visible="true"/>
           </perspectiveExtension>
 		  <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaBrowsingPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
           </perspectiveExtension>
       	<perspectiveExtension
             targetID="org.eclipse.ui.resourcePerspective">
-         <view
-               ratio="0.5"
-               relative="org.eclipse.ui.views.TaskList"
-               relationship="right"
-               id="org.eclipse.mylar.tasklist.repositories">
+            <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
+	         <view
+                id="org.eclipse.mylar.tasks.ui.views.TaskListView"
+                relationship="left"
+                relative="org.eclipse.ui.views.TaskList"
+                >
          </view>
       </perspectiveExtension>
-      
+       
        <perspectiveExtension targetID="org.eclipse.team.cvs.ui.cvsPerspective">
         <view
               id="org.eclipse.mylar.tasklist.repositories"
@@ -166,10 +180,19 @@
               visible="true"/>
         <viewShortcut id="org.eclipse.mylar.tasklist.repositories"/>
      </perspectiveExtension>
+     <perspectiveExtension targetID="org.tigris.subversion.subclipse.ui.svnPerspective">
+        <view
+              id="org.eclipse.mylar.tasklist.repositories"
+              ratio="0.7"
+              relationship="bottom"
+              relative="org.tigris.subversion.subclipse.ui.repository.RepositoriesView"
+              visible="true"/>
+        <viewShortcut id="org.eclipse.mylar.tasklist.repositories"/>
+     </perspectiveExtension>
      <perspectiveExtension targetID="org.eclipse.team.ui.TeamSynchronizingPerspective">
         <view
               id="org.eclipse.mylar.tasklist.repositories"
-              ratio="0.8"
+              ratio="0.7"
               relationship="bottom"
               relative="org.eclipse.team.sync.views.SynchronizeView"
               visible="true"/>
@@ -222,7 +245,7 @@
                enablesFor="*"
                icon="icons/etool16/repository-synchronize.gif"
                id="org.eclipse.mylar.tasklist.synchronize.selected"
-               label="Synchronize with Repository"
+               label="Synchronize"
                menubarPath="reports"
                tooltip="Synchronize with Repository">
             <enablement>
@@ -365,12 +388,12 @@
          
 	<fontDefinition
         categoryId="org.eclipse.mylar.tasklist.ui.presentation"
-        defaultsTo="org.eclipse.jface.textfont"
+        defaultsTo="org.eclipse.jface.dialogfont"
         id="org.eclipse.mylar.tasklist.ui.fonts.task.editor.comment"
         isEditable="true"
-        label="Task Editor - Comments">
+        label="Task Editor - Notes and Comments">
          <description>
-            Text font used for rendering comments.
+            Text font used for task editor text areas.
          </description>
       </fontDefinition>
    </extension>
@@ -389,6 +412,7 @@
      
    <extension point="org.eclipse.mylar.tasklist.providers">    
       <dynamicPopupMenu class="org.eclipse.mylar.internal.tasklist.ui.TaskReminderMenuContributor"/>
+      <dynamicPopupMenu class="org.eclipse.mylar.internal.tasklist.ui.MoveToCategoryMenuContributor"/>
    </extension>
    
    <!--

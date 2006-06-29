@@ -20,6 +20,7 @@ import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryUtil;
 import org.eclipse.mylar.internal.tasklist.Comment;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
 
 /**
@@ -27,8 +28,13 @@ import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
  */
 public class BugzillaTask extends AbstractRepositoryTask {
 
+	BugzillaOfflineTaskHandler offlineHandler = new BugzillaOfflineTaskHandler();
+	
 	public BugzillaTask(String handle, String label, boolean newTask) {
 		super(handle, label, newTask);
+		if (newTask) {
+			setSyncState(RepositoryTaskSyncState.INCOMING);
+		}
 		isDirty = false;
 		initFromHandle();
 	}
@@ -99,15 +105,20 @@ public class BugzillaTask extends AbstractRepositoryTask {
 
 	@Override
 	public Date getCompletionDate() {
-		if (taskData != null) {
-			if (taskData.isResolved()) {
-				List<Comment> comments = taskData.getComments();
-				if (comments != null && !comments.isEmpty()) {
-					// TODO: fix not to be based on comment
-					return comments.get(comments.size() - 1).getCreated();
+		try {
+			if (taskData != null) {
+				if (taskData.isResolved()) {
+					List<Comment> comments = taskData.getComments();
+					if (comments != null && !comments.isEmpty()) {
+						// TODO: fix not to be based on comment
+						return offlineHandler.getDateForAttributeType(RepositoryTaskAttribute.COMMENT_DATE, (comments.get(comments.size() - 1).getCreated()));
+					}
 				}
 			}
-		}
+		} catch (Exception e) {
+			// ignore
+			e.printStackTrace();
+		}		
 		return super.getCompletionDate();
 	}
 

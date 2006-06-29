@@ -12,7 +12,6 @@
 package org.eclipse.mylar.internal.tasklist.ui.views;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -38,20 +37,6 @@ import org.eclipse.swt.widgets.Text;
 public class TaskListContentProvider implements IStructuredContentProvider, ITreeContentProvider {
 
 	private final TaskListView view;
-
-//	private static class ContentTaskFilter extends AbstractTaskListFilter {
-//		@Override
-//		public boolean select(Object element) {
-//			return true;
-//		}
-//
-//		@Override
-//		public boolean shouldAlwaysShow(ITask task) {
-//			return super.shouldAlwaysShow(task);
-//		}
-//	};
-
-//	private ContentTaskFilter contentTaskFilter = new ContentTaskFilter();
 
 	public TaskListContentProvider(TaskListView view) {
 		this.view = view;
@@ -87,6 +72,9 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 		return getFilteredChildrenFor(parent).toArray();
 	}
 
+	/**
+	 * NOTE: If parent is an ITask, this method checks if parent has unfiltered children (see bug 145194).
+	 */
 	public boolean hasChildren(Object parent) {
 		if (parent instanceof AbstractRepositoryQuery) {
 			AbstractRepositoryQuery t = (AbstractRepositoryQuery) parent;
@@ -94,10 +82,21 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 		} else if (parent instanceof AbstractTaskContainer) {
 			AbstractTaskContainer cat = (AbstractTaskContainer) parent;
 			return cat.getChildren() != null && cat.getChildren().size() > 0;
-		} else if (parent instanceof Task) {
-			Task t = (Task) parent;
-			return t.getChildren() != null && t.getChildren().size() > 0;
+		} else if (parent instanceof ITask) {
+			return taskHasUnfilteredChildren((ITask) parent);
 		} 
+		return false;
+	}
+
+	private boolean taskHasUnfilteredChildren(ITask parent) {
+		Set<ITask> children = parent.getChildren();
+		if (children != null) {
+			for (ITask task : children) {
+				if (! filter(task)) {
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 
@@ -215,10 +214,12 @@ public class TaskListContentProvider implements IStructuredContentProvider, ITre
 				}
 				return children;
 			} else if (parent instanceof AbstractRepositoryQuery) {
-				Set<? extends ITaskListElement> list = ((AbstractRepositoryQuery) parent).getHits();
-				for (ITaskListElement element : new HashSet<ITaskListElement>(list)) {
-					if (!filter(element)) {
-						children.add(element);
+				Set<AbstractQueryHit> list = ((AbstractRepositoryQuery) parent).getHits();
+				synchronized(list) {
+					for (ITaskListElement element : list) {
+						if (!filter(element)) {
+							children.add(element);
+						}
 					}
 				}
 				return children;

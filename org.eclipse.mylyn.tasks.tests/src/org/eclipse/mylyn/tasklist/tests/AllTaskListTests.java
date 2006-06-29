@@ -29,7 +29,7 @@ public class AllTaskListTests {
 		suite.addTestSuite(TaskListBackupManagerTest.class);
 		suite.addTestSuite(TableSorterTest.class);
 		suite.addTestSuite(TaskKeyComparatorTest.class); 
-		suite.addTestSuite(TaskListNotificationManagerTest.class);
+//		suite.addTestSuite(TaskListNotificationManagerTest.class);
 		suite.addTestSuite(BugzillaTaskTest.class);
 		suite.addTestSuite(TaskReportGeneratorTest.class);
 		suite.addTestSuite(TaskTest.class);

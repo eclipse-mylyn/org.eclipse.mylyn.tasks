@@ -75,6 +75,7 @@ public class BugzillaQueryHit extends AbstractQueryHit {
 			this.task = (BugzillaTask)existingTask;
 		} else {
 			task = new BugzillaTask(this, true);
+			//task.setSyncState(RepositoryTaskSyncState.INCOMING);
 			MylarTaskListPlugin.getTaskListManager().getTaskList().addTask(task);			
 		} 	
 		return task;

@@ -15,27 +15,21 @@ package org.eclipse.mylar.internal.tasklist.ui.wizards;
 import java.io.File;
 import java.util.ArrayList;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IProject;
+import org.eclipse.core.internal.resources.mapping.ResourceMapping;
+import org.eclipse.core.internal.resources.mapping.ResourceMappingContext;
+import org.eclipse.core.internal.resources.mapping.ResourceTraversal;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.resources.mapping.ResourceMapping;
-import org.eclipse.core.resources.mapping.ResourceMappingContext;
-import org.eclipse.core.resources.mapping.ResourceTraversal;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
-import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
@@ -319,27 +313,27 @@ public class InputAttachmentSourcePage extends WizardPage {
 			}
 		});
 
-		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
-			public void doubleClick(DoubleClickEvent event) {
-				ISelection selection = event.getSelection();
-				if (selection instanceof TreeSelection) {
-					TreeSelection treeSel = (TreeSelection) selection;
-					Object res = treeSel.getFirstElement();
-					if (res != null) {
-						if (res instanceof IProject || res instanceof IFolder) {
-							if (treeViewer.getExpandedState(res)) {
-								treeViewer.collapseToLevel(res, 1);
-							} else {
-								treeViewer.expandToLevel(res, 1);
-							}
-						} else if (res instanceof IFile) {
-							// TODO - support double click file
-							// wizard.showPage(getNextPage());
-						}
-					}
-				}
-			}
-		});
+//		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
+//			public void doubleClick(DoubleClickEvent event) {
+//				ISelection selection = event.getSelection();
+//				if (selection instanceof TreeSelection) {
+//					TreeSelection treeSel = (TreeSelection) selection;
+//					Object res = treeSel.getFirstElement();
+//					if (res != null) {
+//						if (res instanceof IProject || res instanceof IFolder) {
+//							if (treeViewer.getExpandedState(res)) {
+//								treeViewer.collapseToLevel(res, 1);
+//							} else {
+//								treeViewer.expandToLevel(res, 1);
+//							}
+//						} else if (res instanceof IFile) {
+//							// TODO - support double click file
+//							// wizard.showPage(getNextPage());
+//						}
+//					}
+//				}
+//			}
+//		});
 
 		useFileButton.setSelection(true);
 		setEnableWorkspaceAttachment(false);

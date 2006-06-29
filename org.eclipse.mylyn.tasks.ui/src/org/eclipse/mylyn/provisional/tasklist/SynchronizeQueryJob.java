@@ -12,7 +12,6 @@
 package org.eclipse.mylar.provisional.tasklist;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ class SynchronizeQueryJob extends Job {
 
 	private Set<AbstractRepositoryQuery> queries;
 
-	private List<AbstractQueryHit> hits = new ArrayList<AbstractQueryHit>();
+	private List<AbstractQueryHit> newHits = new ArrayList<AbstractQueryHit>();
 
 	private boolean synchTasks;
 
@@ -73,14 +72,10 @@ class SynchronizeQueryJob extends Job {
 
 			MultiStatus queryStatus = new MultiStatus(MylarTaskListPlugin.PLUGIN_ID, IStatus.OK, "Query result", null);
 
-			hits = this.connector.performQuery(repositoryQuery, new NullProgressMonitor(), queryStatus);
+			newHits = this.connector.performQuery(repositoryQuery, new NullProgressMonitor(), queryStatus);
 			if (queryStatus.getChildren() != null && queryStatus.getChildren().length > 0) {
 				if (queryStatus.getChildren()[0].getException() == null) {
-					repositoryQuery.clearHits();
-					for (AbstractQueryHit newHit : hits) {
-						repositoryQuery.addHit(newHit);
-					}
-
+					repositoryQuery.updateHits(newHits);
 					if (synchTasks) {
 						connector.synchronizeChanged(repository);
 					}
@@ -92,7 +87,7 @@ class SynchronizeQueryJob extends Job {
 			}
 
 			repositoryQuery.setCurrentlySynchronizing(false);
-			repositoryQuery.setLastRefresh(new Date());
+			//repositoryQuery.setLastRefresh(new Date());
 			MylarTaskListPlugin.getTaskListManager().getTaskList().notifyQueryUpdated(repositoryQuery);
 			monitor.worked(1);
 		}

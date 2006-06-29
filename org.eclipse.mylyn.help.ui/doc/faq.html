@@ -14,28 +14,22 @@
 		</li>
 		<li><a href="#install-macos">Installing on MacOS</a></li>
 		<li><a href="#uninstall">Uninstall troubleshooting</a></li>
-		<li><a href="#tasklist-backup">Task backup and restore</a></li>
+		<li><a href="#tasklist-backup">Task List backup and restore</a></li>
 	</ul>
 	<p><b>Integration</b></p>
 <ul>
 	<li><a href="#performance-summary">Performance profile</a></li>
-	<li><a href="#subversion-clients">Subversion limitations</a></li>
-</ul>
-	<p><b>Working with Context</b></p>
-<ul>
 	<li><a href="#context-ui-config">Which Focused UI features can I turn off?</a></li>
+	<li><a href="#change-sets">Synchronize and Change Set troubleshooting</a></li>
+	<li><a href="#eclipse-views-tasks">How does the Mylar Task List relate to the Eclipse Tasks view?</a></li>
 </ul>
 <p><b>Tasks and Repository Connectors</b></p>
 	<ul>
 		<li><a href="#repositories-unsupported">What if Mylar doesn't support my task/bug/issue tracker?</a></li>
-		<li><a href="#upgrading-repositories">How do I upgrade to multiple task repository support?</a> 
-		</li>
-		<li><a href="#versions-repositories">Why is only one task appearing in Bugzilla queries?</a> 
-		</li>
-		<li><a href="#repositories-jira-config">Is there any configuration 
-		needed to make Mylar work with my JIRA repository?</a></li>
-		<li><a href="#eclipse-views-tasks">How does the Mylar Task List relate to the Eclipse Tasks view?</a></li>
-		<li><a href="#repositories-connectivity">Connectivity and proxy servers</a></li>
+		<li><a href="#connector-bugzilla">Bugzilla Connector troubleshooting</a></li>
+		<li><a href="#connector-jira">JIRA Connector troubleshooting</a></li>
+		<li><a href="#repositories-connectivity">Network and proxy server 
+		troubleshooting</a></li>
 	</ul>
 <p><b>Java Development</b></p>
 	<ul>
@@ -261,6 +255,10 @@ screenshot</a>) <i>-&gt; Restore Defaults</i></p>
 	the schedule in <i>Preferences -&gt; Mylar -&gt; Task List -&gt; Backup</i>.&nbsp; 
 	Use <i>File -&gt; Import -&gt; Mylar Task Data</i> to restore from one of the 
 	archive zips.</p>
+	<p>Note that uninstalling a connector will cause all of the queries and 
+	tasks of that kind to disappear from the Task List (<a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=146344">bug 
+	146344</a>), so you may need to restore from a backup if you did this 
+	accidentally.</p>
 <p>If the Task List is blank Mylar failed to <a href="#install-failure">install or update</a>, 
 or there was a problem reading the task list.&nbsp; By default Mylar 
 keeps your task list in <i>&lt;workspace&gt;/.mylar/tasklist.xml</i>.&nbsp; If 
@@ -342,7 +340,8 @@ file, which will contain the previously-saved list.&nbsp;</p>
 	<hr>
 
 	<h3>&nbsp;</h3>
-<h3><a name="repositories-unsupported">What if Mylar doesn't support my task/bug/issue tracker?</a></h3>
+<h3><a name="repositories-unsupported">What if Mylar doesn't support my 
+task/bug/issue tracker?</a></h3>
 <p>First, do a search of the <a href="https://bugs.eclipse.org/bugs/buglist.cgi?query_format=advanced&short_desc_type=anywordssubstr&short_desc=%5Bconnector%5D&product=Mylar&long_desc_type=allwordssubstr&long_desc=&bug_file_loc_type=allwordssubstr&bug_file_loc=&status_whiteboard_type=allwordssubstr&status_whiteboard=&keywords_type=allwords&keywords=&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailtype1=substring&email1=&emailtype2=substring&email2=&bugidtype=include&bug_id=&votes=&chfieldfrom=&chfieldto=Now&chfieldvalue=&cmdtype=doit&order=Reuse+same+sort+as+last+time&field0-0-0=noop&type0-0-0=noop&value0-0-0=">open 
 repository connector requests</a> and vote for the corresponding bug if your tracker is found, or create 
 a new report.&nbsp; In the meantime, you can work with those reports (but not 
@@ -365,7 +364,8 @@ repository:</p>
 			<img border="0" src="images/0.4.1/tasklist-weblink-editor.gif" width="585" height="195"></p>
 	<hr>
 	<p>&nbsp;</p>
-	<h3><a name="repositories-connectivity">Connectivity and proxy servers</a></h3>
+	<h3><a name="repositories-connectivity">Network and proxy server 
+	troubleshooting</a></h3>
 	<p>For accessing repositories via a proxy server, Mylar uses the settings 
 	under <i>Preferences -&gt; Install/Update</i>.&nbsp; If you are seeing 
 	errors like <span class="e" id="q_10b3e1bc7372e609_1">
@@ -374,34 +374,24 @@ repository:</p>
 	server settings.</span></font></span></p>
 	<hr>
 	<p>&nbsp;</p>
-	<h3><a name="upgrading-repositories">How do I upgrade to multiple 
-task repository support?</a></h3>
-<p>Bugzilla Client users follow these steps after updating in order to 
-migrate to multiple repository support from version 0.4.6 or older</p>
-<ul>
-	<li>After 
-updating and restarting, deactivate your active task, open the Mylar -&gt; Task 
-Repositories view and re-add your previous repository using the wizard.</li>
-<li>Ensure that you enter the correct Server URL by pressing the &#8220;validate&#8221; button 
-on the corresponding dialog, since this URL will be used for the migration.</li>
-	<li>Exit the workbench and restart Eclipse to complete the migration.</li>
-</ul>
-	<hr>
-	<p>&nbsp;</p>
-<h3><a name="versions-repositories">Why is only one task appearing in Bugzilla 
-queries?</a></h3>
-	<p>This is a symptom of the wrong Bugzilla version selected in your Mylar 
-	Bugzilla preferences ( Window -&gt; Preferences -&gt; Mylar -&gt; Bugzilla Client ). 
-	For example, if you are connecting to the Eclipse.org Bugzilla then the 2.20 
-	option must be selected.</p>
+<h3><a name="connector-bugzilla">Bugzilla Connector troubleshooting</a></h3>
+	<p>If queries are not working correctly ensure that you have the right 
+	Bugzilla server version selected for the corresponding repository: <i>Task 
+	Repositories (view) -&gt; right+click repository -&gt; Properties</i>.&nbsp; 
+	For supported versions see the <a href="http://www.eclipse.org/mylar/dl.php">
+	download page</a>.<sub>&nbsp; </sub>If the repository is still not 
+	functioning it may be due to authentication or
+	<a href="#repositories-connectivity">connectivity problems</a>.&nbsp; If 
+	that does not resolve the problem please post a message to the newsgroup or
+	<a href="http://www.eclipse.org/mylar/bugs.php">submit a bug</a>.</p>
 	<hr>
 <h3>&nbsp;</h3>
-<h3><a name="repositories-jira-config">Is there any configuration needed to make 
-Mylar work with my JIRA repository?</a></h3>
-	<p>Yes, JIRA SOAP/RPC services have to be running on the server.&nbsp; For 
-	additional details see the Requirements at:
+<h3><a name="repositories-jira-config">JIRA Connector troubleshooting</a></h3>
+	<p>Note that the JIRA SOAP/RPC services have to be running on the server.&nbsp; 
+	For additional details see the Requirements at:
 	<a href="http://jira-dashboard.tigris.org/">
-	http://jira-dashboard.tigris.org/</a> </p>
+	http://jira-dashboard.tigris.org/</a>.&nbsp; For supported versions see the
+	<a href="http://www.eclipse.org/mylar/dl.php">download page</a>.&nbsp;&nbsp; </p>
 	<hr>
 <h3>&nbsp;</h3>
 <h3><a name="eclipse-views-tasks">How does the Mylar Task List relate to the Eclipse Tasks view?</a></h3>
@@ -414,13 +404,34 @@ Mylar work with my JIRA repository?</a></h3>
 	Mylar filter is available for both the Problems and the Tasks views.&nbsp; </p>
 	<hr>
 <h3>&nbsp; </h3>
-	<h3><a name="subversion-clients">Subversion Limitations</a></h3>
-	<p>Mylar's Active Change Set integration, which allows you to work with 
-	changes per-task, support's the Eclipse SDK's CVS integration, and should 
-	work with any source repository client that extends Eclipse's Change Set 
-	support.&nbsp; As of March 2006 no Subversion clients support change sets, 
-	and as such this feature is not available for those clients.&nbsp; </p>
-	<p>&nbsp;</p>
+	<h3><a name="change-sets">Change Set troubleshooting</a></h3>
+	<p>There are two modes for Change Sets: the <i>models</i> mode (Eclipse 3.2 
+	only) and the standard mode.&nbsp; The <i>models</i> mode is toggled via <i>
+	Synchronize View -&gt; Preferences -&gt; CVS -&gt; Allow Models to participate in 
+	synchronizations</i>.&nbsp; </p>
+<p>If you are using the standard mode, Change Sets toolbar button will only 
+appear if the Synchronize view is in <i>Incoming</i> or <i>Outgoing</i> mode, 
+not in the combined <i>Incoming/Outgoing</i> mode.&nbsp; This button must be 
+pressed in order for change sets to appear.&nbsp; For working with CVS two modes 
+are indistinguishable beyond this limitation.&nbsp; Subclipse only supports the 
+standard mode.</p>
+<p>
+			<img border="0" src="images/faq/changeset-subclipse.gif"></p>
+<p>If you are using the <i>models</i> mode, you will notice that the 
+Mylar Active Change sets work show up with a decoration in the lower-right 
+corner, and that you can view both incoming and outgoing change sets at the same 
+time.&nbsp; However, note that there is a refresh problem with this mode (<a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=142395">bug 142395</a>) 
+, and you do not get an <i>Open Corresponding Task</i> menu action on the change 
+set node (Platform
+<a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=124882">bug 124882</a>).&nbsp;&nbsp; 
+So until these problems are resolved we <b>recommend that you use the standard 
+mode for CVS</b>.&nbsp; To work around the former, if a a Change 
+Set you expect is missing or if you get a <i>There are no more Incoming/Outgoing 
+changes</i> message in the view on startup toggle the third toolbar button 
+between <i>All Models</i> and <i>Change Sets</i>.&nbsp; If that doesn't resolve 
+it activate and deactivate the current task.</p>
+<p>
+			<img border="0" src="images/faq/changesets-model-based.gif"></p>
 	<hr>
 			<h3>&nbsp;</h3>
 <h3><a name="active-search-empty0">Why does nothing show up in the Active Search or Active Hierarchy?</a></h3>

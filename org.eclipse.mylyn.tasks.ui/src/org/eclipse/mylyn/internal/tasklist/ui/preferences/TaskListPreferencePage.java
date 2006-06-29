@@ -12,6 +12,7 @@ package org.eclipse.mylar.internal.tasklist.ui.preferences;
 
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
+import org.eclipse.mylar.internal.tasklist.ui.GridDataFactory;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
 import org.eclipse.mylar.provisional.tasklist.MylarTaskListPlugin;
 import org.eclipse.swt.SWT;
@@ -30,6 +31,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
@@ -46,6 +48,12 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 
 	private static final String TITLE_FOLDER_SELECTION = "Folder Selection";
 
+	private static final String END_HOUR_LABEL = "Work day end (24hr): ";
+
+	private static final String START_HOUR_LABEL = "Work day start (24hr): ";
+
+	private static final String GROUP_WORK_WEEK_LABEL = "Planning";
+
 	private static final String FORWARDSLASH = "/";
 
 	private static final String BACKSLASH_MULTI = "\\\\";
@@ -60,7 +68,7 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 
 	private Button enableBackgroundSynch;
 
-	private Button synchQueries = null;
+	// private Button synchQueries = null;
 
 	private Text taskDirectoryText = null;
 
@@ -73,6 +81,10 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 	private Text backupScheduleTimeText;
 
 	private Text backupFolderText;
+
+	private Spinner hourDayStart;
+
+	private Spinner hourDayEnd;
 
 	public TaskListPreferencePage() {
 		super();
@@ -88,11 +100,12 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		String message = "See <a>''{0}''</a> for configuring Task List colors.";
 		new PreferenceLinkArea(container, SWT.NONE, "org.eclipse.ui.preferencePages.ColorsAndFonts", message,
 				(IWorkbenchPreferenceContainer) getContainer(), null);
-		
-		createOpenWith(container);
+
 		createTaskRefreshScheduleGroup(container);
-		createTaskDataControl(container);
 		createNotificationsGroup(container);
+		createSchedulingGroup(container);
+		createOpenWith(container);
+		createTaskDataControl(container);
 		
 		updateRefreshGroupEnablements();
 		return container;
@@ -108,7 +121,7 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		taskDirectory = taskDirectory.replaceAll(BACKSLASH_MULTI, FORWARDSLASH);
 		if (!taskDirectory.equals(MylarPlugin.getDefault().getDataDirectory())) {
 			// NOTE: order matters
-			MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskListAndContexts();
+			MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskList(true);
 			MylarTaskListPlugin.getDefault().getTaskListSaveManager().copyDataDirContentsTo(taskDirectory);
 			MylarPlugin.getDefault().setDataDirectory(taskDirectory);
 		}
@@ -121,13 +134,17 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		getPreferenceStore().setValue(TaskListPreferenceConstants.REPORT_DISABLE_INTERNAL,
 				disableInternal.getSelection());
 
-		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP,
-				synchQueries.getSelection());
+		// getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP,
+		// synchQueries.getSelection());
 		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED,
 				enableBackgroundSynch.getSelection());
 		long miliseconds = 60000 * Long.parseLong(synchScheduleTime.getText());
 		getPreferenceStore().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS,
 				"" + miliseconds);
+
+		getPreferenceStore().setValue(TaskListPreferenceConstants.PLANNING_STARTHOUR, hourDayStart.getSelection());
+		getPreferenceStore().setValue(TaskListPreferenceConstants.PLANNING_ENDHOUR, hourDayEnd.getSelection());
+
 		return true;
 	}
 
@@ -143,11 +160,15 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		reportInternal.setSelection(getPreferenceStore().getBoolean(TaskListPreferenceConstants.REPORT_OPEN_INTERNAL));
 		disableInternal.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.REPORT_DISABLE_INTERNAL));
-		synchQueries.setSelection(getPreferenceStore().getBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
+		// synchQueries.setSelection(getPreferenceStore().getBoolean(
+		// TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
 		enableBackgroundSynch.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
 		synchScheduleTime.setText(getMinutesString());
+
+		hourDayStart.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_STARTHOUR));
+		hourDayEnd.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_ENDHOUR));
+
 		return true;
 	}
 
@@ -168,15 +189,18 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		reportInternal.setSelection(getPreferenceStore().getDefaultBoolean(
 				TaskListPreferenceConstants.REPORT_DISABLE_INTERNAL));
 
-		synchQueries.setSelection(getPreferenceStore().getDefaultBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
+		// synchQueries.setSelection(getPreferenceStore().getDefaultBoolean(
+		// TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
 		enableBackgroundSynch.setSelection(getPreferenceStore().getDefaultBoolean(
 				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-//		userRefreshOnly.setSelection(!enableBackgroundSynch.getSelection());
+		// userRefreshOnly.setSelection(!enableBackgroundSynch.getSelection());
 		long miliseconds = getPreferenceStore().getDefaultLong(
 				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS);
 		long minutes = miliseconds / 60000;
 		synchScheduleTime.setText("" + minutes);
+
+		hourDayStart.setSelection(getPreferenceStore().getDefaultInt(TaskListPreferenceConstants.PLANNING_STARTHOUR));
+		hourDayEnd.setSelection(getPreferenceStore().getDefaultInt(TaskListPreferenceConstants.PLANNING_ENDHOUR));
 
 		updateRefreshGroupEnablements();
 	}
@@ -185,31 +209,31 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		Group group = new Group(parent, SWT.SHADOW_ETCHED_IN);
 		group.setText("Repository Synchronization");
 		GridLayout gridLayout = new GridLayout(1, false);
-//		gridLayout.marginLeft = 0;
+		// gridLayout.marginLeft = 0;
 		group.setLayout(gridLayout);
 		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-//		userRefreshOnly = new Button(group, SWT.RADIO);
-//		GridData gridData = new GridData();
-//		gridData.horizontalSpan = 2;
-//		userRefreshOnly.setLayoutData(gridData);
-//		userRefreshOnly.setText("Disabled");
-//		userRefreshOnly.setSelection(!getPreferenceStore().getBoolean(
-//				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
-//		userRefreshOnly.addSelectionListener(new SelectionListener() {
-//			public void widgetSelected(SelectionEvent e) {
-//				updateRefreshGroupEnablements();
-//			}
-//
-//			public void widgetDefaultSelected(SelectionEvent e) {
-//			}
-//		});
+		// userRefreshOnly = new Button(group, SWT.RADIO);
+		// GridData gridData = new GridData();
+		// gridData.horizontalSpan = 2;
+		// userRefreshOnly.setLayoutData(gridData);
+		// userRefreshOnly.setText("Disabled");
+		// userRefreshOnly.setSelection(!getPreferenceStore().getBoolean(
+		// TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
+		// userRefreshOnly.addSelectionListener(new SelectionListener() {
+		// public void widgetSelected(SelectionEvent e) {
+		// updateRefreshGroupEnablements();
+		// }
+		//
+		// public void widgetDefaultSelected(SelectionEvent e) {
+		// }
+		// });
 		Composite enableSynch = new Composite(group, SWT.NULL);
 		gridLayout = new GridLayout(4, false);
 		gridLayout.marginWidth = 0;
 		gridLayout.marginHeight = 0;
 		enableSynch.setLayout(gridLayout);
 		enableBackgroundSynch = new Button(enableSynch, SWT.CHECK);
-//		enableBackgroundSynch.setLayoutData(gridData);
+		// enableBackgroundSynch.setLayoutData(gridData);
 		enableBackgroundSynch.setText("Synchronize every");
 		enableBackgroundSynch.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED));
@@ -234,10 +258,10 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		Label label = new Label(enableSynch, SWT.NONE);
 		label.setText("minutes");
 
-		synchQueries = new Button(group, SWT.CHECK);
-		synchQueries.setText("Synchronize on startup");
-		synchQueries.setSelection(getPreferenceStore().getBoolean(
-				TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
+		// synchQueries = new Button(group, SWT.CHECK);
+		// synchQueries.setText("Synchronize on startup");
+		// synchQueries.setSelection(getPreferenceStore().getBoolean(
+		// TaskListPreferenceConstants.REPOSITORY_SYNCH_ON_STARTUP));
 
 	}
 
@@ -367,9 +391,82 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 		group.setLayout(new GridLayout(1, false));
 		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		notificationEnabledButton = new Button(group, SWT.CHECK);
-		notificationEnabledButton.setText("Reminder popups enabled");
+		notificationEnabledButton.setText("Display notifications for overdue tasks and incoming changes");
 		notificationEnabledButton.setSelection(getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.NOTIFICATIONS_ENABLED));
+	}
+
+	private void createSchedulingGroup(Composite container) {
+		Group group = new Group(container, SWT.SHADOW_ETCHED_IN);
+		group.setText(GROUP_WORK_WEEK_LABEL);
+		group.setLayout(new GridLayout(5, false));
+		group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+		// Label workWeekBeginLabel = new Label(group, SWT.NONE);
+		// workWeekBeginLabel.setText(START_DAY_LABEL);
+		// workWeekBegin = new Combo(group, SWT.READ_ONLY);
+		// // Calendar.SUNDAY = 1
+		// workWeekBegin.add("SUNDAY");
+		// workWeekBegin.add("MONDAY");
+		// workWeekBegin.add("TUESDAY");
+		// workWeekBegin.add("WEDNESDAY");
+		// workWeekBegin.add("THURSDAY");
+		// workWeekBegin.add("FRIDAY");
+		// workWeekBegin.add("SATURDAY");
+		// workWeekBegin.select(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_STARTDAY)
+		// - 1);
+		//		
+		// Label workWeekEndLabel = new Label(group, SWT.NONE);
+		// workWeekEndLabel.setText(END_DAY_LABEL);
+		// workWeekEnd = new Combo(group, SWT.READ_ONLY);
+		// workWeekEnd.add("SUNDAY");
+		// workWeekEnd.add("MONDAY");
+		// workWeekEnd.add("TUESDAY");
+		// workWeekEnd.add("WEDNESDAY");
+		// workWeekEnd.add("THURSDAY");
+		// workWeekEnd.add("FRIDAY");
+		// workWeekEnd.add("SATURDAY");
+		// workWeekEnd.select(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_ENDDAY)
+		// - 1);
+
+		Label hourDayStartLabel = new Label(group, SWT.NONE);
+		hourDayStartLabel.setText(START_HOUR_LABEL);
+		hourDayStart = new Spinner(group, SWT.BORDER);
+		hourDayStart.setDigits(0);
+		hourDayStart.setIncrement(1);
+		hourDayStart.setMaximum(23);
+		hourDayStart.setMinimum(0);
+		hourDayStart.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_STARTHOUR));
+		hourDayStart.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateRefreshGroupEnablements();
+			}
+
+		});
+
+		Label spacer = new Label(group, SWT.NONE);
+		GridDataFactory.fillDefaults().hint(40, SWT.DEFAULT).applyTo(spacer);
+
+		Label hourDayEndLabel = new Label(group, SWT.NONE);
+		hourDayEndLabel.setText(END_HOUR_LABEL);
+
+		hourDayEnd = new Spinner(group, SWT.BORDER);
+		hourDayEnd.setDigits(0);
+		hourDayEnd.setIncrement(1);
+		hourDayEnd.setMaximum(23);
+		hourDayEnd.setMinimum(0);
+		hourDayEnd.setSelection(getPreferenceStore().getInt(TaskListPreferenceConstants.PLANNING_ENDHOUR));
+		hourDayEnd.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateRefreshGroupEnablements();
+			}
+
+		});
+
 	}
 
 	public void updateRefreshGroupEnablements() {
@@ -408,6 +505,17 @@ public class TaskListPreferencePage extends PreferencePage implements IWorkbench
 			this.setValid(true);
 			this.setErrorMessage(null);
 		}
+
+		if (getErrorMessage() == null) {
+			if (hourDayEnd.getSelection() <= hourDayStart.getSelection()) {
+				setErrorMessage("Planning: Work day start must be before end.");
+				this.setValid(false);
+			} else {
+				setErrorMessage(null);
+				this.setValid(true);
+			}
+		}
+
 		synchScheduleTime.setEnabled(enableBackgroundSynch.getSelection());
 	}
 

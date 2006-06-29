@@ -56,7 +56,7 @@ public class TaskListPreferenceConstants {
 
 	public static final String CONTEXTS_MIGRATED = "org.eclipse.mylar.tasklist.repositories.migrated.single";
 
-	public static final String REPOSITORY_SYNCH_ON_STARTUP = "org.eclipse.mylar.tasklist.repositories.synch.startup";
+//	public static final String REPOSITORY_SYNCH_ON_STARTUP = "org.eclipse.mylar.tasklist.repositories.synch.startup";
 
 	public static final String REPOSITORY_SYNCH_SCHEDULE_ENABLED = "org.eclipse.mylar.tasklist.repositories.synch.schedule.enabled";
 	
@@ -73,5 +73,13 @@ public class TaskListPreferenceConstants {
 	public static final String BACKUP_LAST = "org.eclipse.mylar.tasklist.backup.lastarchived";
 
 	public static final String BACKUP_MAXFILES = "org.eclipse.mylar.tasklist.backup.maxfiles";
+	
+//	public static final String PLANNING_STARTDAY = "org.eclipse.mylar.tasklist.planning.startday";
+	
+//	public static final String PLANNING_ENDDAY = "org.eclipse.mylar.tasklist.planning.endday";
+	
+	public static final String PLANNING_STARTHOUR = "org.eclipse.mylar.tasklist.planning.starthour";
+	
+	public static final String PLANNING_ENDHOUR = "org.eclipse.mylar.tasklist.planning.endhour";
 	
 }

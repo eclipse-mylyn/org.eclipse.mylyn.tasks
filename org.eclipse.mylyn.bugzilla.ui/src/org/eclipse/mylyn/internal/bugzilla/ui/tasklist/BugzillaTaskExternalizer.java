@@ -11,11 +11,12 @@
 
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.OfflineTaskManager;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.TaskExternalizationException;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
@@ -38,9 +39,9 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 
 	private static final String STATUS_NEW = "NEW";
 
-	private static final String LAST_DATE = "LastDate";
+	private static final String KEY_OLD_LAST_DATE = "LastDate";
 
-	private static final String DIRTY = "Dirty";
+	private static final String KEY_DIRTY = "Dirty";
 
 	private static final String SYNC_STATE = "offlineSyncState";
 
@@ -54,7 +55,7 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 
 	public String getQueryTagNameForElement(AbstractRepositoryQuery query) {
 		if (query instanceof BugzillaRepositoryQuery) {
-			if (((BugzillaRepositoryQuery)query).isCustomQuery()) {
+			if (((BugzillaRepositoryQuery) query).isCustomQuery()) {
 				return TAG_BUGZILLA_CUSTOM_QUERY;
 			} else {
 				return TAG_BUGZILLA_QUERY;
@@ -70,24 +71,22 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	public AbstractRepositoryQuery readQuery(Node node, TaskList taskList) throws TaskExternalizationException {
 		boolean hasCaughtException = false;
 		Element element = (Element) node;
-		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(
-				element.getAttribute(KEY_REPOSITORY_URL), 
-				element.getAttribute(KEY_QUERY_STRING), 
-				element.getAttribute(KEY_NAME),
-				element.getAttribute(KEY_QUERY_MAX_HITS), taskList);
+		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(element.getAttribute(KEY_REPOSITORY_URL), element
+				.getAttribute(KEY_QUERY_STRING), element.getAttribute(KEY_NAME), element
+				.getAttribute(KEY_QUERY_MAX_HITS), taskList);
 		if (node.getNodeName().equals(TAG_BUGZILLA_CUSTOM_QUERY)) {
 			query.setCustomQuery(true);
 		}
-		if(!element.getAttribute(KEY_LAST_REFRESH).equals("")) {
-			Date refreshDate = new Date();
-			try {
-				refreshDate.setTime(Long.parseLong(element.getAttribute(KEY_LAST_REFRESH)));
-				query.setLastRefresh(refreshDate);
-			} catch (NumberFormatException e) {
-				// ignore
-			}			
-		}
-		
+		// if (!element.getAttribute(KEY_LAST_REFRESH).equals("")) {
+		// Date refreshDate = new Date();
+		// try {
+		// refreshDate.setTime(Long.parseLong(element.getAttribute(KEY_LAST_REFRESH)));
+		// query.setLastRefresh(refreshDate);
+		// } catch (NumberFormatException e) {
+		// // ignore
+		//			}
+		//		}
+
 		NodeList list = node.getChildNodes();
 		for (int i = 0; i < list.getLength(); i++) {
 			Node child = list.item(i);
@@ -115,18 +114,22 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	public Element createTaskElement(ITask task, Document doc, Element parent) {
 		Element node = super.createTaskElement(task, doc, parent);
 		BugzillaTask bugzillaTask = (BugzillaTask) task;
-		if (bugzillaTask.getLastSynchronized() != null) {
-			node.setAttribute(LAST_DATE, new Long(bugzillaTask.getLastSynchronized().getTime()).toString());
-		} else {
-			node.setAttribute(LAST_DATE, new Long(new Date().getTime()).toString());
+		if (bugzillaTask.getLastModifiedDateStamp() != null) {
+			node.setAttribute(KEY_LAST_MOD_DATE, bugzillaTask.getLastModifiedDateStamp());
 		}
 
+		if(bugzillaTask.isNotified()) {
+			node.setAttribute(KEY_NOTIFIED_INCOMING, VAL_TRUE);		
+		} else {
+			node.setAttribute(KEY_NOTIFIED_INCOMING, VAL_FALSE);
+		}
+		
 		node.setAttribute(SYNC_STATE, bugzillaTask.getSyncState().toString());
 
 		if (bugzillaTask.isDirty()) {
-			node.setAttribute(DIRTY, VAL_TRUE);
+			node.setAttribute(KEY_DIRTY, VAL_TRUE);
 		} else {
-			node.setAttribute(DIRTY, VAL_FALSE);
+			node.setAttribute(KEY_DIRTY, VAL_FALSE);
 		}
 		return node;
 	}
@@ -153,16 +156,48 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 			throw new TaskExternalizationException("Description not stored for bug report");
 		}
 		BugzillaTask task = new BugzillaTask(handle, label, false);
-		readTaskInfo(task, taskList, element, parent, category);
+		super.readTaskInfo(task, taskList, element, parent, category);
 
 		task.setCurrentlyDownloading(false);
-		task.setLastSynchronized(new Date(new Long(element.getAttribute("LastDate")).longValue()));
+		if (element.hasAttribute(KEY_LAST_MOD_DATE) && !element.getAttribute(KEY_LAST_MOD_DATE).equals("")) {
+			task.setModifiedDateStamp(element.getAttribute(KEY_LAST_MOD_DATE));
+		} else {
+			// migrate to new time stamp 0.5.3 -> 0.6.0
+			try {
+				if (element.hasAttribute(KEY_OLD_LAST_DATE)) {
+					String DATE_FORMAT_2 = "yyyy-MM-dd HH:mm:ss";
+					SimpleDateFormat delta_ts_format = new SimpleDateFormat(DATE_FORMAT_2);
+					String oldDateStamp = "";
+					try {
+						oldDateStamp = delta_ts_format.format(new Date(
+								new Long(element.getAttribute(KEY_OLD_LAST_DATE)).longValue()));
+						task.setModifiedDateStamp(oldDateStamp);
+					} catch (NumberFormatException e) {
+						// For those who may have been working from head...
+						Date parsedDate = delta_ts_format.parse(element.getAttribute(KEY_OLD_LAST_DATE));
+						if (parsedDate != null) {
+							oldDateStamp = element.getAttribute(KEY_OLD_LAST_DATE);
+							task.setModifiedDateStamp(oldDateStamp);
+						}
+					}
+				}
+			} catch (Exception e) {
+				// invalid date format/parse
+			}
+		}
 
-		if (element.getAttribute("Dirty").compareTo("true") == 0) {
+		if (element.getAttribute(KEY_DIRTY).compareTo(VAL_TRUE) == 0) {
 			task.setDirty(true);
 		} else {
 			task.setDirty(false);
 		}
+		
+		if (element.hasAttribute(KEY_NOTIFIED_INCOMING) && element.getAttribute(KEY_NOTIFIED_INCOMING).compareTo(VAL_TRUE) == 0) {
+			task.setNotified(true);
+		} else {
+			task.setNotified(false);
+		}
+		
 		try {
 			if (readBugReport(task) == false) {
 				MylarStatusHandler.log("Failed to read bug report", null);
@@ -174,7 +209,7 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 		if (element.hasAttribute(SYNC_STATE)) {
 			String syncState = element.getAttribute(SYNC_STATE);
 			if (syncState.compareTo(RepositoryTaskSyncState.SYNCHRONIZED.toString()) == 0) {
-				task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+				task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);				
 			} else if (syncState.compareTo(RepositoryTaskSyncState.INCOMING.toString()) == 0) {
 				task.setSyncState(RepositoryTaskSyncState.INCOMING);
 			} else if (syncState.compareTo(RepositoryTaskSyncState.OUTGOING.toString()) == 0) {
@@ -183,21 +218,23 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 				task.setSyncState(RepositoryTaskSyncState.CONFLICT);
 			}
 		}
+				
 		return task;
 	}
 
 	/**
 	 * TODO: move?
 	 */
-	public boolean readBugReport(BugzillaTask bugzillaTask) {		
-		RepositoryTaskData tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
+	public boolean readBugReport(BugzillaTask bugzillaTask) {
+		RepositoryTaskData tempBug = OfflineTaskManager.findBug(bugzillaTask.getRepositoryUrl(), AbstractRepositoryTask
+				.getTaskIdAsInt(bugzillaTask.getHandleIdentifier()));
 		if (tempBug == null) {
 			bugzillaTask.setTaskData(null);
 			return true;
 		}
-		bugzillaTask.setTaskData((RepositoryTaskData)tempBug);
+		bugzillaTask.setTaskData((RepositoryTaskData) tempBug);
 
-		if (bugzillaTask.getTaskData().hasChanges())
+		if (bugzillaTask.getTaskData().hasLocalChanges())
 			bugzillaTask.setSyncState(RepositoryTaskSyncState.OUTGOING);
 		return true;
 	}
@@ -206,7 +243,8 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 		return node.getNodeName().equals(getQueryHitTagName());
 	}
 
-	public void readQueryHit(Node node, TaskList taskList, AbstractRepositoryQuery query) throws TaskExternalizationException {
+	public void readQueryHit(Node node, TaskList taskList, AbstractRepositoryQuery query)
+			throws TaskExternalizationException {
 		Element element = (Element) node;
 		String handle;
 		String label;
@@ -226,22 +264,29 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 			priority = element.getAttribute(KEY_PRIORITY);
 		} else {
 			throw new TaskExternalizationException("Description not stored for bug report");
-		}
-		
+		}		
+
 		status = STATUS_NEW;
 		if (element.hasAttribute(KEY_COMPLETE)) {
 			status = element.getAttribute(KEY_COMPLETE);
 			if (status.equals(VAL_TRUE)) {
-				status = STATUS_RESO; 
-			} 
-		} 
+				status = STATUS_RESO;
+			}
+		}
 		BugzillaQueryHit hit = new BugzillaQueryHit(label, priority, query.getRepositoryUrl(), AbstractRepositoryTask
 				.getTaskIdAsInt(handle), null, status);
-		ITask correspondingTask = taskList.getTask(hit.getHandleIdentifier());
-		if (correspondingTask instanceof BugzillaTask) {
-			hit.setCorrespondingTask((BugzillaTask)correspondingTask);
+		
+		if (element.hasAttribute(KEY_NOTIFIED_INCOMING) && element.getAttribute(KEY_NOTIFIED_INCOMING).compareTo(VAL_TRUE) == 0) {
+			hit.setNotified(true);
+		} else {
+			hit.setNotified(false);
 		}
 		
+		ITask correspondingTask = taskList.getTask(hit.getHandleIdentifier());
+		if (correspondingTask instanceof BugzillaTask) {
+			hit.setCorrespondingTask((BugzillaTask) correspondingTask);
+		}
+
 		query.addHit(hit);
 	}
 

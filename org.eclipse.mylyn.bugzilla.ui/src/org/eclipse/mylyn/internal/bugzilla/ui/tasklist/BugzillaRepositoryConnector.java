@@ -14,12 +14,10 @@ package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.TimeZone;
 
 import javax.security.auth.login.LoginException;
 
@@ -49,8 +47,8 @@ import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaSearchHit;
 import org.eclipse.mylar.internal.bugzilla.ui.search.RepositoryQueryResultsFactory;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaCategorySearchOperation.ICategorySearchListener;
 import org.eclipse.mylar.internal.bugzilla.ui.wizard.NewBugzillaReportWizard;
-import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.RepositoryTaskAttribute;
 import org.eclipse.mylar.internal.tasklist.RepositoryTaskData;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskRepositoriesView;
 import org.eclipse.mylar.internal.tasklist.ui.wizards.AbstractAddExistingTaskWizard;
@@ -76,11 +74,14 @@ import org.eclipse.ui.actions.WorkspaceModifyOperation;
  */
 public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
+	private static final String BUG_ID = "&bug_id=";
+
 	private static final int MAX_URL_LENGTH = 2000;
 
-	private static final String CHANGED_BUGS_START_DATE_SHORT = "yyyy-MM-dd";
-
-	private static final String CHANGED_BUGS_START_DATE_LONG = "yyyy-MM-dd HH:mm:ss";
+	// private static final String CHANGED_BUGS_START_DATE_SHORT = "yyyy-MM-dd";
+	//
+	// private static final String CHANGED_BUGS_START_DATE_LONG = "yyyy-MM-dd
+	// HH:mm:ss";
 
 	private static final String CHANGED_BUGS_CGI_ENDDATE = "&chfieldto=Now";
 
@@ -93,7 +94,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	private static final String CLIENT_LABEL = "Bugzilla (supports uncustomized 2.18-2.22)";
 
 	private BugzillaAttachmentHandler attachmentHandler = new BugzillaAttachmentHandler();
-	
+
 	private BugzillaOfflineTaskHandler offlineHandler = new BugzillaOfflineTaskHandler();
 
 	public String getLabel() {
@@ -104,12 +105,12 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	public IAttachmentHandler getAttachmentHandler() {
 		return attachmentHandler;
 	}
-	
+
 	@Override
 	public IOfflineTaskHandler getOfflineTaskHandler() {
 		return offlineHandler;
 	}
-	
+
 	public AbstractRepositorySettingsPage getSettingsPage() {
 		return new BugzillaRepositorySettingsPage(this);
 	}
@@ -207,11 +208,15 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		}
 	}
 
-	public void submitBugReport(final RepositoryTaskData bugReport, final BugzillaReportSubmitForm form,
+	/**
+	 * @return bugid if bugReport was a new report created locally null if
+	 *         existing report
+	 */
+	public String submitBugReport(final RepositoryTaskData bugReport, final BugzillaReportSubmitForm form,
 			IJobChangeListener listener) {
 
 		if (forceSyncExecForTesting) {
-			internalSubmitBugReport(bugReport, form);
+			return internalSubmitBugReport(bugReport, form);
 		} else {
 			// TODO: get rid of this idiom?
 			final WorkspaceModifyOperation op = new WorkspaceModifyOperation() {
@@ -236,11 +241,24 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 									WebBrowserDialog.openAcceptAgreement(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
 											"Possible problem posting Bugzilla report.\n"
 													+ throwable.getCause().getMessage(), form.getError());
+									String handle = AbstractRepositoryTask.getHandle(bugReport.getRepositoryUrl(), bugReport.getId());
+									ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
+									if (task != null && task instanceof AbstractRepositoryTask) {
+										synchronize((AbstractRepositoryTask)task, true, null);
+									}
 								} else if (throwable.getCause() instanceof LoginException) {
 									MessageDialog.openError(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
 											"Bugzilla could not post your bug since your login name or password is incorrect."
 													+ " Ensure proper repository configuration in "
 													+ TaskRepositoriesView.NAME + ".");
+									String attributes = "Attributes: ";
+									if (bugReport != null) {
+										for (RepositoryTaskAttribute attribute : bugReport.getAttributes()) {
+											attributes += attribute.getID() + "=" + attribute.getValue() + " | ";
+										}
+										MylarStatusHandler.log(attributes, BugzillaRepositoryConnector.class);
+									}
+									
 								} else {
 									MylarStatusHandler.fail(throwable, "could not post bug", false);
 									MessageDialog.openError(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
@@ -257,15 +275,16 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			};
 			job.addJobChangeListener(listener);
 			job.schedule();
+			return null;
 		}
 	}
 
-	private void internalSubmitBugReport(RepositoryTaskData bugReport, BugzillaReportSubmitForm form) {
+	private String internalSubmitBugReport(RepositoryTaskData bugReport, BugzillaReportSubmitForm form) {
+		String resultId = null;
 		try {
-			form.submitReportToRepository();
-			removeOfflineTaskData(bugReport);
+			resultId = form.submitReportToRepository();
+			//removeOfflineTaskData(bugReport);
 			String handle = AbstractRepositoryTask.getHandle(bugReport.getRepositoryUrl(), bugReport.getId());
-
 			ITask task = MylarTaskListPlugin.getTaskListManager().getTaskList().getTask(handle);
 			if (task != null) {
 				Set<AbstractRepositoryQuery> queriesWithHandle = MylarTaskListPlugin.getTaskListManager().getTaskList()
@@ -273,13 +292,17 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 				synchronize(queriesWithHandle, null, Job.SHORT, 0, true);
 
 				if (task instanceof AbstractRepositoryTask) {
-					synchronize((AbstractRepositoryTask) task, true, null);
+					AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
+					// Set to null in order for update to bypass ui override check with user
+					repositoryTask.setTaskData(null);
+					synchronize(repositoryTask, true, null);
 				}
 			}
 
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+		return resultId;
 	}
 
 	@Override
@@ -379,25 +402,14 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
 		Set<AbstractRepositoryTask> changedTasks = new HashSet<AbstractRepositoryTask>();
 
-		if (repository.getSyncTime() == null) {
+		if (repository.getSyncTimeStamp() == null) {
 			return tasks;
 		}
 
-		TimeZone timeZone = TimeZone.getTimeZone(repository.getTimeZoneId());
-
-		if (!timeZone.getID().equals(repository.getTimeZoneId())) {
-			MylarStatusHandler.log("Mylar: Specified time zone not available, using GMT. Check repository settings in "
-					+ TaskRepositoriesView.NAME + ".", BugzillaRepositoryConnector.class);
+		String dateString = repository.getSyncTimeStamp();
+		if (dateString == null) {
+			dateString = "";
 		}
-
-		
-		// XXX: This is a hack to adjust for slow local clock.
-		//      Backs query start date up by 5 minutes.
-		Date syncTime = new Date(repository.getSyncTime().getTime() - (60000 * 5));
-		
-		String dateString = DateUtil.getZoneFormattedDate(timeZone, syncTime,
-				CHANGED_BUGS_START_DATE_LONG);
-
 		String urlQueryBase;
 		String urlQueryString;
 
@@ -406,29 +418,24 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 					+ URLEncoder.encode(dateString, repository.getCharacterEncoding()) + CHANGED_BUGS_CGI_ENDDATE;
 		} catch (UnsupportedEncodingException e1) {
 			MylarStatusHandler.log(e1, "Mylar: Check encoding settings in " + TaskRepositoriesView.NAME + ".");
-			urlQueryBase = repository.getUrl() + CHANGED_BUGS_CGI_QUERY
-					+ DateUtil.getZoneFormattedDate(timeZone, repository.getSyncTime(), CHANGED_BUGS_START_DATE_SHORT)
-					+ CHANGED_BUGS_CGI_ENDDATE;
+			urlQueryBase = repository.getUrl() + CHANGED_BUGS_CGI_QUERY + dateString + CHANGED_BUGS_CGI_ENDDATE;
 		}
 
-		urlQueryString = new String(urlQueryBase);
+		urlQueryString = new String(urlQueryBase + BUG_ID);
 
 		int queryCounter = -1;
 		Iterator itr = tasks.iterator();
 		while (itr.hasNext()) {
 			queryCounter++;
 			ITask task = (ITask) itr.next();
-
-			String newurlQueryString = "&field0-0-" + queryCounter + "=bug_id&type0-0-" + queryCounter
-					+ "=equals&value0-0-" + queryCounter + "="
-					+ AbstractRepositoryTask.getTaskId(task.getHandleIdentifier());
+			String newurlQueryString = URLEncoder.encode(AbstractRepositoryTask.getTaskId(task.getHandleIdentifier())
+					+ ",", repository.getCharacterEncoding());
 			if ((urlQueryString.length() + newurlQueryString.length() + IBugzillaConstants.CONTENT_TYPE_RDF.length()) > MAX_URL_LENGTH) {
 				urlQueryString += IBugzillaConstants.CONTENT_TYPE_RDF;
 				queryForChanged(repository, changedTasks, urlQueryString);
 				queryCounter = 0;
-				urlQueryString = new String(urlQueryBase);
-				urlQueryString += "&field0-0-" + queryCounter + "=bug_id&type0-0-" + queryCounter + "=equals&value0-0-"
-						+ queryCounter + "=" + AbstractRepositoryTask.getTaskId(task.getHandleIdentifier());
+				urlQueryString = new String(urlQueryBase + BUG_ID);
+				urlQueryString += newurlQueryString;
 			} else if (!itr.hasNext()) {
 				urlQueryString += newurlQueryString;
 				urlQueryString += IBugzillaConstants.CONTENT_TYPE_RDF;
@@ -463,4 +470,3 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	}
 
 }
-

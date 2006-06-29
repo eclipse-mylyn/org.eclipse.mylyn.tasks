@@ -26,11 +26,13 @@ import org.eclipse.mylar.internal.tasklist.util.HtmlStreamTokenizer;
 public abstract class AbstractRepositoryTask extends Task {
 
 	/** The last time this task's bug report was downloaded from the server. */
-	protected Date lastSynchronized;
+	protected String lastModified;
 
 	protected transient RepositoryTaskData taskData;
 
 	protected boolean currentlySynchronizing;
+
+	protected boolean isNotifiedIncoming = true;
 
 	/**
 	 * Value is <code>true</code> if the bug report has saved changes that
@@ -60,12 +62,12 @@ public abstract class AbstractRepositoryTask extends Task {
 
 	public abstract boolean isDownloaded();
 
-	public Date getLastSynchronized() {
-		return lastSynchronized;
+	public String getLastModifiedDateStamp() {
+		return lastModified;
 	}
 
-	public void setLastSynchronized(Date lastOpened) {
-		this.lastSynchronized = lastOpened;
+	public void setModifiedDateStamp(String lastModified) {
+		this.lastModified = lastModified;
 	}
 
 	public void setSyncState(RepositoryTaskSyncState syncState) {
@@ -74,15 +76,6 @@ public abstract class AbstractRepositoryTask extends Task {
 
 	public RepositoryTaskSyncState getSyncState() {
 		return syncState;
-	}
-
-	/**
-	 * @return The number of seconds ago that this task's bug report was
-	 *         downloaded from the server.
-	 */
-	public long getTimeSinceLastRefresh() {
-		Date timeNow = new Date();
-		return (timeNow.getTime() - lastSynchronized.getTime()) / 1000;
 	}
 
 	public String getRepositoryUrl() {
@@ -180,5 +173,13 @@ public abstract class AbstractRepositoryTask extends Task {
 			setDescription(HtmlStreamTokenizer.unescape(AbstractRepositoryTask.getTaskIdAsInt(getHandleIdentifier())
 					+ ": " + taskData.getSummary()));
 		}
+	}
+
+	public boolean isNotified() {
+		return isNotifiedIncoming;
+	}
+
+	public void setNotified(boolean notified) {
+		isNotifiedIncoming = notified;
 	}
 }

@@ -8,7 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-package org.eclipse.mylar.internal.tasklist.util;
+package org.eclipse.mylar.internal.tasklist.ui;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
@@ -131,7 +131,7 @@ public final class GridDataFactory {
      * </ul>
      * 
      * @return a new GridDataFactory instance
-     * @see fillDefaults
+     * @see #fillDefaults()
      */
     public static GridDataFactory swtDefaults() {
     	return new GridDataFactory(new GridData());
@@ -168,7 +168,7 @@ public final class GridDataFactory {
      *  
      * @return a GridDataFactory that makes controls fill their grid by default
      * 
-     * @see swtDefaults
+     * @see #swtDefaults()
      */
     public static GridDataFactory fillDefaults() {
     	GridData data = new GridData();

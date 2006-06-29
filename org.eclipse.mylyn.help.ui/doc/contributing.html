@@ -13,12 +13,14 @@ reports marked help wanted</a>.&nbsp;</p>
 	<ul>
 		<li><a href="#contributing-intro">Introduction</a></li>
 		<li><a href="#contributing-setup">Workspace setup</a></li>
+		<li><a href="#tests">Running tests</a></li>
 		<li><a href="#bootstrap">Working bootstrapped</a></li>
 		<li><a href="#contributing-patches">Contributing patches</li>
 <!--	<li>Building</li>-->
 		</a></li>
-		<li><a href="#bootstrap">Building the JIRA Connector</a></li>
+		<li><a href="#building-jira">Building the JIRA Connector</a></li>
 		<li><a href="#building-dist">Building a distribution</a></li>
+		<li><a href="#web-site-authoring">Web site authoring</a></li>
 	</ul><hr width="50%">
 	<h3>&nbsp; <br>
 	<a name="contributing-setup">Workspace setup</a></h3>
@@ -36,7 +38,13 @@ and leave the password blank.</li>
 		dependencies).&nbsp; There should be no errors or warnings.</li>
 		<li>Run org.eclipse.mylar.tests.AllTests as a JUnit Plug-in Test, with 
 		assertions enabled.&nbsp; All tests should pass and there should be no 
-		console output once you have done the following:<ul>
+		console output.</li>
+	</ul>
+	<hr>
+	<h3><a name="tests">Running tests</a></h3>
+	<p>Each component has it's own All&lt;Component&gt;Tests suite, and all can be run 
+	via org.eclipse.mylar.tests.AllTests.&nbsp; </p>
+	<ul>
 		<li>Add the following to the test configuration under Arguments -&gt; VM 
 		Arguments: -enableassertions -Xmx384M</li>
 		<li>Add a <b>credentials.properties</b> file to 
@@ -44,10 +52,8 @@ and leave the password blank.</li>
 		&quot;password: yyy&quot; in it. Email mylar-dev@ecipse.org for a username and 
 		password.</li>
 	</ul>
-		</li>
-	</ul>
 	<hr>
-	<h3><a name="connector-jira">JIRA Connector</a></h3>
+	<h3><a name="building-jira">JIRA Connector</a></h3>
 	<ul>
 		<li>Get the latest <a href="http://subclipse.tigris.org/download.html">
 		Subclipse</a> plug-in, e.g. from the following update site: 
@@ -76,18 +82,20 @@ and leave the password blank.</li>
 	</ul>
 	<hr>
 <h3><a name="bootstrap">Working bootsrapped</a> </h3>
-<p>To make eating your own dog food easier and avoid having to update to dev 
-builds Mylar committers work bootstrapped:</p>
+<p>Working bootstrapped (i.e. self-hosted) makes eating your own dog food easier 
+and avoids having to update to dev builds:</p>
 	<ul>
 		<li>Set up a fresh workspace launched from an Eclipse that does not have 
 		Mylar installed, and check out Mylar into 
 		it.</li>
-		<li>Create a new Launch Configuration, point it at your workspace, 
-		and work in that.&nbsp; The launching workspace will typically use very 
-		little memory, but if you have a memory constrained machine you can kill 
-		its java process.</li>
-		<li>Whenever your changes make it into HEAD synch up your launching 
-		workspace and restart.&nbsp; You could conceivably </li>
+		<li>Create a new <i>Launch Configuration</i>, point it at your workspace, 
+		and work in that.&nbsp; Note that the launching workspace will typically 
+		consume very little memory.</li>
+		<li>Whenever your changes make it into HEAD close your runtime 
+		workspace, update from CVS, and then re-launch.&nbsp; It is possible to 
+		run in debug mode so that the changes apply to the workspace immediately 
+		after synch, but this can cause problems with the running workspace if 
+		classes change or go missing.</li>
 	</ul>
 	<hr>
 <h3><a name="contributing-patches">Contributing patches</a> </h3>
@@ -117,6 +125,7 @@ builds Mylar committers work bootstrapped:</p>
 		into Window -&gt; Preferences -&gt; Java -&gt; Code Style -&gt; Formatter.&nbsp; 
 		Format code using Eclipse's formatter (Ctrl+Shift+F) 
 		and ensure that no&nbsp; have been added.</li>
+		<li>Add an @author tag to each class that you create.</li>
 		<li>Ensure that there is no console output.&nbsp; For logging errors use 
 		<tt>MylarStatusHandler</tt>.</li>
 	</ul>
@@ -172,5 +181,13 @@ builds Mylar committers work bootstrapped:</p>
 	<ul>
 		<li>Instructions are in org.eclipse.mylar-site/release.txt</li>
 	</ul>
+	<hr>
+<h3><a name=web-site-authoring>Web site authoring</a></h3>
+<ul>
+	<li>Create a new CVS location: dev.eclipse.org:/cvsroot/org.eclipse</li>
+	<li>Check out www/mylar as a project</li>
+	<li>To push documentation from org.eclipse.mylar.doc to the web site use the 
+	targets in mylar/build.xml</li>
+</ul>
 	<p>&nbsp; </p>
 </body></html>

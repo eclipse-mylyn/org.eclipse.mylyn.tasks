@@ -13,22 +13,25 @@ package org.eclipse.mylar.tasklist.tests;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaPlugin;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaQueryHit;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaRepositoryQuery;
 import org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaTask;
 import org.eclipse.mylar.internal.tasklist.ScheduledTaskListSynchJob;
+import org.eclipse.mylar.internal.tasklist.TaskListPreferenceConstants;
+import org.eclipse.mylar.internal.tasklist.TaskListSynchronizationManager;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
 import org.eclipse.mylar.provisional.tasklist.AbstractQueryHit;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryQuery;
@@ -69,7 +72,7 @@ public class TaskListManagerTest extends TestCase {
 	protected void tearDown() throws Exception {
 		super.tearDown();		
 		manager.resetTaskList();
-		MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskListAndContexts();
+		MylarTaskListPlugin.getDefault().getTaskListSaveManager().saveTaskList(true);
 		MylarTaskListPlugin.getRepositoryManager().removeRepository(repository);
 	}
 	
@@ -387,13 +390,14 @@ public class TaskListManagerTest extends TestCase {
 	}
 
 	public void testQueryExternalization() {
-		AbstractRepositoryQuery query = new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager.getTaskList());
-		long time = 1234;
-		Date oldDate = new Date(time);	
-		query.setLastRefresh(oldDate);
+		AbstractRepositoryQuery query = new BugzillaRepositoryQuery("repositoryUrl", "queryUrl", "label", "1", manager
+				.getTaskList());
+		// long time = 1234;
+		// Date oldDate = new Date(time);
+		// query.setLastRefresh(oldDate);
 		assertEquals("repositoryUrl", query.getRepositoryUrl());
 		assertEquals("queryUrl", query.getQueryUrl());
-		assertEquals(time, query.getLastSynchronized().getTime());
+		// assertEquals(time, query.getLastSynchronized().getTime());
 		manager.getTaskList().addQuery(query);
 		manager.saveTaskList();
 		assertNotNull(manager.getTaskList());
@@ -405,7 +409,7 @@ public class TaskListManagerTest extends TestCase {
 		assertEquals(query.getQueryUrl(), readQuery.getQueryUrl());
 		assertEquals(query.getRepositoryUrl(), readQuery.getRepositoryUrl());
 		assertEquals("repositoryUrl", readQuery.getRepositoryUrl());
-		assertEquals(time, readQuery.getLastSynchronized().getTime());
+		// assertEquals(time, readQuery.getLastSynchronized().getTime());
 	}
 
 	public void testArchiveRepositoryTaskExternalization() {
@@ -551,14 +555,34 @@ public class TaskListManagerTest extends TestCase {
 		assertEquals(cat1Contents, readCat1.getChildren());
 	}
 
+	public void testExternalizationOfHandlesWithDash() {
+		Set<ITask> rootTasks = new HashSet<ITask>();
+		
+		String handle = AbstractRepositoryTask.getHandle("http://url/repo-location", 1);
+		Task task1 = new Task(handle, "task 1", true);
+		manager.getTaskList().moveToRoot(task1);
+		rootTasks.add(task1);
+		
+		manager.saveTaskList();
+		assertNotNull(manager.getTaskList());
+		manager.resetTaskList();
+		assertTrue(manager.readExistingOrCreateNewList());
+
+		assertNotNull(manager.getTaskList());
+		assertEquals(rootTasks, manager.getTaskList().getRootTasks());
+	}
+
 	public void testScheduledRefreshJob() throws InterruptedException {
-		int counter = 3;
-		ScheduledTaskListSynchJob job = new ScheduledTaskListSynchJob(10, manager);
-		job.run(new NullProgressMonitor());
-//		job.schedule();
-		Thread.sleep(2000);
-		assertTrue(job.getCount() + " smaller than " + counter, job.getCount() >= counter);
-		job.cancel();
+		int counter = 3;		
+		MylarTaskListPlugin.getMylarCorePrefs().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED, true);
+		MylarTaskListPlugin.getMylarCorePrefs().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_MILISECONDS, 1000L);
+		assertEquals(0, ScheduledTaskListSynchJob.getCount());
+		TaskListSynchronizationManager manager = new TaskListSynchronizationManager(false);
+		manager.startSynchJob();
+		Thread.sleep(3000);		
+		assertTrue(ScheduledTaskListSynchJob.getCount()+ " smaller than " + counter, ScheduledTaskListSynchJob.getCount() >= counter);
+		manager.cancelAll();
+		MylarTaskListPlugin.getMylarCorePrefs().setValue(TaskListPreferenceConstants.REPOSITORY_SYNCH_SCHEDULE_ENABLED, false);
 	}
 
 	public void testgetQueriesAndHitsForHandle() {
@@ -600,10 +624,52 @@ public class TaskListManagerTest extends TestCase {
 		Set<AbstractQueryHit> hitsReturned = taskList.getQueryHitsForHandle(AbstractRepositoryTask.getHandle(
 				"repositoryURL", 2));
 		assertNotNull(hitsReturned);
-		assertEquals(2, hitsReturned.size());
+		assertEquals(1, hitsReturned.size());
 		assertTrue(hitsReturned.contains(hit2));
 		assertTrue(hitsReturned.contains(hit2twin));
 
+	}
+	
+	public void testUpdateQueryHits() {
+
+		BugzillaQueryHit hit1 = new BugzillaQueryHit("description1", "P1", "repositoryURL", 1, null, "status");
+		BugzillaQueryHit hit2 = new BugzillaQueryHit("description2", "P1", "repositoryURL", 2, null, "status");
+		BugzillaQueryHit hit3 = new BugzillaQueryHit("description3", "P1", "repositoryURL", 3, null, "status");
+
+		BugzillaQueryHit hit1twin = new BugzillaQueryHit("description1", "P1", "repositoryURL", 1, null, "status");
+		BugzillaQueryHit hit2twin = new BugzillaQueryHit("description2", "P1", "repositoryURL", 2, null, "status");
+		BugzillaQueryHit hit3twin = new BugzillaQueryHit("description3", "P1", "repositoryURL", 3, null, "status");
+
+		BugzillaRepositoryQuery query1 = new BugzillaRepositoryQuery("url","url", "queryl", "10", manager.getTaskList());
+
+		query1.addHit(hit1);
+		query1.addHit(hit2);		
+		query1.addHit(hit3);
+		assertEquals(3, query1.getHits().size());
+		List<AbstractQueryHit> newHits = new ArrayList<AbstractQueryHit>();		
+		query1.updateHits(newHits);
+		assertEquals(0, query1.getHits().size());
+		newHits.add(hit1);
+		newHits.add(hit2);
+		query1.updateHits(newHits);
+		assertEquals(2, query1.getHits().size());
+		hit1.setNotified(true);
+		newHits.clear();
+		newHits.add(hit1twin);
+		newHits.add(hit2twin);
+		newHits.add(hit3twin);
+		query1.updateHits(newHits);
+		assertEquals(3, query1.getHits().size());
+		assertTrue(query1.getHits().contains(hit1twin));
+		assertTrue(query1.getHits().contains(hit2twin));
+		assertTrue(query1.getHits().contains(hit3twin));
+		for (AbstractQueryHit hit : query1.getHits()) {
+			if(hit.equals(hit1twin)) {
+				assertTrue(hit.isNotified());
+			} else {
+				assertFalse(hit.isNotified());
+			}
+		}
 	}
 		
 	public void testgetRepositoryTasks() {
@@ -626,5 +692,30 @@ public class TaskListManagerTest extends TestCase {
 		assertTrue(tasksReturned.contains(task1));
 	}
 	
+	
+	public void testRemindedPersistance() {
+
+		String repositoryUrl = "https://bugs.eclipse.org/bugs";
+		
+		String bugNumber = "106939";
+		
+		BugzillaTask task1 = new BugzillaTask(repositoryUrl+"-"+bugNumber, "label", false);		
+		manager.getTaskList().addTask(task1);
+		
+		task1.setReminded(true);
+		
+		MylarTaskListPlugin.getTaskListManager().saveTaskList();
+		MylarTaskListPlugin.getTaskListManager().resetTaskList();
+		MylarTaskListPlugin.getTaskListManager().readExistingOrCreateNewList();	
+		
+		TaskList taskList = manager.getTaskList();
+		assertEquals(1, taskList.getAllTasks().size());
+		Set<AbstractRepositoryTask> tasksReturned = taskList.getRepositoryTasks(repositoryUrl);
+		assertNotNull(tasksReturned);
+		assertEquals(1, tasksReturned.size());
+		for (AbstractRepositoryTask task : tasksReturned) {
+			assertTrue(task.hasBeenReminded());
+		}		
+	}
 	
 }

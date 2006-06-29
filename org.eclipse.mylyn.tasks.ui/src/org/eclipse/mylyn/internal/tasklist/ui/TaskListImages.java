@@ -91,6 +91,10 @@ public class TaskListImages {
 
 	public static final ImageDescriptor TASK_REPOSITORY_NEW = create(T_TOOL, "task-repository-new.gif");
 
+	public static final ImageDescriptor COMMENT = create(T_TOOL, "comment.gif");
+	
+	public static final ImageDescriptor PERSON = create(T_TOOL, "person.gif");
+		
 	public static final ImageDescriptor OVERLAY_INCOMMING = create(T_EVIEW, "overlay-incoming.gif");
 
 	public static final ImageDescriptor OVERLAY_OUTGOING = create(T_EVIEW, "overlay-outgoing.gif");
@@ -158,6 +162,8 @@ public class TaskListImages {
 
 	public static final ImageDescriptor COLLAPSE_ALL = create(T_ELCL, "collapseall.png");
 
+	public static final ImageDescriptor NOTIFICATION_CLOSE = create(T_EVIEW, "notification-close.gif");
+	
 	public static final ImageDescriptor EXPAND_ALL = create(T_ELCL, "expandall.gif"); 
 	
 	public static final ImageDescriptor PRIORITY_1 = createSize(create(T_EVIEW, "priority-1.gif"), SIZE);

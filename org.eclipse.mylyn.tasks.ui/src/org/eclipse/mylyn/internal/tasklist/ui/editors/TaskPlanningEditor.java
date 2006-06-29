@@ -19,10 +19,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.core.util.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasklist.RetrieveTitleFromUrlJob;
+import org.eclipse.mylar.internal.tasklist.ui.TaskListColorsAndFonts;
 import org.eclipse.mylar.internal.tasklist.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasklist.ui.actions.TaskEditorCopyAction;
 import org.eclipse.mylar.internal.tasklist.ui.views.DatePicker;
-import org.eclipse.mylar.internal.tasklist.ui.views.RetrieveTitleFromUrlJob;
 import org.eclipse.mylar.internal.tasklist.ui.views.TaskListView;
 import org.eclipse.mylar.provisional.core.MylarPlugin;
 import org.eclipse.mylar.provisional.tasklist.AbstractRepositoryTask;
@@ -41,6 +42,7 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -68,6 +70,7 @@ import org.eclipse.ui.forms.widgets.Section;
 import org.eclipse.ui.internal.WorkbenchImages;
 import org.eclipse.ui.internal.WorkbenchMessages;
 import org.eclipse.ui.part.EditorPart;
+import org.eclipse.ui.themes.IThemeManager;
 
 /**
  * For details on forms, go to:
@@ -325,21 +328,12 @@ public class TaskPlanningEditor extends EditorPart {
 	public void createPartControl(Composite parent) {
 		FormToolkit toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createScrolledForm(parent);
-		// String trucatedDescription = task.getDescription();
-		// int maxLength = 50;
-		// if (trucatedDescription.length() > maxLength) {
-		// trucatedDescription = trucatedDescription.substring(0, maxLength) +
-		// "...";
-		// }
-		// form.setText(trucatedDescription);
 		form.setText(task.getDescription());
 
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
-		// Put the info onto the editor
 		createContent(editorComposite, toolkit);
-		// form.setFocus();
 		if (description != null && NewLocalTaskAction.DESCRIPTION_DEFAULT.equals(description.getText())) {
 			description.setSelection(0);
 			description.setFocus();
@@ -611,7 +605,11 @@ public class TaskPlanningEditor extends EditorPart {
 
 		notes = toolkit.createText(container, task.getNotes(), SWT.FLAT | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
 		notes.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
-
+		
+		IThemeManager themeManager = getSite().getWorkbenchWindow().getWorkbench().getThemeManager();
+		Font notesFont = themeManager.getCurrentTheme().getFontRegistry().get(TaskListColorsAndFonts.TASK_EDITOR_FONT);
+		notes.setFont(notesFont);
+		
 		GridData notesDataLayout = new GridData(GridData.FILL_BOTH);
 		notes.setLayoutData(notesDataLayout);
 		notes.addModifyListener(new ModifyListener() {

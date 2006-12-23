@@ -214,13 +214,11 @@ litigation.
    </license>
 
    <url>
-      <update label="Mylar for Eclipse 3.3" url="http://download.eclipse.org/technology/mylar/update-site/e3.3"/>
+      <update label="Mylar for Eclipse 3.2" url="http://download.eclipse.org/technology/mylar/update-site/e3.2"/>
    </url>
 
    <requires>
       <import plugin="org.eclipse.core.runtime" version="0.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.mylar.context.core" version="1.0.0" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.mylar.tasks.core"/>
       <import plugin="org.eclipse.ui" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.core.resources" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.compare" version="0.0.0" match="greaterOrEqual"/>
@@ -234,9 +232,7 @@ litigation.
       <import plugin="org.eclipse.ui.editors" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.ui.workbench.texteditor" version="0.0.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.update.ui"/>
-      <import plugin="org.eclipse.mylar.tasks.ui"/>
       <import feature="org.eclipse.mylar_feature" version="1.0.1" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.mylar.bugzilla.core"/>
    </requires>
 
    <plugin

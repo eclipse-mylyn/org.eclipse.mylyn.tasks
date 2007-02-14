@@ -262,13 +262,6 @@ litigation.
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.mylar.monitor"
-         download-size="0"
-         install-size="0"
-         version="1.0.1.v20070112-1800"
-         unpack="false"/>
-
-   <plugin
          id="org.eclipse.mylar.tasks.core"
          download-size="0"
          install-size="0"
@@ -280,6 +273,20 @@ litigation.
          download-size="0"
          install-size="0"
          version="1.0.1.v20070112-1800"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.mylar.monitor.core"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.mylar.monitor.ui"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
          unpack="false"/>
 
 </feature>

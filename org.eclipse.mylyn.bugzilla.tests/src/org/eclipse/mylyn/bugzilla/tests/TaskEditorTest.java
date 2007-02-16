@@ -1,0 +1,80 @@
+/*******************************************************************************
+ * Copyright (c) 2004 - 2006 Mylar committers and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *******************************************************************************/
+
+package org.eclipse.mylar.bugzilla.tests;
+
+import junit.framework.TestCase;
+
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaAttributeFactory;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
+import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
+import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
+import org.eclipse.mylar.tasks.core.RepositoryTaskData;
+import org.eclipse.mylar.tasks.core.TaskRepository;
+import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
+import org.eclipse.mylar.tasks.ui.TasksUiUtil;
+import org.eclipse.mylar.tasks.ui.editors.AbstractRepositoryTaskEditor;
+import org.eclipse.mylar.tasks.ui.editors.NewTaskEditorInput;
+import org.eclipse.mylar.tasks.ui.editors.TaskEditor;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PlatformUI;
+
+/**
+ * @author Jeff Pound
+ */
+public class TaskEditorTest extends TestCase {
+
+	private static final String DESCRIPTION = "description";
+
+	@Override
+	protected void setUp() throws Exception {
+		super.setUp();
+	}
+
+	@Override
+	protected void tearDown() throws Exception {
+		PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().closeAllEditors(false);
+		TasksUiPlugin.getRepositoryManager().clearRepositories(TasksUiPlugin.getDefault().getRepositoriesFilePath());
+		TasksUiPlugin.getTaskListManager().resetTaskList();
+		TasksUiPlugin.getTaskListManager().saveTaskList(); 
+//		TasksUiPlugin.getDefault().getTaskListSaveManager().saveTaskList(true);
+		super.tearDown();
+	}
+
+	/**
+	 * Automated task creation needs to access newly created task editors. This
+	 * test tests that the access is available.
+	 * 
+	 * @throws Exception
+	 */
+	public void testAccessNewEditor() throws Exception {
+		TaskRepository repository = new TaskRepository(BugzillaCorePlugin.REPOSITORY_KIND,
+				IBugzillaConstants.TEST_BUGZILLA_222_URL);
+
+		RepositoryTaskData model = new RepositoryTaskData(new BugzillaAttributeFactory(), BugzillaCorePlugin.REPOSITORY_KIND, repository.getUrl(), TasksUiPlugin.getDefault()
+				.getTaskDataManager().getNewRepositoryTaskId());
+		model.setNew(true);
+		
+		NewTaskEditorInput editorInput = new NewTaskEditorInput(repository, model);
+		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+		TasksUiUtil.openEditor(editorInput, TaskListPreferenceConstants.TASK_EDITOR_ID, page);
+		assertTrue(page.getActiveEditor() instanceof TaskEditor);
+		TaskEditor taskEditor = (TaskEditor) page.getActiveEditor();
+		assertTrue(taskEditor.getActivePageInstance() instanceof AbstractRepositoryTaskEditor);
+		AbstractRepositoryTaskEditor editor = (AbstractRepositoryTaskEditor) taskEditor.getActivePageInstance();
+
+		String desc = DESCRIPTION;
+		String summary = "summary";
+		// ensure we have access without exceptions
+		editor.setDescriptionText(desc);
+		editor.setSummaryText(summary);
+		editor.doSave(new NullProgressMonitor());
+	}
+
+}

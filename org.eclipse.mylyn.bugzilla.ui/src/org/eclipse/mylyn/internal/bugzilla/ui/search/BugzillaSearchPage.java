@@ -25,7 +25,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.mylar.context.core.MylarStatusHandler;
+import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryQuery;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
@@ -262,7 +262,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 
 		// Info text
 		label = new Label(group, SWT.LEFT);
-		label.setText("Summary/id contains: ");
+		label.setText("Summary/taskId contains: ");
 		gd = new GridData(GridData.BEGINNING);
 		gd.horizontalSpan = 1;
 		label.setLayoutData(gd);
@@ -1242,7 +1242,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 
 	// --------------- Configuration handling --------------
 
-	// Dialog store id constants
+	// Dialog store taskId constants
 	protected final static String PAGE_NAME = "BugzillaSearchPage"; //$NON-NLS-1$
 
 	private static final String STORE_PRODUCT_ID = PAGE_NAME + ".PRODUCT";

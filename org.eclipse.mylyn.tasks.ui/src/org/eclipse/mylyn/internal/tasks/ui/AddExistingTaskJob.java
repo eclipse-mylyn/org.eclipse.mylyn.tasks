@@ -59,18 +59,22 @@ public class AddExistingTaskJob extends Job {
 	}
 
 	@Override
-	protected IStatus run(IProgressMonitor monitor) {
+	public IStatus run(IProgressMonitor monitor) {
 		final AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(
 				repository.getKind());
 		try {
 			monitor.beginTask("Retrieving task...", IProgressMonitor.UNKNOWN);
 			final ITask newTask = connector.createTaskFromExistingKey(repository, taskId);
+
 			if (newTask instanceof AbstractRepositoryTask) {
+				// TODO: encapsulate in abstract connector
 				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) newTask;
-				TasksUiPlugin.getSynchronizationManager().synchronize(connector, repositoryTask, true, null);
-				TasksUiPlugin.getSynchronizationManager().setTaskRead(repositoryTask, true);
+				TasksUiPlugin.getDefault().getTaskDataManager().push(newTask.getHandleIdentifier(),
+						repositoryTask.getTaskData());
 			}
+
 			if (newTask != null) {
+				TasksUiUtil.refreshAndOpenTaskListElement(newTask);
 				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 
 					public void run() {
@@ -87,7 +91,6 @@ public class AddExistingTaskJob extends Job {
 						}
 						TasksUiPlugin.getTaskListManager().getTaskList().moveToContainer(category, newTask);
 						taskListView.getViewer().setSelection(new StructuredSelection(newTask));
-						TasksUiUtil.openEditor(newTask, false, false);
 					}
 
 				});

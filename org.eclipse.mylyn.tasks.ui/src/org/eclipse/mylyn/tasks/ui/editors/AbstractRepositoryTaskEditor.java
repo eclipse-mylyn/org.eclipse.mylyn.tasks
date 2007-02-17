@@ -143,7 +143,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.RetargetAction;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
@@ -704,7 +704,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		}
 
 		form.setText(kindLabel + " " + idLabel);
-		toolkit.decorateFormHeading(form.getForm());
+//		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
 		GridLayout editorLayout = new GridLayout();
@@ -1723,7 +1723,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				foundNew = true;
 			}
 
-			expandableComposite	.setTitleBarForeground(toolkit.getColors().getColor(IFormColors.TB_TOGGLE));
+			expandableComposite	.setTitleBarForeground(toolkit.getColors().getColor(FormColors.TB_TOGGLE));
 
 			expandableComposite.setText(taskComment.getNumber() + ": " + taskComment.getAuthorName() + ", "
 					+ taskComment.getCreated());
@@ -2542,7 +2542,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 	}
 
 	public void showBusy(boolean busy) {
-		form.setBusy(busy);
+//		form.setBusy(busy);
 		if (busy) {
 			setEnabledState(editorComposite, false);
 			// regularCursor = form.getCursor();

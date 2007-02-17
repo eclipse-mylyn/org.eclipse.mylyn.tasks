@@ -286,7 +286,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		form = managedForm.getForm();
 		toolkit = managedForm.getToolkit();
 		form.setImage(TaskListImages.getImage(TaskListImages.CALENDAR));
-		toolkit.decorateFormHeading(form.getForm());
+//		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
 		editorComposite.setLayout(new GridLayout());

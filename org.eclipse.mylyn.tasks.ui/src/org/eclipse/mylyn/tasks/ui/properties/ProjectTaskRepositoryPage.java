@@ -103,11 +103,6 @@ public class ProjectTaskRepositoryPage extends PropertyPage {
 		listViewer.setSorter(new TaskRepositoriesSorter());
 		listViewer.setInput(project.getWorkspace());
 
-		TaskRepository repository = TasksUiPlugin.getDefault().getRepositoryForResource(project, true);
-
-		if (repository != null) {
-			listViewer.setCheckedElements(new Object[] { repository });
-		}
 		listViewer.addCheckStateListener(new ICheckStateListener() {
 			public void checkStateChanged(CheckStateChangedEvent event) {
 				if (event.getChecked()) {
@@ -118,6 +113,7 @@ public class ProjectTaskRepositoryPage extends PropertyPage {
 				modified = true;
 			}
 		});
+		updateLinkedRepository();
 
 		final AddRepositoryAction action = new AddRepositoryAction();
 
@@ -129,10 +125,19 @@ public class ProjectTaskRepositoryPage extends PropertyPage {
 			public void widgetSelected(SelectionEvent e) {
 				action.run();
 				listViewer.setInput(project.getWorkspace());
+				updateLinkedRepository();
 			}
 		});
 
 		return composite;
+	}
+
+	void updateLinkedRepository() {
+		TaskRepository repository = TasksUiPlugin.getDefault().getRepositoryForResource(project, true);
+		if (repository != null) {
+			listViewer.setCheckedElements(new Object[] { repository });
+		}
+		listViewer.getControl().setEnabled(TasksUiPlugin.getDefault().canSetRepositoryForResource(project));
 	}
 
 	private static int getDefaultFontHeight(Control control, int lines) {
@@ -167,7 +172,10 @@ public class ProjectTaskRepositoryPage extends PropertyPage {
 		if (listViewer.getCheckedElements().length > 0) {
 			TaskRepository selectedRepository = (TaskRepository) listViewer.getCheckedElements()[0];
 			try {
-				TasksUiPlugin.getDefault().setRepositoryForResource(project, selectedRepository);
+				TasksUiPlugin plugin = TasksUiPlugin.getDefault();
+				if(plugin.canSetRepositoryForResource(project)) {
+					plugin.setRepositoryForResource(project, selectedRepository);
+				}
 			} catch (CoreException e) {
 				MylarStatusHandler.fail(e, "Unable to associate project with task repository", true);
 			}

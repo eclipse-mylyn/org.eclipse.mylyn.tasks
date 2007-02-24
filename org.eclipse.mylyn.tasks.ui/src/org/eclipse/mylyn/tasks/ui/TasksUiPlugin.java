@@ -13,24 +13,22 @@ package org.eclipse.mylar.tasks.ui;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.ProjectScope;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Preferences.IPropertyChangeListener;
 import org.eclipse.core.runtime.Preferences.PropertyChangeEvent;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.IScopeContext;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -70,6 +68,7 @@ import org.eclipse.mylar.tasks.core.ITaskActivityListener;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
 import org.eclipse.mylar.tasks.core.ITaskListExternalizer;
 import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
+import org.eclipse.mylar.tasks.core.RepositoryTemplate;
 import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskComment;
 import org.eclipse.mylar.tasks.core.TaskRepository;
@@ -84,7 +83,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * @author Mik Kersten
@@ -97,12 +95,6 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	public static final String PLUGIN_ID = "org.eclipse.mylar.tasklist";
 	
-	private static final String PROPERTY_PREFIX = "project.repository";
-
-	private static final String PROJECT_REPOSITORY_KIND = PROPERTY_PREFIX + ".kind";
-
-	private static final String PROJECT_REPOSITORY_URL = PROPERTY_PREFIX + ".url";
-
 	private static final String NAME_DATA_DIR = ".mylar";
 
 	private static final char DEFAULT_PATH_SEPARATOR = '/';
@@ -133,6 +125,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	private ArrayList<IHyperlinkDetector> hyperlinkDetectors = new ArrayList<IHyperlinkDetector>();
 
+	private TreeSet<AbstractTaskRepositoryLinkProvider> repositoryLinkProviders = new TreeSet<AbstractTaskRepositoryLinkProvider>(new OrderComparator());
+	
 	private TaskListWriter taskListWriter;
 
 	private ITaskHighlighter highlighter;
@@ -146,6 +140,12 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	private Map<String, ImageDescriptor> overlayIcons = new HashMap<String, ImageDescriptor>();
 
 	private boolean eclipse_3_3_workbench = false;
+
+	private static final class OrderComparator implements Comparator<AbstractTaskRepositoryLinkProvider> {
+		public int compare(AbstractTaskRepositoryLinkProvider p1, AbstractTaskRepositoryLinkProvider p2) {
+			return p1.getOrder()-p2.getOrder(); 
+		}
+	}
 
 	public enum TaskListSaveMode {
 		ONE_HOUR, THREE_HOURS, DAY;
@@ -296,7 +296,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 							if (connector != null) {
 								ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
 								if (offlineHandler != null && repositoryTask.getTaskData().getLastModified() != null) {
-									Date modified = offlineHandler.getDateForAttributeType(
+									Date modified = repositoryTask.getTaskData().getAttributeFactory().getDateForAttributeType(
 											RepositoryTaskAttribute.DATE_MODIFIED, repositoryTask.getTaskData()
 													.getLastModified());
 									notification.setDate(modified);
@@ -385,13 +385,29 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			// NOTE: initializing extensions in start(..) has caused race
 			// conditions previously
 			TasksUiExtensionReader.initStartupExtensions(taskListWriter);
+			
+			taskRepositoryManager.readRepositories(getRepositoriesFilePath());
+			
+			// add the automatically created templates
+			for(AbstractRepositoryConnector connector: taskRepositoryManager.getRepositoryConnectors()){
+				for(RepositoryTemplate template: connector.getTemplates()){
+					if(template.addAutomatically){
+						TaskRepository taskRepository = taskRepositoryManager.getRepository(connector.getRepositoryType(), template.repositoryUrl);
+						if(taskRepository == null){
+							taskRepository = new TaskRepository(connector.getRepositoryType(), template.repositoryUrl, template.version);
+							taskRepositoryManager.addRepository(taskRepository, getRepositoriesFilePath());
+						}
+					}
+				}
+			}
+			
 			readOfflineReports();
 			for (ITaskListExternalizer externalizer : taskListWriter.getExternalizers()) {
 				if (externalizer instanceof DelegatingTaskExternalizer) {
 					((DelegatingTaskExternalizer) externalizer).init(offlineTaskManager);
 				}
 			}
-			taskRepositoryManager.readRepositories(getRepositoriesFilePath());
+			
 			taskListWriter.setTaskDataManager(offlineTaskManager);
 			
 			// NOTE: task list must be read before Task List view can be initialized
@@ -671,6 +687,11 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			this.hyperlinkDetectors.add(listener);
 	}
 
+	public void addRepositoryLinkProvider(AbstractTaskRepositoryLinkProvider repositoryLinkProvider) {
+		if (repositoryLinkProvider != null)
+			this.repositoryLinkProviders.add(repositoryLinkProvider);
+	}
+	
 	public TaskListBackupManager getBackupManager() {
 		return taskListBackupManager;
 	}
@@ -684,7 +705,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		} catch (Throwable t) {
 			MylarStatusHandler
 					.log(t,
-							"Could not restore offline repository tasks file, creating new one, likely cause is format update.");
+							"Recreating offline task cache due to format update.");
 			boolean deleted = offlineReportsPath.toFile().delete();
 			if (!deleted) {
 				MylarStatusHandler.log(t, "could not delete offline repository tasks file");
@@ -736,6 +757,27 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		return getDataDirectory() + File.separator + TaskRepositoryManager.DEFAULT_REPOSITORIES_FILE;
 	}
 
+	public boolean canSetRepositoryForResource(IResource resource) {
+		if (resource == null) {
+			return false;
+		}
+
+		// find first provider that can link repository 
+		for (AbstractTaskRepositoryLinkProvider linkProvider : repositoryLinkProviders) {
+			TaskRepository repository = linkProvider.getTaskRepository(resource, getRepositoryManager());
+			if (repository != null) {
+				return linkProvider.canSetTaskRepository(resource);
+			}
+		}
+		// find first provider that can set new repository
+		for (AbstractTaskRepositoryLinkProvider linkProvider : repositoryLinkProviders) {
+			if (linkProvider.canSetTaskRepository(resource)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Associate a Task Repository with a workbench project
 	 * 
@@ -746,21 +788,19 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	 * @throws CoreException
 	 */
 	public void setRepositoryForResource(IResource resource, TaskRepository repository) throws CoreException {
-		if (resource == null || repository == null || !resource.getProject().isOpen()) {
+		if (resource == null || repository == null) {
 			return;
 		}
-		IProject project = resource.getProject();
-		if (project == null)
-			return;
-		IScopeContext projectScope = new ProjectScope(project);
-		IEclipsePreferences projectNode = projectScope.getNode(PLUGIN_ID);
-		if (projectNode != null) {
-			projectNode.put(PROJECT_REPOSITORY_KIND, repository.getKind());
-			projectNode.put(PROJECT_REPOSITORY_URL, repository.getUrl());
-			try {
-				projectNode.flush();
-			} catch (BackingStoreException e) {
-				MylarStatusHandler.fail(e, "Failed to save task repository to project association preference", false);
+
+		for (AbstractTaskRepositoryLinkProvider linkProvider : repositoryLinkProviders) {
+			TaskRepository r = linkProvider.getTaskRepository(resource, getRepositoryManager());
+			boolean canSetRepository = linkProvider.canSetTaskRepository(resource);
+			if (r != null && !canSetRepository) {
+				return;
+			}
+			if (canSetRepository) {
+				linkProvider.setTaskRepository(resource, repository);
+				return;
 			}
 		}
 	}
@@ -770,25 +810,24 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	 * project (or resource belonging to a project)
 	 */
 	public TaskRepository getRepositoryForResource(IResource resource, boolean silent) {
-		if (resource == null)
+		if (resource == null) {
 			return null;
-		IProject project = resource.getProject();
-		if (project == null)
-			return null;
-		TaskRepository taskRepository = null;
-		IScopeContext projectScope = new ProjectScope(project);
-		IEclipsePreferences projectNode = projectScope.getNode(PLUGIN_ID);
-		if (projectNode != null) {
-			String kind = projectNode.get(PROJECT_REPOSITORY_KIND, "");
-			String urlString = projectNode.get(PROJECT_REPOSITORY_URL, "");
-			taskRepository = getRepositoryManager().getRepository(kind, urlString);
-			if (taskRepository == null && !silent) {
-				MessageDialog
-						.openInformation(null, "No Repository Found",
-								"No repository was found. Associate a Task Repository with this project via the project's property page.");
+		}
+
+		for (AbstractTaskRepositoryLinkProvider linkProvider : repositoryLinkProviders) {
+			TaskRepository repository = linkProvider.getTaskRepository(resource, getRepositoryManager());
+			if (repository != null) {
+				return repository;
 			}
 		}
-		return taskRepository;
+
+		if (!silent) {
+			MessageDialog
+					.openInformation(null, "No Repository Found",
+							"No repository was found. Associate a Task Repository with this project via the project's property page.");
+		}
+
+		return null;
 	}
 
 	public boolean isEclipse_3_3_workbench() {

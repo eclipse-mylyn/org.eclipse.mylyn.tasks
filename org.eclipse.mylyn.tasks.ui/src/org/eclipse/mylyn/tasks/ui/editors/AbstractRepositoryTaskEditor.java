@@ -35,6 +35,7 @@ import org.eclipse.core.runtime.jobs.IJobChangeListener;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.ControlContribution;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
@@ -152,7 +153,6 @@ import org.eclipse.ui.forms.events.HyperlinkAdapter;
 import org.eclipse.ui.forms.events.HyperlinkEvent;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
-import org.eclipse.ui.forms.widgets.Hyperlink;
 import org.eclipse.ui.forms.widgets.ImageHyperlink;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
@@ -170,6 +170,10 @@ import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
  * @author Steffen Pingel
  */
 public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
+
+	private static final String LABEL_HISTORY = "History";
+
+	private static final String LABEL_REPLY = "reply";
 
 	public static final String LABEL_JOB_SUBMIT = "Submitting to repository";
 
@@ -203,7 +207,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 	protected TaskRepository repository;
 
-	public static final int RADIO_OPTION_WIDTH = 150;
+	public static final int RADIO_OPTION_WIDTH = 120;
 
 	protected Display display;
 
@@ -697,13 +701,19 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
 		}
 		String idLabel = "";
+
 		if (repositoryTask != null) {
 			idLabel = repositoryTask.getIdentifyingLabel();
 		} else {
 			idLabel = taskData.getId();
 		}
 
-		form.setText(kindLabel + " " + idLabel);
+		if (taskData != null && taskData.isNew()) {
+			form.setText("New " + kindLabel);
+		} else {
+			form.setText(kindLabel + " " + idLabel);
+		}
+
 //		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
@@ -722,7 +732,31 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		if (summaryText != null) {
 			summaryText.setFocus();
 		}
+		addHeaderControls();
 	}
+	
+	
+	protected void addHeaderControls() {
+		ControlContribution repositoryLabelControl = new ControlContribution("TaskEditorHeader") { //$NON-NLS-1$
+			protected Control createControl(Composite parent) {
+				Text text = new Text(parent, SWT.FLAT | SWT.READ_ONLY);
+				text.setFont(TITLE_FONT);
+				text.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
+				String label = repository.getRepositoryLabel();
+				if(label.equals("") && repository.getUrl().indexOf("//") != -1){
+					label = repository.getUrl().substring((repository.getUrl().indexOf("//") + 2));
+				} else {
+					label = repository.getUrl();
+				}
+				text.setText(label);
+				text.setBackground(null);
+				return text;
+			}
+		};
+		form.getToolBarManager().add(repositoryLabelControl);
+		form.getToolBarManager().update(true);
+	}
+	
 
 	protected void createSections() {
 		createReportHeaderLayout(editorComposite);
@@ -765,33 +799,35 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		headerLayout.horizontalSpacing = 6;
 		headerInfoComposite.setLayout(headerLayout);
 
-		
-		
 		RepositoryTaskAttribute statusAtribute = taskData.getAttribute(RepositoryTaskAttribute.STATUS);
 		addNameValue(headerInfoComposite, statusAtribute);
+		toolkit.paintBordersFor(headerInfoComposite);
 
 		RepositoryTaskAttribute priorityAttribute = taskData.getAttribute(RepositoryTaskAttribute.PRIORITY);
 		addNameValue(headerInfoComposite, priorityAttribute);
 
 		String idLabel = (repositoryTask != null) ? repositoryTask.getIdentifyingLabel() : taskData.getId();
 		if (idLabel != null) {
-			
+
 			Composite nameValue = toolkit.createComposite(headerInfoComposite);
 			nameValue.setLayout(new GridLayout(2, false));
-			toolkit.createLabel(nameValue, "ID:");// .setFont(TITLE_FONT);
-			toolkit.createText(nameValue, idLabel, SWT.FLAT | SWT.READ_ONLY);
+			Label label = toolkit.createLabel(nameValue, "ID:");// .setFont(TITLE_FONT);
+			label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
+			//toolkit.createText(nameValue, idLabel, SWT.FLAT | SWT.READ_ONLY);
+			Text text = new Text(nameValue, SWT.FLAT | SWT.READ_ONLY);
+			toolkit.adapt(text, true, true);			
+			text.setText(idLabel);
 		}
-		
 
 		String openedDateString = "";
 		String modifiedDateString = "";
 		final ITaskDataHandler taskDataManager = connector.getTaskDataHandler();
 		if (taskDataManager != null) {
-			Date created = taskDataManager.getDateForAttributeType(RepositoryTaskAttribute.DATE_CREATION, taskData
+			Date created = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.DATE_CREATION, taskData
 					.getCreated());
 			openedDateString = created != null ? DateUtil.getFormattedDate(created, HEADER_DATE_FORMAT) : "";
 
-			Date modified = taskDataManager.getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED, taskData
+			Date modified = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED, taskData
 					.getLastModified());
 			modifiedDateString = modified != null ? DateUtil.getFormattedDate(modified, HEADER_DATE_FORMAT) : "";
 		}
@@ -801,20 +837,29 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			Composite nameValue = toolkit.createComposite(headerInfoComposite);
 			nameValue.setLayout(new GridLayout(2, false));
 			createLabel(nameValue, creationAttribute);
-			toolkit.createText(nameValue, openedDateString, SWT.FLAT | SWT.READ_ONLY);
+			//toolkit.createText(nameValue, openedDateString, SWT.FLAT | SWT.READ_ONLY);
+			Text text = new Text(nameValue, SWT.FLAT | SWT.READ_ONLY);
+			toolkit.adapt(text, true, true);
+			text.setText(openedDateString);
 		}
 
 		RepositoryTaskAttribute modifiedAttribute = taskData.getAttribute(RepositoryTaskAttribute.DATE_MODIFIED);
-		if (modifiedAttribute != null) {			
+		if (modifiedAttribute != null) {
 			Composite nameValue = toolkit.createComposite(headerInfoComposite);
 			nameValue.setLayout(new GridLayout(2, false));
 			createLabel(nameValue, modifiedAttribute);
-			toolkit.createText(nameValue, modifiedDateString, SWT.FLAT | SWT.READ_ONLY);			
+			//toolkit.createText(nameValue, modifiedDateString, SWT.FLAT | SWT.READ_ONLY);
+			Text text = new Text(nameValue, SWT.FLAT | SWT.READ_ONLY);
+			toolkit.adapt(text, true, true);
+			text.setText(modifiedDateString);
 		}
 
 		if (getActivityUrl() != null) {
-			String linkName = kindLabel + " History";
-			Hyperlink hyperlink = toolkit.createHyperlink(headerInfoComposite, linkName, SWT.NONE);
+			String linkName = LABEL_HISTORY;
+			ImageHyperlink hyperlink = toolkit.createImageHyperlink(headerInfoComposite, SWT.NONE);
+			hyperlink.setText(linkName);
+			hyperlink.setToolTipText(kindLabel + " "+LABEL_HISTORY);
+			hyperlink.setImage(TaskListImages.getImage(TaskListImages.TASK_REPOSITORY_HISTORY));
 			hyperlink.addHyperlinkListener(new HyperlinkAdapter() {
 				@Override
 				public void linkActivated(HyperlinkEvent e) {
@@ -824,17 +869,15 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 					}
 				}
 			});
-			// GridDataFactory.fillDefaults().span(1,
-			// SWT.DEFAULT).align(SWT.RIGHT, SWT.DEFAULT).applyTo(hyperlink);
 		}
 	}
-	
+
 	private void addNameValue(Composite parent, RepositoryTaskAttribute attribute) {
 		Composite nameValue = toolkit.createComposite(parent);
 		nameValue.setLayout(new GridLayout(2, false));
 		if (attribute != null) {
-			createLabel(nameValue, attribute);// .setFont(TITLE_FONT);
-			createTextField(nameValue, attribute, SWT.NONE | SWT.READ_ONLY);
+			createLabel(nameValue, attribute);
+			createTextField(nameValue, attribute, SWT.FLAT | SWT.READ_ONLY);
 		}
 	}
 
@@ -854,7 +897,15 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		} else {
 			value = attribute.getValue();
 		}
-		text = toolkit.createText(composite, value, style);
+		if((SWT.READ_ONLY & style) == SWT.READ_ONLY) {
+			text = new Text(composite, style);
+			toolkit.adapt(text, true, true);
+			text.setText(value);
+		} else {
+			text = toolkit.createText(composite, value, style);
+		}
+		
+		
 		if (attribute != null && !attribute.isReadOnly()) {
 			text.setData(attribute);
 			text.addModifyListener(new ModifyListener() {
@@ -939,7 +990,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				attributeCombo = new CCombo(attributesComposite, SWT.FLAT | SWT.READ_ONLY);
 				toolkit.adapt(attributeCombo, true, true);
 				attributeCombo.setFont(TEXT_FONT);
-
+				attributeCombo.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 				if (hasChanged(attribute)) {
 					attributeCombo.setBackground(backgroundIncoming);
 				}
@@ -968,7 +1019,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 				if (attribute.isReadOnly()) {
 					final Text text = createTextField(textFieldComposite, attribute, SWT.FLAT | SWT.READ_ONLY);
-					text.setLayoutData(textData);
+					text.setLayoutData(textData);					
 				} else {
 					final Text text = createTextField(textFieldComposite, attribute, SWT.FLAT);
 					// text.setFont(COMMENT_FONT);
@@ -1071,9 +1122,9 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 					public int compare(Viewer viewer, Object e1, Object e2) {
 						RepositoryAttachment attachment1 = (RepositoryAttachment) e1;
 						RepositoryAttachment attachment2 = (RepositoryAttachment) e2;
-						Date created1 = offlineHandler.getDateForAttributeType(RepositoryTaskAttribute.ATTACHMENT_DATE,
+						Date created1 = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.ATTACHMENT_DATE,
 								attachment1.getDateCreated());
-						Date created2 = offlineHandler.getDateForAttributeType(RepositoryTaskAttribute.ATTACHMENT_DATE,
+						Date created2 = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.ATTACHMENT_DATE,
 								attachment2.getDateCreated());
 						if (created1 != null && created2 != null) {
 							return created1.compareTo(created2);
@@ -1537,6 +1588,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		final ImageHyperlink replyLink = new ImageHyperlink(section, SWT.NULL);
 		toolkit.adapt(replyLink, true, true);
 		replyLink.setImage(TaskListImages.getImage(TaskListImages.REPLY));
+		replyLink.setToolTipText(LABEL_REPLY);
 		// no need for the background - transparency will take care of it
 		replyLink.setBackground(null);
 		// replyLink.setBackground(section.getTitleBarGradientBackground());
@@ -1746,8 +1798,8 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 			ImageHyperlink replyLink = createReplyHyperlink(taskComment.getNumber(), expandableComposite, taskComment
 					.getText());
-			replyLink.setVisible(expandableComposite.isExpanded());
-
+			replyLink.setVisible(expandableComposite.isExpanded());			
+			
 			// HACK: This is necessary
 			// due to a bug in SWT's ExpandableComposite.
 			// 165803: Expandable bars should expand when clicking anywhere
@@ -1760,13 +1812,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			Composite ecComposite = toolkit.createComposite(expandableComposite);
 			GridLayout ecLayout = new GridLayout();
 			ecLayout.marginHeight = 0;
-			ecLayout.marginBottom = 10;
+			ecLayout.marginBottom = 3;
 			ecLayout.marginLeft = 10;
 			ecComposite.setLayout(ecLayout);
 			ecComposite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 			expandableComposite.setClient(ecComposite);
 
-			TextViewer viewer = addTextViewer(repository, ecComposite, taskComment.getText(), SWT.MULTI | SWT.WRAP);
+			TextViewer viewer = addTextViewer(repository, ecComposite, taskComment.getText().trim(), SWT.MULTI
+					| SWT.WRAP);
 			// viewer.getControl().setBackground(new
 			// Color(expandableComposite.getDisplay(), 123, 34, 155));
 			styledText = viewer.getTextWidget();
@@ -1805,7 +1858,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
 			if (offlineHandler != null) {
 
-				Date lastSyncDate = offlineHandler.getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED,
+				Date lastSyncDate = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED,
 						repositoryTask.getLastSyncDateStamp());
 
 				if (lastSyncDate != null) {
@@ -1815,7 +1868,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 					calLastMod.setTimeInMillis(lastSyncDate.getTime());
 					calLastMod.set(Calendar.SECOND, 0);
 
-					Date commentDate = offlineHandler.getDateForAttributeType(RepositoryTaskAttribute.COMMENT_DATE,
+					Date commentDate = taskData.getAttributeFactory().getDateForAttributeType(RepositoryTaskAttribute.COMMENT_DATE,
 							comment.getCreated());
 					if (commentDate != null) {
 						if (commentDate.after(calLastMod.getTime())) {
@@ -2378,19 +2431,11 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				radioData.horizontalSpan = 1;
 				radioData.heightHint = 20;
 				radioData.widthHint = RADIO_OPTION_WIDTH;
-				// radioOptions[i] = new Combo(buttonComposite, SWT.NULL);
 				radioOptions[i] = new CCombo(buttonComposite, SWT.FLAT | SWT.READ_ONLY);
+				radioOptions[i].setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 				toolkit.adapt(radioOptions[i], true, true);
-				// radioOptions[i] = new Combo(buttonComposite, SWT.MULTI |
-				// SWT.V_SCROLL | SWT.READ_ONLY);
-				// radioOptions[i].setData(FormToolkit.KEY_DRAW_BORDER,
-				// FormToolkit.TEXT_BORDER);
-				// radioOptions[i] = new Combo(buttonComposite,
-				// SWT.NO_BACKGROUND | SWT.MULTI | SWT.V_SCROLL
-				// | SWT.READ_ONLY);
 				radioOptions[i].setFont(TEXT_FONT);
 				radioOptions[i].setLayoutData(radioData);
-				// radioOptions[i].setBackground(background);
 
 				Object[] a = o.getOptionNames().toArray();
 				Arrays.sort(a);
@@ -2402,15 +2447,13 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			} else if (o.isInput()) {
 				radioData = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
 				radioData.horizontalSpan = 1;
-				radioData.widthHint = 120;
+				radioData.widthHint = RADIO_OPTION_WIDTH - 10;
 
-				// TODO: add condition for if opName = reassign to...
 				String assignmentValue = "";
 				if (opName.equals(REASSIGN_BUG_TO)) {
 					assignmentValue = repository.getUserName();
 				}
-				radioOptions[i] = toolkit.createText(buttonComposite, assignmentValue);// ,
-				// SWT.SINGLE);
+				radioOptions[i] = toolkit.createText(buttonComposite, assignmentValue);
 				radioOptions[i].setFont(TEXT_FONT);
 				radioOptions[i].setLayoutData(radioData);
 				// radioOptions[i].setBackground(background);
@@ -2580,8 +2623,6 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 	public void submitToRepository() {
 		submitButton.setEnabled(false);
 		showBusy(true);
-
-		// updateEditor();
 		updateTask();
 		if (isDirty()) {
 			runSaveJob();
@@ -2615,14 +2656,12 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 								.getTask(repository.getUrl(), taskData.getId());
 					}
 
-					// Attach context if required
-					if (attachContext) {
-						attachContext(modifiedTask);
-					}
-
 					// Synchronization accounting...
 					if (modifiedTask != null) {
-
+						// Attach context if required
+						if (attachContext) {
+							attachContext(modifiedTask);
+						}
 						submitting = true;
 						modifiedTask.getTaskData().setHasLocalChanges(true);
 						TasksUiPlugin.getSynchronizationManager().synchronize(connector, modifiedTask, true,
@@ -2630,10 +2669,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 									@Override
 									public void done(IJobChangeEvent event) {
-
-										// if (!isNew) {
-										// updateEditor();
-										// } else {
+										
 										if (isNew) {
 											close();
 											TasksUiPlugin.getSynchronizationManager().setTaskRead(modifiedTask, true);
@@ -2723,11 +2759,13 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 	 * the form during refresh
 	 */
 	private void setNullMenu(Composite comp) {
-		comp.setMenu(null);
-		for (Control child : comp.getChildren()) {
-			child.setMenu(null);
-			if (child instanceof Composite) {
-				setNullMenu((Composite) child);
+		if (!comp.isDisposed()) {
+			comp.setMenu(null);
+			for (Control child : comp.getChildren()) {
+				child.setMenu(null);
+				if (child instanceof Composite) {
+					setNullMenu((Composite) child);
+				}
 			}
 		}
 	}

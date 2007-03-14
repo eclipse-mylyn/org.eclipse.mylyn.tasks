@@ -12,7 +12,6 @@ import junit.framework.TestCase;
 
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaTask;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
-import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.ui.TaskListManager;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 
@@ -22,7 +21,7 @@ import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 public class RepositoryTaskHandleTest extends TestCase {
 
 	private TaskListManager manager = TasksUiPlugin.getTaskListManager();
-	
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
@@ -32,29 +31,30 @@ public class RepositoryTaskHandleTest extends TestCase {
 
 	@Override
 	protected void tearDown() throws Exception {
-		super.tearDown();		
+		super.tearDown();
 		manager.resetTaskList();
 	}
-	
-	public void testInvalidHandle() {
-//		MockRepositoryTask task = new MockRepositoryTask()
-		String url = "http://foo";
-		assertEquals(url + "-" + "abc", AbstractRepositoryTask.getHandle(url, "abc"));
-		Exception caught = null;
-		try {
-			AbstractRepositoryTask.getHandle(url, "a-23");
-		} catch (Exception e) {
-			caught = e;
-		}
-		assertNotNull(caught);
-	}
-	
+
+	// Dash now allowed in task id
+	// public void testInvalidHandle() {
+	// // MockRepositoryTask task = new MockRepositoryTask()
+	// String url = "http://foo";
+	// assertEquals(url + "-" + "abc", RepositoryTaskHandleUtil.getHandle(url,
+	// "abc"));
+	// Exception caught = null;
+	// try {
+	// RepositoryTaskHandleUtil.getHandle(url, "a-23");
+	// } catch (Exception e) {
+	// caught = e;
+	// }
+	// assertNotNull(caught);
+	// }
+
 	public void testRepositoryUrlHandles() {
 
 		String repository = IBugzillaConstants.ECLIPSE_BUGZILLA_URL;
 		String id = "123";
-		String handle = AbstractRepositoryTask.getHandle(repository, id);
-		BugzillaTask bugTask = new BugzillaTask(handle, "label 124", true);
+		BugzillaTask bugTask = new BugzillaTask(repository, id, "label 124", true);
 		assertEquals(repository, bugTask.getRepositoryUrl());
 
 		manager.getTaskList().moveToRoot(bugTask);

@@ -79,7 +79,7 @@ public class TaskListNotificationManagerTest extends TestCase {
 
 		TaskRepository repository = new TaskRepository("bugzilla", "https://bugs.eclipse.org/bugs");
 		TasksUiPlugin.getRepositoryManager().addRepository(repository, TasksUiPlugin.getDefault().getRepositoriesFilePath());
-		AbstractRepositoryTask task = new BugzillaTask("https://bugs.eclipse.org/bugs-142891", "label", true);
+		AbstractRepositoryTask task = new BugzillaTask("https://bugs.eclipse.org/bugs", "142891", "label", true);
 		assertTrue(task.getSyncState() == RepositoryTaskSyncState.INCOMING);
 		assertTrue(task.isNotified());
 		task.setNotified(false);
@@ -95,11 +95,11 @@ public class TaskListNotificationManagerTest extends TestCase {
 	}
 
 	public void testTaskListNotificationQueryIncoming() {
-		BugzillaQueryHit hit = new BugzillaQueryHit(null, "description", "priority", "https://bugs.eclipse.org/bugs", "1",
+		BugzillaQueryHit hit = new BugzillaQueryHit(null, "summary", "priority", "https://bugs.eclipse.org/bugs", "1",
 				null, "status");
 		assertFalse(hit.isNotified());
 		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery("https://bugs.eclipse.org/bugs", "queryUrl",
-				"description", "10", TasksUiPlugin.getTaskListManager().getTaskList());
+				"summary", "10", TasksUiPlugin.getTaskListManager().getTaskList());
 		query.addHit(hit);
 		TasksUiPlugin.getTaskListManager().getTaskList().addQuery(query);
 		TaskListNotificationManager notificationManager = TasksUiPlugin.getDefault()
@@ -111,12 +111,12 @@ public class TaskListNotificationManagerTest extends TestCase {
 	
 	public void testTaskListNotificationQueryIncomingRepeats() {
 		TasksUiPlugin.getTaskListManager().resetTaskList();
-		BugzillaQueryHit hit = new BugzillaQueryHit(null, "description", "priority", "https://bugs.eclipse.org/bugs", "1",
+		BugzillaQueryHit hit = new BugzillaQueryHit(null, "summary", "priority", "https://bugs.eclipse.org/bugs", "1",
 				null, "status");
 		String hitHandle = hit.getHandleIdentifier();
 		assertFalse(hit.isNotified());
 		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery("https://bugs.eclipse.org/bugs", "queryUrl",
-				"description", "10", TasksUiPlugin.getTaskListManager().getTaskList());		
+				"summary", "10", TasksUiPlugin.getTaskListManager().getTaskList());		
 		query.addHit(hit);
 		TasksUiPlugin.getTaskListManager().getTaskList().addQuery(query);		
 		TaskListNotificationManager notificationManager = TasksUiPlugin.getDefault()

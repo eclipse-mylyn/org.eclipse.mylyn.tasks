@@ -548,7 +548,7 @@
          point="org.eclipse.ui.perspectives">
       <perspective
             class="org.eclipse.mylar.internal.tasks.ui.PlanningPerspectiveFactory"
-            icon="icons/eview16/task-activity.gif"
+            icon="icons/etool16/calendar.gif"
             id="org.eclipse.mylar.tasklist.ui.perspectives.planning"
             name="Planning"/>
    </extension>
@@ -726,7 +726,17 @@
          </adapter>
       </factory>
    </extension>
-  
+   <!--
+   <extension
+         point="org.eclipse.ui.workbench.texteditor.hyperlinkDetectors">
+      <hyperlinkDetector            
+            class="org.eclipse.mylar.tasks.ui.editors.TaskHyperlinkDetector"
+            id="org.eclipse.mylar.jira.ui.hyperlinkdetector"
+            name="Mylar Task"
+            targetId="org.eclipse.jdt.ui.javaCode">
+      </hyperlinkDetector>
+   </extension>
+   -->
 </plugin>
 
    <!--

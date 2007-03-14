@@ -19,14 +19,14 @@ import junit.framework.TestCase;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaAttributeFactory;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaTaskDataHandler;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaTask;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaTaskDataHandler;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
+import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskComment;
-import org.eclipse.mylar.tasks.core.TaskList;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 
 /**
@@ -36,12 +36,11 @@ public class BugzillaTaskTest extends TestCase {
 
 	private BugzillaAttributeFactory attributeFactory = new BugzillaAttributeFactory();
 
-	private BugzillaTaskDataHandler offlineHandler;
 
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
-		offlineHandler = new BugzillaTaskDataHandler((BugzillaRepositoryConnector)TasksUiPlugin.getRepositoryManager().getRepositoryConnector(BugzillaCorePlugin.REPOSITORY_KIND), new TaskList());
+		new BugzillaTaskDataHandler((BugzillaRepositoryConnector)TasksUiPlugin.getRepositoryManager().getRepositoryConnector(BugzillaCorePlugin.REPOSITORY_KIND));
 	}
 
 	@Override
@@ -50,14 +49,14 @@ public class BugzillaTaskTest extends TestCase {
 	}
 
 	public void testCompletionDate() throws Exception {
-		BugzillaTask task = new BugzillaTask("bug-1", "description", true);
+		BugzillaTask task = new BugzillaTask("repo", "1", "summary", true);
 		RepositoryTaskData report = new RepositoryTaskData(new BugzillaAttributeFactory(),
-				BugzillaCorePlugin.REPOSITORY_KIND, IBugzillaConstants.ECLIPSE_BUGZILLA_URL, "1");
+				BugzillaCorePlugin.REPOSITORY_KIND, IBugzillaConstants.ECLIPSE_BUGZILLA_URL, "1", Task.DEFAULT_TASK_KIND);
 		task.setTaskData(report);
 		assertNull(task.getCompletionDate());
 
 		Date now = new Date();
-		String nowTimeStamp = new SimpleDateFormat(BugzillaTaskDataHandler.comment_creation_ts_format).format(now);
+		String nowTimeStamp = new SimpleDateFormat(BugzillaAttributeFactory.comment_creation_ts_format).format(now);
 
 		TaskComment taskComment = new TaskComment(new BugzillaAttributeFactory(), 1);
 		RepositoryTaskAttribute attribute = attributeFactory.createAttribute(BugzillaReportElement.BUG_WHEN
@@ -72,7 +71,7 @@ public class BugzillaTaskTest extends TestCase {
 		resolvedAttribute.setValue(IBugzillaConstants.VALUE_STATUS_RESOLVED);
 		report.addAttribute(BugzillaReportElement.BUG_STATUS.getKeyString(), resolvedAttribute);
 		assertNotNull(task.getCompletionDate());
-		assertEquals(offlineHandler
+		assertEquals(report.getAttributeFactory()
 				.getDateForAttributeType(BugzillaReportElement.BUG_WHEN.getKeyString(), nowTimeStamp), task
 				.getCompletionDate());
 

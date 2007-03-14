@@ -712,8 +712,10 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 		if (taskData != null && taskData.isNew()) {
 			form.setText("New " + kindLabel);
-		} else {
+		} else if(idLabel != null){
 			form.setText(kindLabel + " " + idLabel);
+		} else {
+			form.setText(kindLabel);
 		}
 
 //		toolkit.decorateFormHeading(form.getForm());
@@ -724,17 +726,21 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 
 		if (taskData == null) {
-			toolkit.createLabel(editorComposite, "Task data not available, please synchronize and reopen.");
-			return;
+			GridLayout warningLayout = new GridLayout(2, false);			
+			Composite warningComposite = toolkit.createComposite(editorComposite);
+			warningComposite.setLayout(warningLayout);
+			Label warning = toolkit.createLabel(warningComposite, "");
+			warning.setImage(TaskListImages.getImage(TaskListImages.WARNING));
+			toolkit.createLabel(warningComposite, "Task data not available. If connected, synchronize the task and reopen.");
+		} else {
+			createSections();
+			getSite().getPage().addSelectionListener(selectionListener);
+			getSite().setSelectionProvider(selectionProvider);
+			if (summaryText != null) {
+				summaryText.setFocus();
+			}
+			addHeaderControls();
 		}
-
-		createSections();
-		getSite().getPage().addSelectionListener(selectionListener);
-		getSite().setSelectionProvider(selectionProvider);
-		if (summaryText != null) {
-			summaryText.setFocus();
-		}
-		addHeaderControls();
 	}
 
 	protected void addHeaderControls() {
@@ -1648,7 +1654,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		if (assignedAttribute != null) {
 
 			Label label = createLabel(peopleComposite, assignedAttribute);
-			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.DEFAULT).applyTo(label);
+			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 			Text textField = createTextField(peopleComposite, assignedAttribute, SWT.FLAT | SWT.READ_ONLY);
 			GridDataFactory.fillDefaults().hint(150, SWT.DEFAULT).applyTo(textField);
 		}
@@ -1657,7 +1663,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		if (reporterAttribute != null) {
 
 			Label label = createLabel(peopleComposite, reporterAttribute);
-			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.DEFAULT).applyTo(label);
+			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 			Text textField = createTextField(peopleComposite, reporterAttribute, SWT.FLAT | SWT.READ_ONLY);
 			GridDataFactory.fillDefaults().hint(150, SWT.DEFAULT).applyTo(textField);
 		}
@@ -1678,7 +1684,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		}
 		if (addCCattribute != null) {
 			Label label = createLabel(attributesComposite, addCCattribute);
-			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.DEFAULT).applyTo(label);
+			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 			Text text = createTextField(attributesComposite, addCCattribute, SWT.FLAT);
 			GridDataFactory.fillDefaults().hint(150, SWT.DEFAULT).applyTo(text);
 		}
@@ -1686,7 +1692,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		RepositoryTaskAttribute CCattribute = taskData.getAttribute(RepositoryTaskAttribute.USER_CC);
 		if (CCattribute != null) {
 			Label label = createLabel(attributesComposite, CCattribute);
-			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.DEFAULT).applyTo(label);
+			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.TOP).applyTo(label);
 			ccList = new org.eclipse.swt.widgets.List(attributesComposite, SWT.MULTI | SWT.V_SCROLL);// SWT.BORDER
 			ccList.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 			ccList.setFont(TEXT_FONT);
@@ -1733,7 +1739,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			});
 			toolkit.createLabel(attributesComposite, "");
 			label = toolkit.createLabel(attributesComposite, "(Select to remove)");
-			GridDataFactory.fillDefaults().align(SWT.CENTER, SWT.DEFAULT).applyTo(label);
+			GridDataFactory.fillDefaults().align(SWT.CENTER, SWT.CENTER).applyTo(label);
 		}
 
 	}

@@ -27,9 +27,9 @@
    <extension
          point="org.eclipse.mylar.tasks.ui.editors">
       <editorFactory class="org.eclipse.mylar.internal.bugzilla.ui.tasklist.BugzillaTaskEditorFactory"/>
-      <hyperlinkDetector
-            class="org.eclipse.mylar.internal.bugzilla.ui.BugzillaTaskHyperlinkDetector"
-            id="org.eclipse.mylar.tasks.hyperlinkdetector.bugzillatask"/>
+    <!-- <hyperlinkDetector
+            class="org.eclipse.mylar.tasks.ui.editors.TaskHyperlinkDetector"
+            id="org.eclipse.mylar.tasks.hyperlinkdetector.bugzillatask"/>-->
    </extension>
    
    <extension 

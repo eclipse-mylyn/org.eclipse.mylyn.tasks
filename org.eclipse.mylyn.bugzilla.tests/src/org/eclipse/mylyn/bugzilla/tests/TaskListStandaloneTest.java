@@ -57,23 +57,6 @@ public class TaskListStandaloneTest extends TestCase {
 		manager.saveTaskList();
 		super.tearDown();
 	}
-	
-	public void testDueDateExternalization() {
-		ITask task = new Task("1", "task 1", true);
-		Date dueDate = new Date();
-		task.setDueDate(dueDate);
-		manager.getTaskList().moveToRoot(task);
-		assertEquals(1, manager.getTaskList().getAllTasks().size());
-		
-		manager.saveTaskList();
-		manager.resetTaskList();
-		manager.readExistingOrCreateNewList();
-		assertEquals(1, manager.getTaskList().getAllTasks().size());
-		Set<ITask> readList = manager.getTaskList().getRootTasks();
-		ITask readTask = readList.iterator().next();
-		assertTrue(readTask.getSummary().equals("task 1"));
-		assertTrue(readTask.getDueDate().compareTo(dueDate) == 0);
-	}
 
 	public void testPastReminder() {
 		ITask task = new Task("1", "1", true);
@@ -131,7 +114,7 @@ public class TaskListStandaloneTest extends TestCase {
 		externalizers.add(new BugzillaTaskExternalizer());
 		// make some tasks
 		// save them
-		BugzillaTask task = new BugzillaTask("http://bugs", "1", "1", true);
+		BugzillaTask task = new BugzillaTask("http://bugs-1", "1", true);
 		manager.getTaskList().addTask(task);
 		manager.saveTaskList();
 
@@ -173,7 +156,7 @@ public class TaskListStandaloneTest extends TestCase {
 		externalizers.add(new BugzillaTaskExternalizer());
 		// make a query
 		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(IBugzillaConstants.TEST_BUGZILLA_222_URL,
-				"http://queryurl", "summary", "-1", TasksUiPlugin.getTaskListManager().getTaskList());
+				"http://queryurl", "description", "-1", TasksUiPlugin.getTaskListManager().getTaskList());
 
 		manager.getTaskList().addQuery(query);
 		manager.saveTaskList();

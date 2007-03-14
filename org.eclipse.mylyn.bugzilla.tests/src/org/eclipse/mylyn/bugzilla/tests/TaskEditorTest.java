@@ -13,11 +13,9 @@ import junit.framework.TestCase;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaAttributeFactory;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
-import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryConnector;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
-import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
@@ -32,7 +30,7 @@ import org.eclipse.ui.PlatformUI;
  */
 public class TaskEditorTest extends TestCase {
 
-	private static final String DESCRIPTION = "summary";
+	private static final String DESCRIPTION = "description";
 
 	@Override
 	protected void setUp() throws Exception {
@@ -60,9 +58,9 @@ public class TaskEditorTest extends TestCase {
 				IBugzillaConstants.TEST_BUGZILLA_222_URL);
 
 		RepositoryTaskData model = new RepositoryTaskData(new BugzillaAttributeFactory(), BugzillaCorePlugin.REPOSITORY_KIND, repository.getUrl(), TasksUiPlugin.getDefault()
-				.getTaskDataManager().getNewRepositoryTaskId(), Task.DEFAULT_TASK_KIND);
+				.getTaskDataManager().getNewRepositoryTaskId());
 		model.setNew(true);
-		BugzillaRepositoryConnector.setupNewBugAttributes(repository, model);
+		
 		NewTaskEditorInput editorInput = new NewTaskEditorInput(repository, model);
 		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		TasksUiUtil.openEditor(editorInput, TaskListPreferenceConstants.TASK_EDITOR_ID, page);

@@ -24,12 +24,13 @@ import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.actions.BaseSelectionListenerAction;
 import org.eclipse.ui.internal.WorkbenchImages;
 
 /**
  * @author Mik Kersten
  */
-public class DeleteTaskRepositoryAction extends AbstractTaskRepositoryAction {
+public class DeleteTaskRepositoryAction extends BaseSelectionListenerAction {
 
 	private static final String ID = "org.eclipse.mylar.tasklist.repositories.delete";
 
@@ -38,6 +39,11 @@ public class DeleteTaskRepositoryAction extends AbstractTaskRepositoryAction {
 		setImageDescriptor(WorkbenchImages.getImageDescriptor(ISharedImages.IMG_TOOL_DELETE));
 		setId(ID);
 		setEnabled(false);
+	}
+
+	@Override
+	protected boolean updateSelection(IStructuredSelection selection) {
+		return selection != null && !selection.isEmpty();
 	}
 
 	public void init(IViewPart view) {

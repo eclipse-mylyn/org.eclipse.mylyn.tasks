@@ -127,13 +127,6 @@
                </documentation>
             </annotation>
          </attribute>
-         <attribute name="userManaged" type="boolean">
-            <annotation>
-               <documentation>
-                  
-               </documentation>
-            </annotation>
-         </attribute>
       </complexType>
    </element>
 

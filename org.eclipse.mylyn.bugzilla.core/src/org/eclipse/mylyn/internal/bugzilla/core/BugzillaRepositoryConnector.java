@@ -12,24 +12,15 @@
 package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants.BugzillaServerVersion;
-import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
@@ -49,14 +40,6 @@ import org.eclipse.mylar.tasks.core.UnrecognizedReponseException;
  */
 public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
-	private static final int MAX_URL_LENGTH = 2000;
-
-	private static final String BUG_ID = "&bug_id=";
-
-	private static final String CHANGED_BUGS_CGI_ENDDATE = "&chfieldto=Now";
-
-	private static final String CHANGED_BUGS_CGI_QUERY = "/buglist.cgi?query_format=advanced&chfieldfrom=";
-
 	private static final String CLIENT_LABEL = "Bugzilla (supports uncustomized 2.18-2.22)";
 
 	private BugzillaAttachmentHandler attachmentHandler;
@@ -70,7 +53,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	@Override
 	public void init(TaskList taskList) {
 		super.init(taskList);
-		this.taskDataHandler = new BugzillaTaskDataHandler(this);
+		this.taskDataHandler = new BugzillaTaskDataHandler(this, taskList);
 		this.attachmentHandler = new BugzillaAttachmentHandler(this);
 		BugzillaCorePlugin.setConnector(this);
 	}
@@ -113,15 +96,14 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			return null;
 		}
 
-		// String handle = AbstractRepositoryTask.getHandle();
-		ITask task = taskList.getTask(repository.getUrl(), id);
+		String handle = AbstractRepositoryTask.getHandle(repository.getUrl(), bugId);
+		ITask task = taskList.getTask(handle);
 		AbstractRepositoryTask repositoryTask = null;
 		if (task == null) {
 			RepositoryTaskData taskData = null;
 			taskData = taskDataHandler.getTaskData(repository, id);
 			if (taskData != null) {
-				repositoryTask = new BugzillaTask(repository.getUrl(), "" + bugId, taskData.getId() + ": "
-						+ taskData.getDescription(), true);
+				repositoryTask = new BugzillaTask(handle, taskData.getId() + ": " + taskData.getDescription(), true);
 				repositoryTask.setTaskData(taskData);
 				taskList.addTask(repositoryTask);
 			}
@@ -129,93 +111,6 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			repositoryTask = (AbstractRepositoryTask) task;
 		}
 		return repositoryTask;
-	}
-
-	@Override
-	public Set<AbstractRepositoryTask> getChangedSinceLastSync(TaskRepository repository,
-			Set<AbstractRepositoryTask> tasks) throws CoreException {
-		try {
-			Set<AbstractRepositoryTask> changedTasks = new HashSet<AbstractRepositoryTask>();
-
-			if (repository.getSyncTimeStamp() == null) {
-				return tasks;
-			}
-
-			String dateString = repository.getSyncTimeStamp();
-			if (dateString == null) {
-				dateString = "";
-			}
-			String urlQueryBase;
-			String urlQueryString;
-
-			urlQueryBase = repository.getUrl() + CHANGED_BUGS_CGI_QUERY
-					+ URLEncoder.encode(dateString, repository.getCharacterEncoding()) + CHANGED_BUGS_CGI_ENDDATE;
-
-			urlQueryString = urlQueryBase + BUG_ID;
-
-			int queryCounter = -1;
-			Iterator<AbstractRepositoryTask> itr = tasks.iterator();
-			while (itr.hasNext()) {
-				queryCounter++;
-				AbstractRepositoryTask task = itr.next();
-				String newurlQueryString = URLEncoder.encode(task.getTaskId() + ",", repository.getCharacterEncoding());
-				if ((urlQueryString.length() + newurlQueryString.length() + IBugzillaConstants.CONTENT_TYPE_RDF
-						.length()) > MAX_URL_LENGTH) {
-					queryForChanged(repository, changedTasks, urlQueryString);
-					queryCounter = 0;
-					urlQueryString = urlQueryBase + BUG_ID;
-					urlQueryString += newurlQueryString;
-				} else if (!itr.hasNext()) {
-					urlQueryString += newurlQueryString;
-					queryForChanged(repository, changedTasks, urlQueryString);
-				} else {
-					urlQueryString += newurlQueryString;
-				}
-			}
-			return changedTasks;
-		} catch (UnsupportedEncodingException e) {
-			MylarStatusHandler.fail(e, "Repository configured with unsupported encoding: "
-					+ repository.getCharacterEncoding() + "\n\n Unable to determine changed tasks.", true);
-			return tasks;
-		}
-	}
-
-	private void queryForChanged(TaskRepository repository, Set<AbstractRepositoryTask> changedTasks,
-			String urlQueryString) throws UnsupportedEncodingException, CoreException {
-		QueryHitCollector collector = new QueryHitCollector(taskList);
-		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(repository.getUrl(), urlQueryString, "", "-1",
-				taskList);
-
-		performQuery(query, repository, new NullProgressMonitor(), collector);
-
-		for (AbstractQueryHit hit : collector.getHits()) {
-			// String handle =
-			// AbstractRepositoryTask.getHandle(repository.getUrl(),
-			// hit.getId());
-			ITask correspondingTask = taskList.getTask(repository.getUrl(), hit.getTaskId());
-			if (correspondingTask != null && correspondingTask instanceof AbstractRepositoryTask) {
-				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) correspondingTask;
-				// Hack to avoid re-syncing last task from previous
-				// synchronization
-				// This can be removed once we are getting a query timestamp
-				// from the repository rather than
-				// using the last modified stamp of the last task modified in
-				// the return hits.
-				// (or the changeddate field in the hit rdf becomes consistent,
-				// currently it doesn't return a proper modified date string)
-				if (repositoryTask.getTaskData() != null
-						&& repositoryTask.getTaskData().getLastModified().equals(repository.getSyncTimeStamp())) {
-					// String taskId =
-					// RepositoryTaskHandleUtil.getTaskId(repositoryTask.getHandleIdentifier());
-					RepositoryTaskData taskData = getTaskDataHandler().getTaskData(repository,
-							repositoryTask.getTaskId());
-					if (taskData != null && taskData.getLastModified().equals(repository.getSyncTimeStamp())) {
-						continue;
-					}
-				}
-				changedTasks.add(repositoryTask);
-			}
-		}
 	}
 
 	@Override
@@ -286,12 +181,60 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
 	@Override
 	public String getTaskWebUrl(String repositoryUrl, String taskId) {
-		try {
-			return BugzillaClient.getBugUrlWithoutLogin(repositoryUrl, Integer.parseInt(taskId));
-		} catch (NumberFormatException ex) {
-			return null;
-		}
+		return repositoryUrl + IBugzillaConstants.URL_GET_SHOW_BUG + taskId;
 	}
+
+	// @Override
+	// public void updateAttributes(final TaskRepository repository, Proxy
+	// proxySettings, IProgressMonitor monitor)
+	// throws CoreException {
+	// try {
+	// BugzillaCorePlugin.getRepositoryConfiguration(true, repository.getUrl(),
+	// proxySettings, repository
+	// .getUserName(), repository.getPassword(),
+	// repository.getCharacterEncoding());
+	// } catch (Exception e) {
+	// throw new CoreException(new Status(IStatus.ERROR,
+	// BugzillaCorePlugin.PLUGIN_ID, IStatus.OK,
+	// "could not update repository configuration", e));
+	// }
+	// }
+
+	// public void updateBugAttributeOptions(TaskRepository taskRepository,
+	// RepositoryTaskData existingReport) throws IOException,
+	// KeyManagementException, GeneralSecurityException, BugzillaException,
+	// CoreException {
+	// String product =
+	// existingReport.getAttributeValue(BugzillaReportElement.PRODUCT.getKeyString());
+	// for (RepositoryTaskAttribute attribute : existingReport.getAttributes())
+	// {
+	// BugzillaReportElement element =
+	// BugzillaReportElement.valueOf(attribute.getID().trim().toUpperCase());
+	// attribute.clearOptions();
+	// // List<String> optionValues =
+	// BugzillaCorePlugin.getRepositoryConfiguration(false, repositoryUrl,
+	// // proxySettings, userName, password,
+	// characterEncoding).getOptionValues(element, product);
+	// List<String> optionValues =
+	// this.getRepositoryConfiguration(taskRepository,
+	// false).getOptionValues(element.getKeyString(), product);
+	// if (element != BugzillaReportElement.OP_SYS && element !=
+	// BugzillaReportElement.BUG_SEVERITY
+	// && element != BugzillaReportElement.PRIORITY && element !=
+	// BugzillaReportElement.BUG_STATUS) {
+	// Collections.sort(optionValues);
+	// }
+	// if (element == BugzillaReportElement.TARGET_MILESTONE &&
+	// optionValues.isEmpty()) {
+	// existingReport.removeAttribute(BugzillaReportElement.TARGET_MILESTONE);
+	// continue;
+	// }
+	// for (String option : optionValues) {
+	// attribute.addOptionValue(option, option);
+	// }
+	// }
+	//
+	// }
 
 	@Override
 	public void updateTask(TaskRepository repository, AbstractRepositoryTask repositoryTask) {
@@ -325,8 +268,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			throws CoreException {
 		String product = existingReport.getAttributeValue(BugzillaReportElement.PRODUCT.getKeyString());
 		for (RepositoryTaskAttribute attribute : existingReport.getAttributes()) {
-			BugzillaReportElement element = BugzillaReportElement.valueOf(attribute.getID().trim().toUpperCase(
-					Locale.ENGLISH));
+			BugzillaReportElement element = BugzillaReportElement.valueOf(attribute.getID().trim().toUpperCase());
 			attribute.clearOptions();
 			List<String> optionValues = BugzillaCorePlugin.getRepositoryConfiguration(taskRepository, false)
 					.getOptionValues(element, product);
@@ -395,9 +337,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		a.setValue(IBugzillaConstants.VALUE_STATUS_NEW);
 
 		newTaskData.addAttribute(BugzillaReportElement.BUG_STATUS.getKeyString(), a);
-
-		a = BugzillaClient.makeNewAttribute(BugzillaReportElement.SHORT_DESC);
-		newTaskData.addAttribute(BugzillaReportElement.SHORT_DESC.getKeyString(), a);
+		// attributes.put(a.getName(), a);
 
 		a = BugzillaClient.makeNewAttribute(BugzillaReportElement.VERSION);
 		optionValues = repositoryConfiguration.getVersions(newTaskData.getProduct());
@@ -500,5 +440,200 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
 		// newReport.attributes = attributes;
 	}
+
+	// // TODO: change to getAttributeOptions() and use whereever attribute
+	// options are required.
+	// public void updateAttributeOptions(TaskRepository taskRepository,
+	// RepositoryTaskData existingReport)
+	// throws IOException, KeyManagementException, GeneralSecurityException,
+	// BugzillaException, CoreException {
+	//
+	// RepositoryConfiguration configuration =
+	// BugzillaCorePlugin.getDefault().getRepositoryConfiguration(taskRepository,
+	// false);
+	// if (configuration == null)
+	// return;
+	// String product =
+	// existingReport.getAttributeValue(BugzillaReportElement.PRODUCT.getKeyString());
+	// for (RepositoryTaskAttribute attribute : existingReport.getAttributes())
+	// {
+	// BugzillaReportElement element =
+	// BugzillaReportElement.valueOf(attribute.getID().trim().toUpperCase());
+	// attribute.clearOptions();
+	// String key = attribute.getID();
+	// if (!product.equals("")) {
+	// switch (element) {
+	// case TARGET_MILESTONE:
+	// case VERSION:
+	// case COMPONENT:
+	// key = product + "." + key;
+	// }
+	// }
+	//
+	// List<String> optionValues = configuration.getAttributeValues(key);
+	// if(optionValues.size() == 0) {
+	// optionValues = configuration.getAttributeValues(attribute.getID());
+	// }
+	//
+	// if (element != BugzillaReportElement.OP_SYS && element !=
+	// BugzillaReportElement.BUG_SEVERITY
+	// && element != BugzillaReportElement.PRIORITY && element !=
+	// BugzillaReportElement.BUG_STATUS) {
+	// Collections.sort(optionValues);
+	// }
+	// if (element == BugzillaReportElement.TARGET_MILESTONE &&
+	// optionValues.isEmpty()) {
+	// existingReport.removeAttribute(BugzillaReportElement.TARGET_MILESTONE);
+	// continue;
+	// }
+	// for (String option : optionValues) {
+	// attribute.addOptionValue(option, option);
+	// }
+	// }
+	// }
+
+	// /**
+	// * Adds bug attributes to new bug model and sets defaults TODO: Make
+	// generic
+	// * and move TaskRepositoryManager
+	// */
+	// public void setupNewBugAttributes(TaskRepository taskRepository,
+	// NewBugzillaTaskData newReport) throws CoreException {
+	//
+	// newReport.removeAllAttributes();
+	//
+	// RepositoryConfiguration repositoryConfiguration =
+	// BugzillaCorePlugin.getDefault().getRepositoryConfiguration(
+	// taskRepository, false);
+	//
+	// RepositoryTaskAttribute a =
+	// BugzillaClient.makeNewAttribute(BugzillaReportElement.PRODUCT);
+	// List<String> optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.PRODUCT
+	// .getKeyString());
+	// Collections.sort(optionValues);
+	// // for (String option : optionValues) {
+	// // a.addOptionValue(option, option);
+	// // }
+	// a.setValue(newReport.getProduct());
+	// a.setReadOnly(true);
+	// newReport.addAttribute(BugzillaReportElement.PRODUCT.getKeyString(), a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.BUG_STATUS);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.BUG_STATUS.getKeyString());
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// a.setValue(IBugzillaConstants.VALUE_STATUS_NEW);
+	// newReport.addAttribute(BugzillaReportElement.BUG_STATUS.getKeyString(),
+	// a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.VERSION);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.VERSION.getKeyString());
+	// Collections.sort(optionValues);
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// if (optionValues != null && optionValues.size() > 0) {
+	// a.setValue(optionValues.get(optionValues.size() - 1));
+	// }
+	// newReport.addAttribute(BugzillaReportElement.VERSION.getKeyString(), a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.COMPONENT);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.COMPONENT.getKeyString());
+	// Collections.sort(optionValues);
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// if (optionValues != null && optionValues.size() > 0) {
+	// a.setValue(optionValues.get(0));
+	// }
+	// newReport.addAttribute(BugzillaReportElement.COMPONENT.getKeyString(),
+	// a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.REP_PLATFORM);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.REP_PLATFORM.getKeyString());
+	// Collections.sort(optionValues);
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// if (optionValues != null && optionValues.size() > 0) {
+	// a.setValue(optionValues.get(0));
+	// }
+	// newReport.addAttribute(BugzillaReportElement.REP_PLATFORM.getKeyString(),
+	// a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.OP_SYS);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.OP_SYS.getKeyString());
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// if (optionValues != null && optionValues.size() > 0) {
+	// a.setValue(optionValues.get(optionValues.size() - 1));
+	// }
+	// newReport.addAttribute(BugzillaReportElement.OP_SYS.getKeyString(), a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.PRIORITY);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.PRIORITY.getKeyString());
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// a.setValue(optionValues.get((optionValues.size() / 2)));
+	// newReport.addAttribute(BugzillaReportElement.PRIORITY.getKeyString(), a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.BUG_SEVERITY);
+	// optionValues =
+	// repositoryConfiguration.getAttributeValues(BugzillaReportElement.BUG_SEVERITY.getKeyString());
+	// for (String option : optionValues) {
+	// a.addOptionValue(option, option);
+	// }
+	// a.setValue(optionValues.get((optionValues.size() / 2)));
+	// newReport.addAttribute(BugzillaReportElement.BUG_SEVERITY.getKeyString(),
+	// a);
+	// // attributes.put(a.getName(), a);
+	//
+	// // a = new
+	// // RepositoryTaskAttribute(BugzillaReportElement.TARGET_MILESTONE);
+	// // optionValues =
+	// //
+	// BugzillaPlugin.getDefault().getProductConfiguration(serverUrl).getTargetMilestones(
+	// // newReport.getProduct());
+	// // for (String option : optionValues) {
+	// // a.addOptionValue(option, option);
+	// // }
+	// // if(optionValues.size() > 0) {
+	// // // new bug posts will fail if target_milestone element is included
+	// // // and there are no milestones on the server
+	// // newReport.addAttribute(BugzillaReportElement.TARGET_MILESTONE, a);
+	// // }
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.ASSIGNED_TO);
+	// a.setValue("");
+	// a.setReadOnly(false);
+	// newReport.addAttribute(BugzillaReportElement.ASSIGNED_TO.getKeyString(),
+	// a);
+	// // attributes.put(a.getName(), a);
+	//
+	// a = BugzillaClient.makeNewAttribute(BugzillaReportElement.BUG_FILE_LOC);
+	// a.setValue("http://");
+	// a.setHidden(false);
+	// newReport.addAttribute(BugzillaReportElement.BUG_FILE_LOC.getKeyString(),
+	// a);
+	// // attributes.put(a.getName(), a);
+	//
+	// // newReport.attributes = attributes;
+	// }
 
 }

@@ -29,7 +29,6 @@ import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.AbstractTaskContainer;
-import org.eclipse.mylar.tasks.core.DateRangeContainer;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskListElement;
 import org.eclipse.mylar.tasks.core.TaskArchive;
@@ -84,9 +83,7 @@ public class TaskListTableLabelProvider extends DecoratingLabelProvider implemen
 			return null;
 		}
 		if (columnIndex == 0) {
-			if (element instanceof DateRangeContainer) {
-				return TaskListImages.getImage(TaskListImages.CALENDAR);
-			} else if (element instanceof AbstractTaskContainer) {
+			if (element instanceof AbstractTaskContainer) {
 				return super.getImage(element);
 			} else {
 				ITask task = TaskElementLabelProvider.getCorrespondingTask((ITaskListElement) element);
@@ -130,7 +127,10 @@ public class TaskListTableLabelProvider extends DecoratingLabelProvider implemen
 				} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
 					image = TaskListImages.STATUS_NORMAL_CONFLICT;
 				}
-				if (image == null && repositoryTask.getStatus() != null) {
+				if (repositoryTask.getStatus() != null) {
+					if (image == null) {
+						image = TaskListImages.STATUS_NORMAL;
+					}
 					return TaskListImages.getImage(TaskListImages.STATUS_WARNING);
 				} else if (image != null) {
 					return TaskListImages.getImage(image);

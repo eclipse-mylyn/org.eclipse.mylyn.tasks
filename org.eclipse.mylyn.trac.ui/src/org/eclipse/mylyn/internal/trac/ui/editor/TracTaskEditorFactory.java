@@ -7,7 +7,7 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.trac.ui.editor;
 
-import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.context.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.trac.core.TracCorePlugin;
 import org.eclipse.mylar.internal.trac.core.TracRepositoryConnector;
 import org.eclipse.mylar.internal.trac.core.TracTask;
@@ -69,7 +69,7 @@ public class TracTaskEditorFactory implements ITaskEditorFactory {
 		TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(TracCorePlugin.REPOSITORY_KIND,
 				tracTask.getRepositoryUrl());
 		try {
-			return new RepositoryTaskEditorInput(repository, tracTask.getHandleIdentifier(), tracTask.getTaskUrl(), tracTask.getTaskId());
+			return new RepositoryTaskEditorInput(repository, tracTask.getHandleIdentifier(), tracTask.getUrl());
 		} catch (Exception e) {
 			MylarStatusHandler.fail(e, "Could not create Trac editor input", true);
 		}

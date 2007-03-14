@@ -38,7 +38,7 @@ public class BugzillaClientManager implements ITaskRepositoryListener {
 
 			client = BugzillaClientFactory.createClient(taskRepository.getUrl(), taskRepository.getUserName(),
 					taskRepository.getPassword(), htUser, htPass, taskRepository.getProxy(), taskRepository
-							.getCharacterEncoding(), taskRepository.getProperties());
+							.getCharacterEncoding());
 			clientByUrl.put(taskRepository.getUrl(), client);
 		}
 		return client;

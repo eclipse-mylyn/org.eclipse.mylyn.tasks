@@ -30,7 +30,6 @@ public class NewRepositoryWizard extends AbstractRepositoryClientWizard {
 	public NewRepositoryWizard(String repositoryType) {
 		super(repositoryType);
 		setForcePreviousAndNextButtons(true);
-		setNeedsProgressMonitor(true);
 		setWindowTitle(AddRepositoryAction.TITLE);
 	}
 

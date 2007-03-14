@@ -86,7 +86,7 @@ public class TaskSelectionDialog extends SelectionStatusDialog {
 			}
 			if (element instanceof AbstractRepositoryTask) {
 				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) element;
-				String taskString = repositoryTask.getTaskKey() + ": "
+				String taskString = repositoryTask.getIdentifyingLabel() + ": "
 						+ repositoryTask.getSummary();
 				return pattern.matcher(taskString).find();
 			} else if (element instanceof ITask) {

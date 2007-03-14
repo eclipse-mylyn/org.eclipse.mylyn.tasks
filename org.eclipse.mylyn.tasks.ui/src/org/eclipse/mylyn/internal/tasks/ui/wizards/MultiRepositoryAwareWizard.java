@@ -44,11 +44,12 @@ public class MultiRepositoryAwareWizard extends Wizard implements INewWizard {
 
 	@Override
 	public boolean canFinish() {
-		return selectRepositoryPage.canFinish();
+		return false;
 	}
 
 	@Override
 	public boolean performFinish() {
-		return selectRepositoryPage.performFinish();
+		// Can't finish on the first page
+		return false;
 	}
 }

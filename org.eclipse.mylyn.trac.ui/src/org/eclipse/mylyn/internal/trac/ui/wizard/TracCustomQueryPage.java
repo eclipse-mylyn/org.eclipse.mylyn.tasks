@@ -19,7 +19,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.context.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.trac.core.ITracClient;
 import org.eclipse.mylar.internal.trac.core.TracCorePlugin;
 import org.eclipse.mylar.internal.trac.core.TracException;
@@ -137,10 +137,6 @@ public class TracCustomQueryPage extends AbstractRepositoryQueryPage {
 		GridData gd = new GridData(GridData.FILL_BOTH);
 		control.setLayoutData(gd);
 		GridLayout layout = new GridLayout(4, false);
-		if (isSearchPage()) {
-			layout.marginWidth = 0;
-			layout.marginHeight = 0;
-		}
 		control.setLayout(layout);
 
 		createTitleGroup(control);

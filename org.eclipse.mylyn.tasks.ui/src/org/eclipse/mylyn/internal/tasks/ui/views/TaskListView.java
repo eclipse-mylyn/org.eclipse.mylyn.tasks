@@ -34,7 +34,6 @@ import org.eclipse.jface.viewers.CheckboxCellEditor;
 import org.eclipse.jface.viewers.ComboBoxCellEditor;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.ICellModifier;
-import org.eclipse.jface.viewers.IContentProvider;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IOpenListener;
 import org.eclipse.jface.viewers.ISelection;
@@ -66,7 +65,6 @@ import org.eclipse.mylar.internal.tasks.ui.actions.GoIntoAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.GoUpAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.MarkTaskCompleteAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.MarkTaskIncompleteAction;
-import org.eclipse.mylar.internal.tasks.ui.actions.ModelDropDownSelectionAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.OpenTaskListElementAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.OpenWithBrowserAction;
@@ -168,10 +166,6 @@ public class TaskListView extends ViewPart {
 
 	private boolean focusedMode = false;
 
-	private TaskListContentProvider taskListContentProvider;
-	
-	private TaskActivityContentProvider taskActivityContentProvider;
-	
 	private IThemeManager themeManager;
 
 	private TaskListFilteredTree filteredTree;
@@ -215,8 +209,6 @@ public class TaskListView extends ViewPart {
 	private PriorityDropDownAction filterOnPriority;
 
 	private PreviousTaskDropDownAction previousTaskAction;
-	
-	private ModelDropDownSelectionAction modelDropDownSelectionAction;
 
 	static TaskPriorityFilter FILTER_PRIORITY = new TaskPriorityFilter();
 
@@ -308,11 +300,7 @@ public class TaskListView extends ViewPart {
 		public void localInfoChanged(final ITask task) {
 			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 				public void run() {
-					if(getTasklistMode().equals(TaskActivityContentProvider.ID)) {
-						refresh(null);
-					} else {					
-						refresh(task);
-					}
+					refresh(task);
 				}
 			});
 			if (task.isActive()) {
@@ -793,9 +781,7 @@ public class TaskListView extends ViewPart {
 		getViewer().setSorter(tableSorter);
 
 		drillDownAdapter = new DrillDownAdapter(getViewer());
-		taskListContentProvider = new TaskListContentProvider(this);
-		taskActivityContentProvider = new TaskActivityContentProvider(this, TasksUiPlugin.getTaskListManager());
-		getViewer().setContentProvider(taskListContentProvider);
+		getViewer().setContentProvider(new TaskListContentProvider(this));
 		getViewer().setLabelProvider(taskListTableLabelProvider);
 		getViewer().setInput(getViewSite());
 		getViewer().getTree().addKeyListener(new KeyListener() {
@@ -928,8 +914,7 @@ public class TaskListView extends ViewPart {
 
 	private void fillLocalToolBar(IToolBarManager manager) {
 		manager.add(new Separator(ID_SEPARATOR_NEW));
-		manager.add(new Separator(ID_SEPARATOR_NAVIGATION));		
-		manager.add(modelDropDownSelectionAction);
+		manager.add(new Separator(ID_SEPARATOR_NAVIGATION));
 		manager.add(previousTaskAction);
 		manager.add(new Separator(ID_SEPARATOR_CONTEXT));
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
@@ -1142,8 +1127,6 @@ public class TaskListView extends ViewPart {
 		filterOnPriority = new PriorityDropDownAction(this);
 		previousTaskAction = new PreviousTaskDropDownAction(this, TasksUiPlugin.getTaskListManager()
 				.getTaskActivationHistory());
-		TaskListContentProvider[] providers = {taskListContentProvider, taskActivityContentProvider};
-		modelDropDownSelectionAction = new ModelDropDownSelectionAction(this, providers);
 		
 		filteredTree.getViewer().addSelectionChangedListener(openWithBrowser);
 		filteredTree.getViewer().addSelectionChangedListener(copyDetailsAction);
@@ -1506,13 +1489,5 @@ public class TaskListView extends ViewPart {
 
 	public void setFocusedMode(boolean focusedMode) {
 		this.focusedMode = focusedMode;	
-	}
-	
-	private String getTasklistMode() {
-		IContentProvider provider = TaskListView.this.getViewer().getContentProvider();
-		if(provider instanceof TaskListContentProvider) {
-			return ((TaskListContentProvider)provider).getId();
-		}
-		return null;
 	}
 }

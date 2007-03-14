@@ -19,15 +19,15 @@ import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.ui.actions.AbstractTaskRepositoryAction;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
+import org.eclipse.ui.actions.BaseSelectionListenerAction;
 
 /**
  * @author Mik Kersten
  */
-public class ResetRepositoryConfigurationAction extends AbstractTaskRepositoryAction {
+public class ResetRepositoryConfigurationAction extends BaseSelectionListenerAction {
 
 	private static final String ID = "org.eclipse.mylar.tasklist.repositories.reset";
 
@@ -37,6 +37,11 @@ public class ResetRepositoryConfigurationAction extends AbstractTaskRepositoryAc
 		setEnabled(false);
 	}
 
+	@Override
+	protected boolean updateSelection(IStructuredSelection selection) {
+		return selection != null && !selection.isEmpty();
+	}
+	
 	@Override
 	public void run() {
 		try {
@@ -75,5 +80,6 @@ public class ResetRepositoryConfigurationAction extends AbstractTaskRepositoryAc
 	}
 
 	public void selectionChanged(IAction action, ISelection selection) {
+		// TODO Auto-generated method stub
 	}
 }

@@ -28,7 +28,6 @@ import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.ITaskListExternalizer;
 import org.eclipse.mylar.tasks.core.RepositoryTemplate;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
-import org.eclipse.mylar.tasks.ui.AbstractTaskRepositoryLinkProvider;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.editors.ITaskEditorFactory;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -41,8 +40,6 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 public class TasksUiExtensionReader {
 
 	public static final String EXTENSION_REPOSITORIES = "org.eclipse.mylar.tasks.ui.repositories";
-
-	public static final String EXTENSION_REPOSITORY_LINKS_PROVIDERS = "org.eclipse.mylar.tasks.ui.projectLinkProviders";
 
 	public static final String EXTENSION_TEMPLATES = "org.eclipse.mylar.tasks.core.templates";
 
@@ -71,11 +68,7 @@ public class TasksUiExtensionReader {
 	public static final String ELMNT_TMPL_ADDAUTO = "addAutomatically";
 
 	public static final String ELMNT_REPOSITORY_CONNECTOR = "connectorCore";
-	
-	public static final String ATTR_USER_MANAGED = "userManaged";
 
-	public static final String ELMNT_REPOSITORY_LINK_PROVIDER = "linkProvider";
-	
 	public static final String ELMNT_REPOSITORY_UI= "connectorUi";
 	
 	public static final String ELMNT_EXTERNALIZER = "externalizer";
@@ -181,34 +174,8 @@ public class TasksUiExtensionReader {
 				} 
 			}
 		}
-
-		IExtensionPoint linkProvidersExtensionPoint = registry.getExtensionPoint(EXTENSION_REPOSITORY_LINKS_PROVIDERS);
-		IExtension[] linkProvidersExtensions = linkProvidersExtensionPoint.getExtensions();
-		for (int i = 0; i < linkProvidersExtensions.length; i++) {
-			IConfigurationElement[] elements = linkProvidersExtensions[i].getConfigurationElements();
-			for (int j = 0; j < elements.length; j++) {
-				if (elements[j].getName().equals(ELMNT_REPOSITORY_LINK_PROVIDER)) {
-					readLinkProvider(elements[j]);
-				} 
-			}
-		}
-	
 	}
 	
-	private static void readLinkProvider(IConfigurationElement element) {
-		try {
-			Object repositoryLinkProvider = element.createExecutableExtension(ATTR_CLASS);
-			if (repositoryLinkProvider instanceof AbstractTaskRepositoryLinkProvider) {
-				TasksUiPlugin.getDefault().addRepositoryLinkProvider((AbstractTaskRepositoryLinkProvider) repositoryLinkProvider);
-			} else {
-				MylarStatusHandler.log("Could not load repository link provider: " + repositoryLinkProvider.getClass().getCanonicalName(),
-						null);
-			}
-		} catch (CoreException e) {
-			MylarStatusHandler.log(e, "Could not load repository link provider extension");
-		}
-	}
-
 	private static void readHyperlinkDetector(IConfigurationElement element) {
 		try {
 			Object hyperlinkDetector = element.createExecutableExtension(ATTR_CLASS);
@@ -242,15 +209,7 @@ public class TasksUiExtensionReader {
 			Object type = element.getAttribute(ELMNT_TYPE);
 			Object connectorCore = element.createExecutableExtension(ATTR_CLASS);
 			if (connectorCore instanceof AbstractRepositoryConnector && type != null) {
-				AbstractRepositoryConnector repositoryConnector = (AbstractRepositoryConnector) connectorCore;
-				TasksUiPlugin.getRepositoryManager().addRepositoryConnector(repositoryConnector);
-				
-				String userManagedString = element.getAttribute(ATTR_USER_MANAGED);
-				if(userManagedString != null){
-					boolean userManaged = Boolean.parseBoolean(userManagedString);
-					repositoryConnector.setUserManaged(userManaged);					
-				}
-				
+				TasksUiPlugin.getRepositoryManager().addRepositoryConnector((AbstractRepositoryConnector) connectorCore);
 			} else {
 				MylarStatusHandler.log("could not not load connector core: " + connectorCore, null);
 			}

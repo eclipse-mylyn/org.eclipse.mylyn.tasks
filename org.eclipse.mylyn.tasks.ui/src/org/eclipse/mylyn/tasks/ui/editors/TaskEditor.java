@@ -18,6 +18,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylar.core.MylarStatusHandler;
@@ -29,7 +30,6 @@ import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
-import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
 import org.eclipse.swt.browser.Browser;
@@ -140,6 +140,13 @@ public class TaskEditor extends FormEditor {
 
 	@Override
 	public void doSave(IProgressMonitor monitor) {
+		if (this.getEditorInput() instanceof NewTaskEditorInput) {
+			MessageDialog.openWarning(this.getSite().getShell(), "Operation not supported",
+					"Save of un-submitted new tasks is not currently supported.\nPlease submit all new tasks.");
+			monitor.setCanceled(true);
+			return;
+		}
+
 		for (IFormPage page : getPages()) {
 			if (page.isDirty()) {
 				page.doSave(monitor);
@@ -315,8 +322,6 @@ public class TaskEditor extends FormEditor {
 		if (webBrowser != null) {
 			webBrowser.setUrl(url);
 			revealBrowser();
-		} else {
-			TasksUiUtil.openBrowser(url);
 		}
 	}
 
@@ -379,7 +384,7 @@ public class TaskEditor extends FormEditor {
 				task = taskEditorInput.getTask();
 				setPartName(taskEditorInput.getLabel());
 			}
-			
+
 			int selectedIndex = index;
 			for (ITaskEditorFactory factory : TasksUiPlugin.getDefault().getTaskEditorFactories()) {
 				if (factory.canCreateEditorFor(task) || factory.canCreateEditorFor(getEditorInput())) {

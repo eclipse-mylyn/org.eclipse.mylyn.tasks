@@ -11,39 +11,40 @@
 
 package org.eclipse.mylar.internal.tasks.ui.views;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.mylar.tasks.core.DateRangeActivityDelegate;
 import org.eclipse.mylar.tasks.core.DateRangeContainer;
-import org.eclipse.mylar.tasks.core.ITaskListElement;
 import org.eclipse.mylar.tasks.ui.TaskListManager;
 
 /**
  * @author Rob Elves
+ * @author Mik Kersten
  */
-public class TaskActivityContentProvider extends TaskListContentProvider {
+public class TaskActivityContentProvider implements IStructuredContentProvider, ITreeContentProvider {
 
-	public static final String ID = "tasklist.mode.scheduled";
-	
-	private static final String LABEL_ACTIVITY = "Scheduled";
+//	private TreeViewer treeViewer;
 
 	private TaskListManager taskListManager;
 
-	public TaskActivityContentProvider(TaskListView view, TaskListManager taskActivityManager) {
-		super(view);
+	public TaskActivityContentProvider(TaskListManager taskActivityManager) {
 		this.taskListManager = taskActivityManager;
-		this.id = ID;
+//		this.treeViewer = viewer;
+	}
+
+	public void inputChanged(Viewer v, Object oldInput, Object newInput) {
+//		treeViewer = (TreeViewer)v;
+//		taskActivityManager = MylarTaskListPlugin.getTaskActivityManager();
+//		taskActivityManager.addListener(this);
+	}
+
+	public void dispose() {
+//		taskActivityManager.removeListener(this);
 	}
 
 	public Object[] getElements(Object parent) {
-		if (parent.equals(this.view.getViewSite())) {
-			Set<ITaskListElement> ranges = new HashSet<ITaskListElement>();
-			ranges.addAll(taskListManager.getDateRanges());
-			return applyFilter(ranges).toArray();
-		} else {
-			return super.getElements(parent);
-		}
+		return taskListManager.getDateRanges();
 	}
 
 	public Object getParent(Object child) {
@@ -51,7 +52,16 @@ public class TaskActivityContentProvider extends TaskListContentProvider {
 			DateRangeActivityDelegate dateRangeTaskWrapper = (DateRangeActivityDelegate) child;
 			return dateRangeTaskWrapper.getParent();
 		} else {
-			return null;
+			return new Object[0];
+		}
+	}
+
+	public Object[] getChildren(Object parent) {
+		if (parent instanceof DateRangeContainer) {
+			DateRangeContainer taskContainer = (DateRangeContainer) parent;
+			return taskContainer.getChildren().toArray();
+		} else {
+			return new Object[0];
 		}
 	}
 
@@ -64,8 +74,11 @@ public class TaskActivityContentProvider extends TaskListContentProvider {
 		}
 	}
 
-	@Override
-	public String getLabel() {
-		return LABEL_ACTIVITY;
-	}
+//	public void changed(Object o) {
+//		if (o != null) {
+//			treeViewer.refresh(o);
+//		} else {
+//			treeViewer.refresh();
+//		}
+//	}
 }

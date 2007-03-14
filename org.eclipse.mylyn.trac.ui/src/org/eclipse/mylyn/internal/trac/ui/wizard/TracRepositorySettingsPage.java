@@ -11,23 +11,21 @@
 
 package org.eclipse.mylar.internal.trac.ui.wizard;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.mylar.internal.trac.core.ITracClient;
 import org.eclipse.mylar.internal.trac.core.TracClientFactory;
 import org.eclipse.mylar.internal.trac.core.TracException;
 import org.eclipse.mylar.internal.trac.core.TracLoginException;
-import org.eclipse.mylar.internal.trac.core.TracPermissionDeniedException;
-import org.eclipse.mylar.internal.trac.core.TracStatus;
 import org.eclipse.mylar.internal.trac.core.ITracClient.Version;
 import org.eclipse.mylar.internal.trac.ui.TracUiPlugin;
 import org.eclipse.mylar.tasks.core.RepositoryTemplate;
-import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.wizards.AbstractRepositorySettingsPage;
 import org.eclipse.swt.SWT;
@@ -43,11 +41,21 @@ import org.eclipse.swt.widgets.Label;
  */
 public class TracRepositorySettingsPage extends AbstractRepositorySettingsPage {
 
+	private static final String MESSAGE_FAILURE_UNKNOWN = "Unknown error occured. Check that server url and credentials are valid.";
+
 	private static final String TITLE = "Trac Repository Settings";
 
 	private static final String DESCRIPTION = "Example: http://trac.edgewall.org";
 
 	private Combo accessTypeCombo;
+
+	// private static RepositoryTemplate[] REPOSITORY_TEMPLATES = { new
+	// RepositoryTemplate("Edgewall",
+	// "http://trac.edgewall.org", Version.TRAC_0_9.toString(), null, null,
+	// true),
+	// // new TracRepositoryInfo("Mylar Trac Client",
+	// // "http://mylar.eclipse.org/mylar-trac-client", true, Version.XML_RPC),
+	// };
 
 	/** Supported access types. */
 	private Version[] versions;
@@ -62,7 +70,7 @@ public class TracRepositorySettingsPage extends AbstractRepositorySettingsPage {
 
 	@Override
 	protected void createAdditionalControls(final Composite parent) {
-
+		
 		for (RepositoryTemplate template : connector.getTemplates()) {
 			serverUrlCombo.add(template.label);
 		}
@@ -88,7 +96,7 @@ public class TracRepositorySettingsPage extends AbstractRepositorySettingsPage {
 				}
 			}
 		});
-
+		
 		Label accessTypeLabel = new Label(parent, SWT.NONE);
 		accessTypeLabel.setText("Access Type: ");
 		accessTypeCombo = new Combo(parent, SWT.READ_ONLY);
@@ -157,97 +165,67 @@ public class TracRepositorySettingsPage extends AbstractRepositorySettingsPage {
 	}
 
 	@Override
-	protected void applyValidatorResult(Validator validator) {
-		super.applyValidatorResult(validator);
+	protected void validateSettings() {
 
-		if (((TracValidator) validator).getResult() != null) {
-			setTracVersion(((TracValidator) validator).getResult());
-		}
-	}
+		try {
+			final String serverUrl = getServerUrl();
+			final Version version = getTracVersion();
+			final String username = getUserName();
+			final String password = getPassword();
+			// TODO is there a way to get the proxy without duplicating code and
+			// creating a task repository?
+			final Proxy proxy = createTaskRepository().getProxy();
 
-	// public for testing
-	public class TracValidator extends Validator {
-
-		final String serverUrl;
-
-		final Version version;
-
-		final String username;
-
-		final String password;
-
-		final Proxy proxy;
-
-		private Version result;
-
-		public TracValidator(TaskRepository repository, Version version) {
-			this.serverUrl = repository.getUrl();
-			this.username = repository.getUserName();
-			this.password = repository.getPassword();
-			this.proxy = repository.getProxy();
-			this.version = version;
-		}
-
-		public void run(IProgressMonitor monitor) throws CoreException {
-			try {
-				validate();
-			} catch (MalformedURLException e) {
-				throw new CoreException(new TracStatus(IStatus.ERROR, TracUiPlugin.PLUGIN_ID, 0, INVALID_REPOSITORY_URL));
-			} catch (TracLoginException e) {
-				throw new CoreException(new TracStatus(IStatus.ERROR, TracUiPlugin.PLUGIN_ID, 0, INVALID_LOGIN));
-			} catch(TracPermissionDeniedException e) {
-				throw new CoreException(new TracStatus(IStatus.ERROR, TracUiPlugin.PLUGIN_ID, 0, 
-						"Insufficient permissions for selected access type."));
-			} catch (TracException e) {
-				String message = "No Trac repository found at url";
-				if (e.getMessage() != null) {
-					message += ": " + e.getMessage();
-				}
-				throw new CoreException(new TracStatus(IStatus.ERROR, TracUiPlugin.PLUGIN_ID, 0, message));
-			}
-		}
-
-		public void validate() throws MalformedURLException, TracException {
-			if (version != null) {
-				ITracClient client = TracClientFactory.createClient(serverUrl, version, username, password, proxy);
-				client.validate();
-			} else {
-				// probe version: XML-RPC access first, then web
-				// access
-				try {
-					ITracClient client = TracClientFactory.createClient(serverUrl, Version.XML_RPC, username, password,
-							proxy);
-					client.validate();
-					result = Version.XML_RPC;
-				} catch (TracException e) {
+			final Version[] result = new Version[1];
+			getWizard().getContainer().run(true, false, new IRunnableWithProgress() {
+				public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+					monitor.beginTask("Validating server settings", IProgressMonitor.UNKNOWN);
 					try {
-						ITracClient client = TracClientFactory.createClient(serverUrl, Version.TRAC_0_9, username,
-								password, proxy);
-						client.validate();
-						result = Version.TRAC_0_9;
-
-						if (e instanceof TracPermissionDeniedException) {
-							setStatus(new TracStatus(IStatus.INFO, TracUiPlugin.PLUGIN_ID, IStatus.OK,
-									"Authentication credentials are valid. Note: Insufficient permissions for XML-RPC access, falling back to web access."));
+						if (version != null) {
+							ITracClient client = TracClientFactory.createClient(serverUrl, version, username, password, proxy);
+							client.validate();
+						} else {
+							result[0] = TracClientFactory.probeClient(serverUrl, username, password, proxy);
 						}
-					} catch (TracLoginException e2) {
-						throw e;
-					} catch (TracException e2) {
-						throw new TracException();
+
+					} catch (Exception e) {
+						throw new InvocationTargetException(e);
+					} finally {
+						monitor.done();
 					}
 				}
+			});
+
+			if (username.length() > 0) {
+				MessageDialog.openInformation(null, TracUiPlugin.TITLE_MESSAGE_DIALOG,
+						"Authentication credentials are valid.");
+			} else {
+				MessageDialog.openInformation(null, TracUiPlugin.TITLE_MESSAGE_DIALOG, "Repository is valid.");
 			}
+
+			if (result[0] != null) {
+				setTracVersion(result[0]);
+			}
+		} catch (InvocationTargetException e) {
+			if (e.getCause() instanceof MalformedURLException) {
+				MessageDialog.openWarning(null, TracUiPlugin.TITLE_MESSAGE_DIALOG, "Repository url is invalid.");
+			} else if (e.getCause() instanceof TracLoginException) {
+				MessageDialog.openWarning(null, TracUiPlugin.TITLE_MESSAGE_DIALOG,
+						"Unable to authenticate with repository. Login credentials invalid.");
+			} else if (e.getCause() instanceof TracException) {
+				String message = "No Trac repository found at url";
+				if (e.getCause().getMessage() != null) {
+					message += ": " + e.getCause().getMessage();
+				}
+				MessageDialog
+						.openWarning(null, TracUiPlugin.TITLE_MESSAGE_DIALOG, message);
+			} else {
+				MessageDialog.openWarning(null, TracUiPlugin.TITLE_MESSAGE_DIALOG, MESSAGE_FAILURE_UNKNOWN);
+			}
+		} catch (InterruptedException e) {
+			MessageDialog.openWarning(null, TracUiPlugin.TITLE_MESSAGE_DIALOG, MESSAGE_FAILURE_UNKNOWN);
 		}
 
-		public Version getResult() {
-			return result;
-		}
-
+		super.getWizard().getContainer().updateButtons();
 	}
-
-	@Override
-	protected Validator getValidator(TaskRepository repository) {
-		return new TracValidator(repository, getTracVersion());
-	}
-
 }

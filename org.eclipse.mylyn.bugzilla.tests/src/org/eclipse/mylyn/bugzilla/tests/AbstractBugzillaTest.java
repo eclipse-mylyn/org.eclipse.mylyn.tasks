@@ -113,8 +113,7 @@ public abstract class AbstractBugzillaTest extends TestCase {
 
 	protected void submit(AbstractRepositoryTask task) throws CoreException {
 		connector.getTaskDataHandler().postTaskData(repository, task.getTaskData());
-		task.getTaskData().setHasLocalChanges(true);
-		task.setSyncState(RepositoryTaskSyncState.OUTGOING);
+		task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
 	}
 
 	// protected BugzillaReportSubmitForm makeExistingBugPost(RepositoryTaskData

@@ -34,22 +34,21 @@ public enum BugzillaReportElement {
 	BUG_WHEN ("bug_when", "bug_when", true, true),
 	BUGZILLA ("bugzilla", "bugzilla", true),
 	CC ("CC:", "cc", true, true),
-	CCLIST_ACCESSIBLE ("CC List", "cclist_accessible", true),
+	CCLIST_ACCESSIBLE ("cclist_accessible", "cclist_accessible", true),
 	CLASSIFICATION ("Classification:", "classification", true),
 	CLASSIFICATION_ID ("Classification ID:", "classification_id", true),
 	COMPONENT ("Component:", "component", false),
-	CREATION_TS ("Opened:", "creation_ts", true),
+	CREATION_TS ("Creation date:", "creation_ts", true),
 	CTYPE ("Content Type", "ctype"),
 	DATA ("data", "data"), 
 	DATE ("Date", "date"), 
 	DEADLINE ("Deadline:", "deadline", true, true),
-	DELTA_TS ("Modified:", "delta_ts", true), 
+	DELTA_TS ("Last Modification", "delta_ts", true), 
 	DEPENDSON ("Bug depends on:", "dependson", true, false), 
 	DESC ("desc", "desc", true, true), 
 	EVERCONFIRMED ("everconfirmed", "everconfirmed", true),
 	ESTIMATED_TIME ("Estimated Time:", "estimated_time", true),
 	FILENAME ("filename", "filename"),
-	GROUP ("Group", "group", true, true),
 	IS_OBSOLETE ("Obsolete", "isobsolete", true), 
 	IS_PATCH("Patch", "ispatch", true),
 	KEYWORDS ("Keywords:", "keywords", true),
@@ -61,7 +60,7 @@ public enum BugzillaReportElement {
 	PRODUCT ("Product:", "product", false), 
 	REP_PLATFORM ("Platform:", "rep_platform", false),
 	REPORTER ("Reporter:", "reporter", true, true),
-	REPORTER_ACCESSIBLE ("Reporter", "reporter_accessible", true),
+	REPORTER_ACCESSIBLE ("reporter_accessible", "reporter_accessible", true),
 	RESOLUTION ("Resolution:", "resolution", false, true), // Exiting bug field, new cc
 	REMAINING_TIME( "Hours Left:", "remaining_time", true),
 	SHORT_DESC ("Summary:", "short_desc", true),
@@ -85,8 +84,7 @@ public enum BugzillaReportElement {
 	RDF ("used by search engine", "rdf", false),
 	INSTALLATION ("used by search engine", "installation", false),
 	BUGS ("used by search engine", "bugs", false),
-	STATUS_OPEN ("open status values", "status_open", true, true), 
-	NEW_COMMENT ("new comment", "new_comment", true, false);
+	STATUS_OPEN ("open status values", "status_open", true, true);
 	
 	private final boolean isHidden;
 	

@@ -26,7 +26,6 @@ import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.AbstractTaskContainer;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskListElement;
-import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
@@ -208,15 +207,7 @@ public class TaskListToolTipHandler {
 			}
 			tooltip += (element).getSummary();
 			if (repositoryTask != null) {
-
-				TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
-				if(repository != null && repository.getRepositoryLabel() != null && !repository.getRepositoryLabel().equals("")) {
-					tooltip += "\n" + repository.getRepositoryLabel();
-				} else {
-					tooltip += "\n" + repositoryTask.getRepositoryUrl(); 	
-				}
-				
-				tooltip += formatScheduledFor(repositoryTask);
+				tooltip += "\n" + repositoryTask.getRepositoryUrl() + formatScheduledFor(repositoryTask);
 
 				if (repositoryTask.getStatus() != null) {
 					tooltip += SEPARATOR + "Last Error: " + repositoryTask.getStatus().getMessage();

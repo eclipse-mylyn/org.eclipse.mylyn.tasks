@@ -11,11 +11,14 @@
 
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaQueryHit;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryQuery;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaTask;
-import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
+import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.AbstractTaskContainer;
 import org.eclipse.mylar.tasks.core.DelegatingTaskExternalizer;
 import org.eclipse.mylar.tasks.core.ITask;
@@ -23,6 +26,7 @@ import org.eclipse.mylar.tasks.core.TaskExternalizationException;
 import org.eclipse.mylar.tasks.core.TaskList;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  * @author Mik Kersten
@@ -33,11 +37,11 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 
 	private static final String STATUS_NEW = "NEW";
 
-	private static final String TAG_BUGZILLA = "Bugzilla";
-	
-	private static final String TAG_BUGZILLA_QUERY_HIT = TAG_BUGZILLA + KEY_QUERY_HIT;
+	private static final String KEY_OLD_LAST_DATE = "LastDate";
 
-	private static final String TAG_BUGZILLA_QUERY = TAG_BUGZILLA + KEY_QUERY;
+	private static final String TAG_BUGZILLA_QUERY_HIT = "Bugzilla" + KEY_QUERY_HIT;
+
+	private static final String TAG_BUGZILLA_QUERY = "Bugzilla" + KEY_QUERY;
 
 	private static final String TAG_BUGZILLA_CUSTOM_QUERY = "BugzillaCustom" + KEY_QUERY;
 
@@ -62,6 +66,7 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 
 	@Override
 	public AbstractRepositoryQuery readQuery(Node node, TaskList taskList) throws TaskExternalizationException {
+		boolean hasCaughtException = false;
 		Element element = (Element) node;
 		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(element.getAttribute(KEY_REPOSITORY_URL), element
 				.getAttribute(KEY_QUERY_STRING), element.getAttribute(KEY_NAME), element
@@ -72,7 +77,21 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 		if (element.getAttribute(KEY_LAST_REFRESH) != null && !element.getAttribute(KEY_LAST_REFRESH).equals("")) {
 			query.setLastRefreshTimeStamp(element.getAttribute(KEY_LAST_REFRESH));
 		}
-		return query;
+
+		NodeList list = node.getChildNodes();
+		for (int i = 0; i < list.getLength(); i++) {
+			Node child = list.item(i);
+			try {
+				readQueryHit(child, taskList, query);
+			} catch (TaskExternalizationException e) {
+				hasCaughtException = true;
+			}
+		}
+		if (hasCaughtException) {
+			throw new TaskExternalizationException("Failed to load all tasks");
+		} else {
+			return query;
+		}
 	}
 
 	@Override
@@ -91,9 +110,49 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	}
 
 	@Override
-	public ITask createTask(String repositoryUrl, String taskId, String summary, Element element, TaskList taskList, AbstractTaskContainer category, ITask parent)
+	public ITask readTask(Node node, TaskList taskList, AbstractTaskContainer category, ITask parent)
 			throws TaskExternalizationException {
-		BugzillaTask task = new BugzillaTask(repositoryUrl, taskId, summary, false);
+		Element element = (Element) node;
+		String handle;
+		String label;
+		if (element.hasAttribute(KEY_HANDLE)) {
+			handle = element.getAttribute(KEY_HANDLE);
+		} else {
+			throw new TaskExternalizationException("Handle not stored for bug report");
+		}
+		if (element.hasAttribute(KEY_LABEL)) {
+			label = element.getAttribute(KEY_LABEL);
+		} else {
+			throw new TaskExternalizationException("Description not stored for bug report");
+		}
+		BugzillaTask task = new BugzillaTask(handle, label, false);
+		super.readTaskInfo(task, taskList, element, parent, category);
+
+		if (!element.hasAttribute(KEY_LAST_MOD_DATE) || element.getAttribute(KEY_LAST_MOD_DATE).equals("")) {
+			// migrate to new time stamp 0.5.3 -> 0.6.0
+			try {
+				if (element.hasAttribute(KEY_OLD_LAST_DATE)) {
+					String DATE_FORMAT_2 = "yyyy-MM-dd HH:mm:ss";
+					SimpleDateFormat delta_ts_format = new SimpleDateFormat(DATE_FORMAT_2);
+					String oldDateStamp = "";
+					try {
+						oldDateStamp = delta_ts_format.format(new Date(
+								new Long(element.getAttribute(KEY_OLD_LAST_DATE)).longValue()));
+						task.setLastSyncDateStamp(oldDateStamp);
+					} catch (NumberFormatException e) {
+						// For those who may have been working from head...
+						Date parsedDate = delta_ts_format.parse(element.getAttribute(KEY_OLD_LAST_DATE));
+						if (parsedDate != null) {
+							oldDateStamp = element.getAttribute(KEY_OLD_LAST_DATE);
+							task.setLastSyncDateStamp(oldDateStamp);
+						}
+					}
+				}
+			} catch (Exception e) {
+				// invalid date format/parse
+			}
+		}
+				
 		return task;
 	}
 
@@ -103,17 +162,27 @@ public class BugzillaTaskExternalizer extends DelegatingTaskExternalizer {
 	}
 
 	@Override
-	public AbstractQueryHit createQueryHit(String repositoryUrl, String taskId, String summary, Element element, TaskList taskList, AbstractRepositoryQuery query)
+	public void readQueryHit(Node node, TaskList taskList, AbstractRepositoryQuery query)
 			throws TaskExternalizationException {
-		String status = STATUS_NEW;
+		Element element = (Element) node;
+		String handle;
+		String status;
+		if (element.hasAttribute(KEY_HANDLE)) {
+			handle = element.getAttribute(KEY_HANDLE);
+		} else {
+			throw new TaskExternalizationException("Handle not stored for bug report");
+		}
+
+		status = STATUS_NEW;
 		if (element.hasAttribute(KEY_COMPLETE)) {
 			status = element.getAttribute(KEY_COMPLETE);
 			if (status.equals(VAL_TRUE)) {
 				status = STATUS_RESO;
 			}
 		}
-		BugzillaQueryHit hit = new BugzillaQueryHit(taskList, summary, "", repositoryUrl, taskId, null, status);
-		return hit;
+		BugzillaQueryHit hit = new BugzillaQueryHit(taskList, "", "", query.getRepositoryUrl(), AbstractRepositoryTask
+				.getTaskId(handle), null, status);
+		readQueryHitInfo(hit, taskList, query, element);
 	}
 
 	@Override

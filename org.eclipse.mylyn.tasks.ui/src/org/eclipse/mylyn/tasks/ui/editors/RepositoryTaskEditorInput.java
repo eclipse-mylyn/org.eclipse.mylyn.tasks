@@ -43,7 +43,7 @@ public class RepositoryTaskEditorInput extends AbstractTaskEditorInput {
 		
 	public String getName() {
 		if(repositoryTask != null) {
-			String idLabel = repositoryTask.getTaskKey();
+			String idLabel = repositoryTask.getIdentifyingLabel();
 			
 			String label = "";
 			if (idLabel != null) {

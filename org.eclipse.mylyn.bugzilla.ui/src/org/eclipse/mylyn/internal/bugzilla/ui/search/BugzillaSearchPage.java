@@ -10,10 +10,12 @@
  *******************************************************************************/
 package org.eclipse.mylar.internal.bugzilla.ui.search;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -23,7 +25,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.context.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryQuery;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
@@ -99,8 +101,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 	private static final String[] emailRoleValues = { "emailassigned_to1", "emailreporter1", "emailcc1",
 			"emaillongdesc1" };
 
-	// protected IPreferenceStore prefs =
-	// BugzillaUiPlugin.getDefault().getPreferenceStore();
+	//protected IPreferenceStore prefs = BugzillaUiPlugin.getDefault().getPreferenceStore();
 
 	protected String maxHits;
 
@@ -261,7 +262,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 
 		// Info text
 		label = new Label(group, SWT.LEFT);
-		label.setText("Summary/taskId contains: ");
+		label.setText("Summary/id contains: ");
 		gd = new GridData(GridData.BEGINNING);
 		gd.horizontalSpan = 1;
 		label.setLayoutData(gd);
@@ -894,7 +895,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 		getPatternData(summaryPattern, summaryOperation, previousSummaryPatterns);
 		getPatternData(commentPattern, commentOperation, previousCommentPatterns);
 		getPatternData(this.emailPattern, emailOperation, previousEmailPatterns);
-
+		
 		String summaryText = summaryPattern.getText();
 		BugzillaUiPlugin.getDefault().getPreferenceStore().setValue(IBugzillaConstants.MOST_RECENT_QUERY, summaryText);
 
@@ -1190,7 +1191,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 
 		selected = severity.getSelectionIndices();
 		for (int i = 0; i < selected.length; i++) {
-			sb.append("&bug_severity=");
+			sb.append("&bug_severity=");			
 			sb.append(URLEncoder.encode(severity.getItem(selected[i]), repository.getCharacterEncoding()));
 		}
 
@@ -1241,7 +1242,7 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 
 	// --------------- Configuration handling --------------
 
-	// Dialog store taskId constants
+	// Dialog store id constants
 	protected final static String PAGE_NAME = "BugzillaSearchPage"; //$NON-NLS-1$
 
 	private static final String STORE_PRODUCT_ID = PAGE_NAME + ".PRODUCT";
@@ -1353,16 +1354,27 @@ public class BugzillaSearchPage extends AbstractRepositoryQueryPage implements L
 					repository.getKind());
 
 			IRunnableWithProgress updateRunnable = new IRunnableWithProgress() {
-				public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
-					if (monitor == null) {
+				public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {			
+					if(monitor == null) {
 						monitor = new NullProgressMonitor();
 					}
 					try {
 						monitor.beginTask("Updating search options...", IProgressMonitor.UNKNOWN);
-						connector.updateAttributes(repository, monitor);
+						connector.updateAttributes(repository, monitor);					
 						BugzillaUiPlugin.updateQueryOptions(repository, monitor);
-					} catch (final CoreException ce) {
-						MylarStatusHandler.displayStatus("Update failed", ce.getStatus());
+					} catch (CoreException ce) {
+						if (ce.getStatus().getException() instanceof GeneralSecurityException) {
+							MylarStatusHandler.fail(ce,
+									"Bugzilla could not log you in to get the information you requested since login name or password is incorrect.\n"
+											+ "Please ensure proper configuration in " + TasksUiPlugin.LABEL_VIEW_REPOSITORIES
+											+ ". ", true);
+						} else if (ce.getStatus().getException() instanceof IOException) {
+							MylarStatusHandler.fail(ce, "Connection Error, please ensure proper configuration in "
+									+ TasksUiPlugin.LABEL_VIEW_REPOSITORIES + ".", true);
+						} else {
+							MylarStatusHandler.fail(ce, "Error updating repository attributes for "
+									+ repository.getUrl(), true);
+						}						
 					} finally {
 						monitor.done();
 					}

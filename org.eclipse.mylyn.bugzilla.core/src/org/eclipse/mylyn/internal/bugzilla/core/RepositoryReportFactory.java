@@ -13,7 +13,6 @@ package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Locale;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
@@ -40,15 +39,15 @@ public class RepositoryReportFactory extends AbstractReportFactory {
 		collectResults(contentHandler, false);
 
 		if (contentHandler.errorOccurred()) {
-			String errorResponse = contentHandler.getErrorMessage().toLowerCase(Locale.ENGLISH);
+			String errorResponse = contentHandler.getErrorMessage().toLowerCase();
 			if (errorResponse.equals(IBugzillaConstants.XML_ERROR_NOTFOUND)
 					|| errorResponse.equals(IBugzillaConstants.XML_ERROR_INVALIDBUGID)) {
-				throw new CoreException(new MylarStatus(IStatus.WARNING, BugzillaCorePlugin.PLUGIN_ID,
+				throw new CoreException(new MylarStatus(IStatus.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 						IMylarStatusConstants.REPOSITORY_ERROR, bugReport.getRepositoryUrl(),
 						IBugzillaConstants.ERROR_MSG_INVALID_BUG_ID));
 			}
 			if (errorResponse.equals(IBugzillaConstants.XML_ERROR_NOTPERMITTED)) {
-				throw new CoreException(new MylarStatus(IStatus.WARNING, BugzillaCorePlugin.PLUGIN_ID,
+				throw new CoreException(new MylarStatus(IStatus.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 						IMylarStatusConstants.REPOSITORY_ERROR, bugReport.getRepositoryUrl(),
 						IBugzillaConstants.ERROR_MSG_OP_NOT_PERMITTED));
 			}

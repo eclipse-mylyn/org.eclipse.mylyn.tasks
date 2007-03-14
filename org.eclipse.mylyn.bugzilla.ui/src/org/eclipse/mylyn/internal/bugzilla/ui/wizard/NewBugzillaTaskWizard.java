@@ -19,7 +19,6 @@ import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
-import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
@@ -57,7 +56,7 @@ public class NewBugzillaTaskWizard extends Wizard implements INewWizard {
 	public NewBugzillaTaskWizard(TaskRepository repository) {
 		this(false, repository);
 		taskData = new RepositoryTaskData(new BugzillaAttributeFactory(), BugzillaCorePlugin.REPOSITORY_KIND,
-				repository.getUrl(), TasksUiPlugin.getDefault().getNextNewRepositoryTaskId(), Task.DEFAULT_TASK_KIND);
+				repository.getUrl(), TasksUiPlugin.getDefault().getNextNewRepositoryTaskId());
 		taskData.setNew(true);
 		super.setDefaultPageImageDescriptor(BugzillaUiPlugin.imageDescriptorFromPlugin(
 				"org.eclipse.mylar.internal.bugzilla.ui", "icons/wizban/bug-wizard.gif"));
@@ -97,7 +96,7 @@ public class NewBugzillaTaskWizard extends Wizard implements INewWizard {
 			return true;
 		} catch (Exception e) {
 			productPage.applyToStatusLine(new Status(IStatus.ERROR, "not_used", 0,
-					"Problem occurred retrieving repository configuration from " + repository.getUrl(), null));
+					"Problem occured retrieving repository configuration from " + repository.getUrl(), null));
 		}
 		return false;
 	}
@@ -131,13 +130,13 @@ public class NewBugzillaTaskWizard extends Wizard implements INewWizard {
 // }
 // } catch (NumberFormatException nfe) {
 // MessageDialog.openError(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
-// "Could not create bug taskId, no valid taskId");
+// "Could not create bug id, no valid id");
 // return false;
 // }
 // // if (!validId) {
 // // MessageDialog.openError(null,
 // // IBugzillaConstants.TITLE_MESSAGE_DIALOG,
-// // "Could not create bug taskId, no valid taskId");
+// // "Could not create bug id, no valid id");
 // // return false;
 // // }
 //

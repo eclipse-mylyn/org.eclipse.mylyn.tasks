@@ -12,20 +12,32 @@
 package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.mylar.context.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants.BUGZILLA_OPERATION;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants.BUGZILLA_REPORT_STATUS;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants.BUGZILLA_RESOLUTION;
 import org.eclipse.mylar.tasks.core.AbstractAttributeFactory;
+import org.eclipse.mylar.tasks.core.AbstractQueryHit;
+import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.IMylarStatusConstants;
+import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
 import org.eclipse.mylar.tasks.core.MylarStatus;
+import org.eclipse.mylar.tasks.core.QueryHitCollector;
 import org.eclipse.mylar.tasks.core.RepositoryOperation;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
+import org.eclipse.mylar.tasks.core.TaskList;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 
 /**
@@ -56,13 +68,38 @@ public class BugzillaTaskDataHandler implements ITaskDataHandler {
 
 	private static final String OPERATION_LABEL_ACCEPT = "Accept (change status to ASSIGNED)";
 
+	private static final String BUG_ID = "&bug_id=";
 
+	private static final int MAX_URL_LENGTH = 2000;
+
+	private static final String CHANGED_BUGS_CGI_ENDDATE = "&chfieldto=Now";
+
+	private static final String CHANGED_BUGS_CGI_QUERY = "/buglist.cgi?query_format=advanced&chfieldfrom=";
+
+	private static final String DATE_FORMAT_1 = "yyyy-MM-dd HH:mm";
+
+	private static final String DATE_FORMAT_2 = "yyyy-MM-dd HH:mm:ss";
+
+	private static final String delta_ts_format = DATE_FORMAT_2;
+
+	private static final String creation_ts_format = DATE_FORMAT_1;
+
+	/**
+	 * public for testing Bugzilla 2.18 uses DATE_FORMAT_1 but later versions
+	 * use DATE_FORMAT_2 Using lowest common denominator DATE_FORMAT_1
+	 */
+	public static final String comment_creation_ts_format = DATE_FORMAT_1;
+
+	private static final String attachment_creation_ts_format = DATE_FORMAT_1;
 
 	private AbstractAttributeFactory attributeFactory = new BugzillaAttributeFactory();
 
+	private TaskList taskList;
+
 	private BugzillaRepositoryConnector connector;
 
-	public BugzillaTaskDataHandler(BugzillaRepositoryConnector connector) {
+	public BugzillaTaskDataHandler(BugzillaRepositoryConnector connector, TaskList taskList) {
+		this.taskList = taskList;
 		this.connector = connector;
 	}
 
@@ -98,8 +135,13 @@ public class BugzillaTaskDataHandler implements ITaskDataHandler {
 
 		} catch (IOException e) {
 			throw new CoreException(new MylarStatus(IStatus.ERROR, BugzillaCorePlugin.PLUGIN_ID,
-					IMylarStatusConstants.IO_ERROR, repository.getUrl(), e));
+					IMylarStatusConstants.IO_ERROR, repository.getUrl(), e));			
 		}
+	}
+
+	private void configureTaskData(TaskRepository repository, RepositoryTaskData taskData) throws CoreException {
+		connector.updateAttributeOptions(repository, taskData);
+		addValidOperations(taskData, repository.getUserName());
 	}
 
 	public String postTaskData(TaskRepository repository, RepositoryTaskData taskData) throws CoreException {
@@ -120,26 +162,141 @@ public class BugzillaTaskDataHandler implements ITaskDataHandler {
 		} catch (IOException e) {
 			throw new CoreException(new MylarStatus(IStatus.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 					IMylarStatusConstants.IO_ERROR, repository.getUrl(), e));
+			// throw new CoreException(new Status(IStatus.ERROR,
+			// BugzillaCorePlugin.PLUGIN_ID, IMylarStatusConstants.IO_ERROR,
+			// "Posting to " + repository.getUrl() + " failed. \n\n Error was "
+			// + e.getClass().getSimpleName()
+			// + ": " + e.getMessage(), e));
 		}
 	}
 
-	public AbstractAttributeFactory getAttributeFactory(String repositoryUrl, String repositoryKind, String taskKind) {
-		// we don't care about the repository information right now
+	public AbstractAttributeFactory getAttributeFactory() {
 		return attributeFactory;
 	}
 
-	private void configureTaskData(TaskRepository repository, RepositoryTaskData taskData) throws CoreException {
-		connector.updateAttributeOptions(repository, taskData);
-		addValidOperations(taskData, repository.getUserName());
+	public Date getDateForAttributeType(String attributeKey, String dateString) {
+		if (dateString == null || dateString.equals("")) {
+			return null;
+		}
+		try {
+			String mappedKey = attributeFactory.mapCommonAttributeKey(attributeKey);
+			Date parsedDate = null;
+			if (mappedKey.equals(BugzillaReportElement.DELTA_TS.getKeyString())) {
+				parsedDate = new SimpleDateFormat(delta_ts_format).parse(dateString);
+			} else if (mappedKey.equals(BugzillaReportElement.CREATION_TS.getKeyString())) {
+				parsedDate = new SimpleDateFormat(creation_ts_format).parse(dateString);
+			} else if (mappedKey.equals(BugzillaReportElement.BUG_WHEN.getKeyString())) {
+				parsedDate = new SimpleDateFormat(comment_creation_ts_format).parse(dateString);
+			} else if (mappedKey.equals(BugzillaReportElement.DATE.getKeyString())) {
+				parsedDate = new SimpleDateFormat(attachment_creation_ts_format).parse(dateString);
+			}
+			return parsedDate;
+		} catch (Exception e) {
+			return null;
+			// throw new CoreException(new Status(IStatus.ERROR,
+			// BugzillaPlugin.PLUGIN_ID, 0,
+			// "Error parsing date string: " + dateString, e));
+		}
 	}
-	
-	private void addValidOperations(RepositoryTaskData bugReport, String userName) throws CoreException {
+
+	public Set<AbstractRepositoryTask> getChangedSinceLastSync(TaskRepository repository,
+			Set<AbstractRepositoryTask> tasks) throws CoreException {
+		try {
+			Set<AbstractRepositoryTask> changedTasks = new HashSet<AbstractRepositoryTask>();
+
+			if (repository.getSyncTimeStamp() == null) {
+				return tasks;
+			}
+
+			String dateString = repository.getSyncTimeStamp();
+			if (dateString == null) {
+				dateString = "";
+			}
+			String urlQueryBase;
+			String urlQueryString;
+
+			urlQueryBase = repository.getUrl() + CHANGED_BUGS_CGI_QUERY
+					+ URLEncoder.encode(dateString, repository.getCharacterEncoding()) + CHANGED_BUGS_CGI_ENDDATE;
+
+			urlQueryString = urlQueryBase + BUG_ID;
+
+			int queryCounter = -1;
+			Iterator<AbstractRepositoryTask> itr = tasks.iterator();
+			while (itr.hasNext()) {
+				queryCounter++;
+				ITask task = itr.next();
+				String newurlQueryString = URLEncoder.encode(AbstractRepositoryTask.getTaskId(task
+						.getHandleIdentifier())
+						+ ",", repository.getCharacterEncoding());
+				if ((urlQueryString.length() + newurlQueryString.length() + IBugzillaConstants.CONTENT_TYPE_RDF
+						.length()) > MAX_URL_LENGTH) {
+					queryForChanged(repository, changedTasks, urlQueryString);
+					queryCounter = 0;
+					urlQueryString = urlQueryBase + BUG_ID;
+					urlQueryString += newurlQueryString;
+				} else if (!itr.hasNext()) {
+					urlQueryString += newurlQueryString;
+					queryForChanged(repository, changedTasks, urlQueryString);
+				} else {
+					urlQueryString += newurlQueryString;
+				}
+			}
+			return changedTasks;
+		} catch (UnsupportedEncodingException e) {
+			MylarStatusHandler.fail(e, "Repository configured with unsupported encoding: "
+					+ repository.getCharacterEncoding() + "\n\n Unable to determine changed tasks.", true);
+			return tasks;
+		}
+	}
+
+	private void queryForChanged(TaskRepository repository, Set<AbstractRepositoryTask> changedTasks,
+			String urlQueryString) throws UnsupportedEncodingException, CoreException {
+		QueryHitCollector collector = new QueryHitCollector(taskList);
+		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(repository.getUrl(), urlQueryString, "", "-1",
+				taskList);
+		// TODO: use connector instead?
+		// connector.performQuery(query, repository, monitor, collector);
+		try {
+			BugzillaClient client = connector.getClientManager().getClient(repository);
+			client.getSearchHits(query, collector, taskList);
+		} catch (Exception e) {
+			throw new CoreException(new Status(IStatus.ERROR, BugzillaCorePlugin.PLUGIN_ID, IStatus.ERROR,
+					"Failed to perform query: \n\n" + e.getMessage(), e));
+		}
+
+		for (AbstractQueryHit hit : collector.getHits()) {
+			String handle = AbstractRepositoryTask.getHandle(repository.getUrl(), hit.getId());
+			ITask correspondingTask = taskList.getTask(handle);
+			if (correspondingTask != null && correspondingTask instanceof AbstractRepositoryTask) {
+				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) correspondingTask;
+				// Hack to avoid re-syncing last task from previous
+				// synchronization
+				// This can be removed once we are getting a query timestamp
+				// from the repository rather than
+				// using the last modified stamp of the last task modified in
+				// the return hits.
+				// (or the changeddate field in the hit rdf becomes consistent,
+				// currently it doesn't return a proper modified date string)
+				if (repositoryTask.getTaskData() != null
+						&& repositoryTask.getTaskData().getLastModified().equals(repository.getSyncTimeStamp())) {
+					String taskId = AbstractRepositoryTask.getTaskId(repositoryTask.getHandleIdentifier());
+					RepositoryTaskData taskData = getTaskData(repository, taskId);
+					if (taskData != null && taskData.getLastModified().equals(repository.getSyncTimeStamp())) {
+						continue;
+					}
+				}
+				changedTasks.add(repositoryTask);
+			}
+		}
+	}
+
+	public static void addValidOperations(RepositoryTaskData bugReport, String userName) throws CoreException {
 		BUGZILLA_REPORT_STATUS status;
 		try {
 			status = BUGZILLA_REPORT_STATUS.valueOf(bugReport.getStatus());
 		} catch (RuntimeException e) {
-			MylarStatusHandler.log(e, "Unrecognized status: " + bugReport.getStatus());
-			status = BUGZILLA_REPORT_STATUS.NEW;
+			MylarStatusHandler.log(e, "Unable to get status object for: " + bugReport.getStatus());
+			throw new CoreException(Status.CANCEL_STATUS);
 		}
 		switch (status) {
 		case UNCONFIRMED:
@@ -176,7 +333,7 @@ public class BugzillaTaskDataHandler implements ITaskDataHandler {
 		}
 	}
 
-	private void addOperation(RepositoryTaskData bugReport, BUGZILLA_OPERATION opcode, String userName) {
+	public static void addOperation(RepositoryTaskData bugReport, BUGZILLA_OPERATION opcode, String userName) {
 		RepositoryOperation newOperation = null;
 		switch (opcode) {
 		case none:
@@ -225,12 +382,6 @@ public class BugzillaTaskDataHandler implements ITaskDataHandler {
 		if (newOperation != null) {
 			bugReport.addOperation(newOperation);
 		}
-	}
-
-	public boolean initializeTaskData(TaskRepository repository, RepositoryTaskData data, IProgressMonitor monitor)
-			throws CoreException {
-		// Bugzilla needs a product to create task data
-		return false;
 	}
 
 }

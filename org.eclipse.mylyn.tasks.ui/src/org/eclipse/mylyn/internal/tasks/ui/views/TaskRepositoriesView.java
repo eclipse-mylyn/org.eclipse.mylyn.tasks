@@ -128,9 +128,7 @@ public class TaskRepositoriesView extends ViewPart {
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
 
 			public void doubleClick(DoubleClickEvent event) {
-				if(repositoryPropertiesAction.isEnabled()){
-					repositoryPropertiesAction.run();
-				}
+				repositoryPropertiesAction.run();
 			}
 		});
 

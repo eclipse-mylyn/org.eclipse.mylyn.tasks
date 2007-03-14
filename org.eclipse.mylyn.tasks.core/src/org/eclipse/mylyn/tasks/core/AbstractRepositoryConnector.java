@@ -12,9 +12,9 @@
 package org.eclipse.mylar.tasks.core;
 
 import java.io.File;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
@@ -36,8 +36,6 @@ public abstract class AbstractRepositoryConnector {
 	public static final String MYLAR_CONTEXT_DESCRIPTION = "mylar/context/zip";
 
 	private static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
-
-	protected List<String> supportedVersions;
 
 	protected Set<RepositoryTemplate> templates = new LinkedHashSet<RepositoryTemplate>();
 
@@ -106,8 +104,6 @@ public abstract class AbstractRepositoryConnector {
 	 */
 	public abstract String getRepositoryType();
 
-	public abstract List<String> getSupportedVersions();
-
 	/**
 	 * Updates the properties of <code>repositoryTask</code>. Invoked when on
 	 * task synchronization if {@link #getTaskDataHandler()} returns
@@ -165,8 +161,8 @@ public abstract class AbstractRepositoryConnector {
 	}
 
 	/**
-	 * Of <code>tasks</code> provided, return all that have changed since last synchronization of
-	 * <code>repository</code>
+	 * Of <code>tasks</code> provided, return all that have changed since last
+	 * synchronization of <code>repository</code>
 	 * 
 	 * TODO: Add progress monitor as parameter
 	 * 
@@ -271,11 +267,38 @@ public abstract class AbstractRepositoryConnector {
 	public abstract void updateAttributes(TaskRepository repository, IProgressMonitor monitor) throws CoreException;
 
 	public void setUserManaged(boolean userManaged) {
-		this.userManaged  = userManaged;	
+		this.userManaged = userManaged;
 	}
-	
-	public boolean isUserManaged(){
+
+	public boolean isUserManaged() {
 		return userManaged;
+	}
+
+	/**
+	 * Following synchronization, the timestamp needs to be recorded.
+	 * This provides a default implementation for determining the last synchronization
+	 * timestamp. Override to return actual timestamp from repository.
+	 */
+	public String getLastSyncTimestamp(TaskRepository repository, Set<AbstractRepositoryTask> changedTasks) {
+		Date mostRecent = new Date(0);
+		String mostRecentTimeStamp = repository.getSyncTimeStamp();
+		for (AbstractRepositoryTask task : changedTasks) {
+			Date taskModifiedDate;
+
+			if (getTaskDataHandler() != null && task.getTaskData() != null
+					&& task.getTaskData().getLastModified() != null) {
+				taskModifiedDate = task.getTaskData().getAttributeFactory().getDateForAttributeType(
+						RepositoryTaskAttribute.DATE_MODIFIED, task.getTaskData().getLastModified());
+			} else {
+				continue;
+			}
+
+			if (taskModifiedDate != null && taskModifiedDate.after(mostRecent)) {
+				mostRecent = taskModifiedDate;
+				mostRecentTimeStamp = task.getTaskData().getLastModified();
+			}
+		}
+		return mostRecentTimeStamp;
 	}
 
 }

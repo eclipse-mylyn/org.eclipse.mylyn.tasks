@@ -89,9 +89,10 @@ public class DatePicker extends Composite {
 		gridLayout.makeColumnsEqualWidth = false;
 		this.setLayout(gridLayout);
 
-		dateText = new Text(this, SWT.FLAT);
+		dateText = new Text(this, SWT.NONE);
+
 		GridData dateTextGridData = new org.eclipse.swt.layout.GridData();
-		dateTextGridData.widthHint = 135;
+		dateTextGridData.widthHint = 110;
 		dateTextGridData.horizontalAlignment = GridData.FILL;
 
 		dateText.setLayoutData(dateTextGridData);
@@ -100,7 +101,7 @@ public class DatePicker extends Composite {
 
 			public void keyPressed(KeyEvent e) {
 				// key listener used because setting of date picker text causes
-				// modify listener to fire which results in perpetual dirty
+				// modify litener to fire which results in perpetual dirty
 				// editor
 				notifyPickerListeners();
 			}
@@ -132,7 +133,7 @@ public class DatePicker extends Composite {
 			}
 		});
 
-		pickButton = new Button(this, SWT.FLAT | SWT.ARROW | SWT.DOWN);
+		pickButton = new Button(this, SWT.ARROW | SWT.DOWN);
 		GridData pickButtonGridData = new org.eclipse.swt.layout.GridData();
 		pickButtonGridData.horizontalAlignment = org.eclipse.swt.layout.GridData.END;
 		pickButton.setLayoutData(pickButtonGridData);
@@ -253,10 +254,9 @@ public class DatePicker extends Composite {
 		if (!canceled) {
 			this.date = selectedDate != null ? selectedDate : null;
 			updateDateText();
-			notifyPickerListeners();
 		}
 
-		
+		notifyPickerListeners();
 		pickButton.setEnabled(true);
 		dateText.setEnabled(true);
 	}
@@ -284,5 +284,4 @@ public class DatePicker extends Composite {
 		pickButton.setEnabled(enabled);
 		super.setEnabled(enabled);
 	}
-
 }

@@ -69,8 +69,6 @@ public class TaskListImages {
 	
 	public static final ImageDescriptor TASK_NOTES = createSize(create(T_TOOL, "task-notes.gif"), SIZE);
 
-	public static final ImageDescriptor TASK_REPOSITORY_HISTORY = createSize(create(T_TOOL, "task-repository-history.gif"), SIZE);
-	
 	public static final ImageDescriptor TASK_REPOSITORY_NOTES = createSize(create(T_TOOL, "task-repository-notes.gif"), SIZE);
 
 	public static final ImageDescriptor TASK_REPOSITORY_COMPLETED = createSize(create(T_TOOL, "task-repository-completed.gif"), SIZE);
@@ -80,8 +78,6 @@ public class TaskListImages {
 	public static final ImageDescriptor OVERLAY_WEB = create(T_TOOL, "overlay-web.gif");
  
 	public static final ImageDescriptor OVERLAY_SYNCHRONIZING = create(T_EVIEW, "overlay-synchronizing.gif");
-
-	public static final ImageDescriptor OVERLAY_DUE = create(T_EVIEW, "overlay-due.gif");
 	
 	public static final ImageDescriptor TASK_WEB = createWithOverlay(TASK, OVERLAY_WEB, false, true);
 
@@ -156,8 +152,6 @@ public class TaskListImages {
 	public static final ImageDescriptor NAVIGATE_PREVIOUS = create(T_TOOL, "navigate-previous.gif");
 
 	public static final ImageDescriptor NAVIGATE_NEXT = create(T_TOOL, "navigate-next.gif");
-	
-	public static final ImageDescriptor TASKLIST_MODE = create(T_TOOL, "tasklist-mode.gif");
 
 	public static final ImageDescriptor COPY = create(T_TOOL, "copy.png");
 

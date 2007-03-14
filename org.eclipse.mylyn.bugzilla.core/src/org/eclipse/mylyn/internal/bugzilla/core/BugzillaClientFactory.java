@@ -13,8 +13,6 @@ package org.eclipse.mylar.internal.bugzilla.core;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author Steffen Pingel
@@ -24,16 +22,9 @@ public class BugzillaClientFactory {
 
 	public static BugzillaClient createClient(String hostUrl, String username, String password, String htAuthUser,
 			String htAuthPass, Proxy proxy, String encoding) throws MalformedURLException {
-		return createClient(hostUrl, username, password, htAuthUser, htAuthPass, proxy, encoding,
-				new HashMap<String, String>());
-	}
-
-	public static BugzillaClient createClient(String hostUrl, String username, String password, String htAuthUser,
-			String htAuthPass, Proxy proxy, String encoding, Map<String, String> configParameters)
-			throws MalformedURLException {
 		URL url = new URL(hostUrl);
 
-		BugzillaClient client = new BugzillaClient(url, username, password, htAuthUser, htAuthPass, encoding, configParameters);
+		BugzillaClient client = new BugzillaClient(url, username, password, htAuthUser, htAuthPass, encoding);
 		client.setProxy(proxy);
 		return client;
 	}

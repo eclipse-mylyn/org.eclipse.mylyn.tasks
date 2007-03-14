@@ -12,6 +12,7 @@
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
@@ -21,7 +22,9 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
+import org.eclipse.mylar.context.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaClient;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaClientFactory;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
@@ -30,25 +33,24 @@ import org.eclipse.mylar.internal.bugzilla.core.RepositoryConfiguration;
 import org.eclipse.mylar.tasks.core.IMylarStatusConstants;
 import org.eclipse.mylar.tasks.core.MylarStatus;
 import org.eclipse.mylar.tasks.core.RepositoryTemplate;
-import org.eclipse.mylar.tasks.core.TaskRepository;
+import org.eclipse.mylar.tasks.core.web.WebClientUtil;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
+import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.mylar.tasks.ui.wizards.AbstractRepositorySettingsPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.ui.PlatformUI;
 
 /**
  * @author Mik Kersten
  * @author Rob Elves
  */
 public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPage {
-
-	private static final String LABEL_SHORT_LOGINS = "Local users enabled:";
 
 	public static final String LABEL_AUTOMATIC_VERSION = "Automatic (Use Validate Settings)";
 
@@ -58,7 +60,7 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 
 	protected Combo repositoryVersionCombo;
 
-	private Button cleanQAContact;
+	private boolean testing = false;
 
 	public BugzillaRepositorySettingsPage(AbstractRepositoryConnectorUi repositoryUi) {
 		super(TITLE, DESCRIPTION, repositoryUi);
@@ -122,16 +124,6 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 				// ignore
 			}
 		});
-
-		Label shortLoginLabel = new Label(parent, SWT.NONE);
-		shortLoginLabel.setText(LABEL_SHORT_LOGINS);
-		cleanQAContact = new Button(parent, SWT.CHECK | SWT.LEFT);
-		if (repository != null) {
-			boolean shortLogin = Boolean.parseBoolean(repository
-					.getProperty(IBugzillaConstants.REPOSITORY_SETTING_SHORT_LOGIN));
-			cleanQAContact.setSelection(shortLogin);
-		}
-
 	}
 
 	public void setBugzillaVersion(String version) {
@@ -163,12 +155,6 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 	}
 
 	@Override
-	public void updateProperties(TaskRepository repository) {
-		repository.setProperty(IBugzillaConstants.REPOSITORY_SETTING_SHORT_LOGIN, String.valueOf(cleanQAContact
-				.getSelection()));
-	}
-
-	@Override
 	public boolean isPageComplete() {
 		return super.isPageComplete();
 	}
@@ -185,222 +171,116 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 		return false;
 	}
 
-//	/* public for testing */
-//	@Override
-//	public void validateSettings() {
-//
-//		final String serverUrl = getServerUrl();
-//		final String newUserId = getUserName();
-//		final String newPassword = getPassword();
-//		final boolean isAnonymous = isAnonymousAccess();
-//		final String newEncoding = getCharacterEncoding();
-//		final String httpAuthUser = getHttpAuthUserId();
-//		final String httpAuthPass = getHttpAuthPassword();
-//		final Proxy tempProxy;
-//		try {
-//			setMessage("Validating server settings...");
-//			setErrorMessage(null);
-//			if (getUseDefaultProxy()) {
-//				tempProxy = TaskRepository.getSystemProxy();
-//			} else {
-//				tempProxy = WebClientUtil.getProxy(getProxyHostname(), getProxyPort(), getProxyUsername(),
-//						getProxyPassword());
-//			}
-//			final boolean checkVersion = repositoryVersionCombo.getSelectionIndex() == 0;
-//			final String[] version = new String[1];
-//			getWizard().getContainer().run(true, false, new IRunnableWithProgress() {
-//				public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
-//					if (monitor == null) {
-//						monitor = new NullProgressMonitor();
-//					}
-//					try {
-//						monitor.beginTask("Validating server settings", IProgressMonitor.UNKNOWN);
-//						BugzillaClient client = null;
-//						if (isAnonymous) {
-//							client = BugzillaClientFactory.createClient(serverUrl, newUserId, newPassword,
-//									httpAuthUser, httpAuthPass, tempProxy, newEncoding);
-//							client.logout();
-//						} else if (version != null) {
-//							client = BugzillaClientFactory.createClient(serverUrl, newUserId, newPassword,
-//									httpAuthUser, httpAuthPass, tempProxy, newEncoding);
-//							client.validate();
-//						}
-//						if (checkVersion && client != null) {
-//							RepositoryConfiguration config = client.getRepositoryConfiguration();
-//							if (config != null) {
-//								version[0] = config.getInstallVersion();
-//							}
-//						}
-//
-//					} catch (Exception ex) {
-//						throw new InvocationTargetException(ex);
-//
-//					} finally {
-//						monitor.done();
-//					}
-//				}
-//			});
-//
-//			if (version[0] != null) {
-//				setBugzillaVersion(version[0]);
-//			}
-//
-//			if (!isAnonymous) {
-//				setMessage("Valid Bugzilla server found and your login was accepted");
-//			} else {
-//				setMessage("Valid Bugzilla server found");
-//			}
-//		} catch (InvocationTargetException e) {
-//			setMessage(null);
-//			displayError(serverUrl, e.getTargetException());
-//
-//		} catch (InterruptedException e) {
-//			setErrorMessage("Could not connect to Bugzilla server or authentication failed");
-//		}
-//	}
+	/* public for testing */
+	@Override
+	public void validateSettings() {
 
-	private void displayError(final String serverUrl, Throwable e) {
+		final String serverUrl = getServerUrl();
+		final String newUserId = getUserName();
+		final String newPassword = getPassword();
+		final boolean isAnonymous = isAnonymousAccess();
+		final String newEncoding = getCharacterEncoding();
+		final String httpAuthUser = getHttpAuthUserId();
+		final String httpAuthPass = getHttpAuthPassword();
+		final Proxy tempProxy;
+		try {
+			if (getUseDefaultProxy()) {
+				tempProxy = WebClientUtil.getSystemProxy();
+			} else {
+				tempProxy = WebClientUtil.getProxy(getProxyHostname(), getProxyPort(), getProxyUsername(),
+						getProxyPassword());
+			}
+			final boolean checkVersion = repositoryVersionCombo.getSelectionIndex() == 0;
+			final String[] version = new String[1];
+			getWizard().getContainer().run(true, false, new IRunnableWithProgress() {
+				public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+					if (monitor == null) {
+						monitor = new NullProgressMonitor();
+					}
+					try {
+						monitor.beginTask("Validating server settings", IProgressMonitor.UNKNOWN);
+						BugzillaClient client = null;
+						if (!isAnonymous && version != null) {
+							client = BugzillaClientFactory.createClient(serverUrl, newUserId, newPassword,
+									httpAuthUser, httpAuthPass, tempProxy, newEncoding);
+							client.validate();
+						}
+						if (checkVersion && client != null) {
+							RepositoryConfiguration config = client.getRepositoryConfiguration();
+							if (config != null) {
+								version[0] = config.getInstallVersion();
+							}
+						}
+					} catch (final Exception e) {
+						PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+							public void run() {
+								displayError(serverUrl, e);
+							}
+						});
+						throw new InvocationTargetException(e);
+					} finally {
+						monitor.done();
+					}
+				}
+			});
+
+			if (version[0] != null) {
+				setBugzillaVersion(version[0]);
+			}
+
+			if (!testing) {
+				MessageDialog.openInformation(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG,
+						"Authentication credentials are valid.");
+			}
+		} catch (InvocationTargetException e) {			
+			// ignore
+		} catch (InterruptedException e) {
+			MessageDialog.openWarning(null, IBugzillaConstants.TITLE_MESSAGE_DIALOG, "Validation cancelled");
+		}
+
+		super.getWizard().getContainer().updateButtons();
+	}
+
+	private void displayError(final String serverUrl, Exception e) {
 		IStatus status;
 		if (e instanceof MalformedURLException) {
-			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID, IMylarStatusConstants.NETWORK_ERROR,
-					"Server URL is invalid.");
+			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
+					IMylarStatusConstants.NETWORK_ERROR, "Server URL is invalid.");
 		} else if (e instanceof CoreException) {
 			status = ((CoreException) e).getStatus();
 		} else if (e instanceof IOException) {
-			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID, IMylarStatusConstants.IO_ERROR,
-					serverUrl, e.getMessage());
+			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
+					IMylarStatusConstants.IO_ERROR, serverUrl, e);
 		} else {
-			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID, IMylarStatusConstants.NETWORK_ERROR,
-					serverUrl, e.getMessage());
+			status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
+					IMylarStatusConstants.NETWORK_ERROR, serverUrl, e.getMessage());
 		}
-		MylarStatusHandler.displayStatus("Validation failed", status);
+		TasksUiUtil.displayStatus("Validation failed", status, BugzillaRepositorySettingsPage.this.getShell());
 	}
 
-	@Override
-	protected Validator getValidator(TaskRepository repository) {
-		
-		if(repositoryVersionCombo.getSelectionIndex() != 0) {
-			return new BugzillaValidator(repository, repositoryVersionCombo.getItem(repositoryVersionCombo.getSelectionIndex()));
-		} else {
-			return new BugzillaValidator(repository, null);
-		}
-	}
-	
-//	public String getBugzillaVersion() {
-//		if (repositoryVersionCombo.getSelectionIndex() == 0) {
-//			return null;
-//		} else {
-//			return repositoryVersionCombo.getItem(repositoryVersionCombo.getSelectionIndex());
-//		}
-//	}
+	// private void displayError(final String serverUrl, Exception e) {
+	// CoreException coreException;
+	// if (e.getCause() instanceof MalformedURLException) {
+	// coreException = new CoreException(new MylarStatus(Status.WARNING,
+	// BugzillaCorePlugin.PLUGIN_ID,
+	// IMylarStatusConstants.NETWORK_ERROR, "Server URL is invalid."));
+	// } else if (e.getCause() instanceof CoreException) {
+	// coreException = (CoreException) e.getCause();
+	// } else if (e.getCause() instanceof IOException) {
+	// coreException = new CoreException(new MylarStatus(Status.WARNING,
+	// BugzillaCorePlugin.PLUGIN_ID,
+	// IMylarStatusConstants.IO_ERROR, serverUrl, e.getCause()));
+	// } else {
+	// coreException = new CoreException(new MylarStatus(Status.WARNING,
+	// BugzillaCorePlugin.PLUGIN_ID,
+	// IMylarStatusConstants.NETWORK_ERROR, e.getCause().getMessage()));
+	// }
+	// TasksUiUtil.displayDialog("Validation failed", coreException,
+	// BugzillaRepositorySettingsPage.this.getShell());
+	// }
 
-	@Override
-	protected void applyValidatorResult(Validator validator) {
-		super.applyValidatorResult(validator);
-
-		if (((BugzillaValidator) validator).getResult() != null && ((BugzillaValidator) validator).getResult() != null) {
-			setBugzillaVersion(((BugzillaValidator) validator).getResult());			
-		}
-	}
-
-	public class BugzillaValidator extends Validator {
-
-		final String serverUrl;
-
-		final String newUserId;
-
-		final String newPassword;
-
-		final boolean isAnonymous;
-
-		final String newEncoding;
-
-		final String httpAuthUser;
-
-		final String httpAuthPass;
-		
-		final Proxy proxy;
-
-		private String[] versions = new String[1];;
-
-		public BugzillaValidator(TaskRepository repository, String version) {
-			serverUrl = getServerUrl();
-			newUserId = getUserName();
-			newPassword = getPassword();
-			isAnonymous = isAnonymousAccess();
-			newEncoding = getCharacterEncoding();
-			httpAuthUser = getHttpAuthUserId();
-			httpAuthPass = getHttpAuthPassword();
-			proxy = repository.getProxy();
-			versions[0] = version;
-		}
-
-		public void run(IProgressMonitor monitor) throws CoreException {
-			try {
-				validate(monitor);
-			} catch (Exception e) {
-				displayError(serverUrl, e);
-//				IStatus status;
-//				if (e instanceof MalformedURLException) {
-//					status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
-//							IMylarStatusConstants.NETWORK_ERROR, "Server URL is invalid.");
-//				} else if (e instanceof CoreException) {
-//					status = ((CoreException) e).getStatus();
-//				} else if (e instanceof IOException) {
-//					status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
-//							IMylarStatusConstants.IO_ERROR, serverUrl, e.getMessage());
-//				} else {
-//					status = new MylarStatus(Status.WARNING, BugzillaCorePlugin.PLUGIN_ID,
-//							IMylarStatusConstants.NETWORK_ERROR, serverUrl, e.getMessage());
-//				}
-//				MylarStatusHandler.displayStatus("Validation failed", status);
-			}
-		}
-
-		public void validate(IProgressMonitor monitor) throws IOException, CoreException {
-
-			if (monitor == null) {
-				monitor = new NullProgressMonitor();
-			}
-			try {
-				monitor.beginTask("Validating server settings", IProgressMonitor.UNKNOWN);
-				BugzillaClient client = null;
-
-//				Proxy tempProxy = Proxy.NO_PROXY;
-//
-//				if (getUseDefaultProxy()) {
-//					tempProxy = TaskRepository.getSystemProxy();
-//				} else {
-//					tempProxy = WebClientUtil.getProxy(getProxyHostname(), getProxyPort(), getProxyUsername(),
-//							getProxyPassword());
-//				}
-				boolean checkVersion = versions[0] == null;
-
-				if (isAnonymous) {
-					client = BugzillaClientFactory.createClient(serverUrl, newUserId, newPassword, httpAuthUser,
-							httpAuthPass, proxy, newEncoding);
-					client.logout();
-				} else if (versions != null) {
-					client = BugzillaClientFactory.createClient(serverUrl, newUserId, newPassword, httpAuthUser,
-							httpAuthPass, proxy, newEncoding);
-					client.validate();
-				}
-				if (checkVersion && client != null) {
-					RepositoryConfiguration config = client.getRepositoryConfiguration();
-					if (config != null) {
-						versions[0] = config.getInstallVersion();
-					}
-				}
-
-			} finally {
-				monitor.done();
-			}
-		}
-
-		public String getResult() {
-			return versions[0];
-		}
-
+	public void setTesting(boolean testing) {
+		this.testing = testing;
 	}
 
 }

@@ -38,7 +38,7 @@ public class BugzillaQueryHit extends AbstractQueryHit {
 
 	@Override
 	public String getUrl() {
-		Integer idInt = new Integer(id);
+		Integer idInt = new Integer(taskId);
 		return BugzillaClient.getBugUrlWithoutLogin(repositoryUrl, idInt);
 	}
 
@@ -51,5 +51,4 @@ public class BugzillaQueryHit extends AbstractQueryHit {
 		}
 		return false;
 	}
-
 }

@@ -12,14 +12,15 @@
 package org.eclipse.mylar.internal.bugzilla.core;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
+import org.eclipse.mylar.core.net.HtmlStreamTokenizer;
 import org.eclipse.mylar.tasks.core.AbstractAttributeFactory;
 import org.eclipse.mylar.tasks.core.RepositoryAttachment;
 import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskComment;
-import org.eclipse.mylar.tasks.core.web.HtmlStreamTokenizer;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -79,7 +80,7 @@ public class SaxBugReportContentHandler extends DefaultHandler {
 		characters = new StringBuffer();
 		BugzillaReportElement tag = BugzillaReportElement.UNKNOWN;
 		try {
-			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase());
+			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase(Locale.ENGLISH));
 		} catch (RuntimeException e) {
 			if (e instanceof IllegalArgumentException) {
 				// ignore unrecognized tags
@@ -123,7 +124,7 @@ public class SaxBugReportContentHandler extends DefaultHandler {
 
 		BugzillaReportElement tag = BugzillaReportElement.UNKNOWN;
 		try {
-			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase());
+			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase(Locale.ENGLISH));
 		} catch (RuntimeException e) {
 			if (e instanceof IllegalArgumentException) {
 				// ignore unrecognized tags
@@ -208,11 +209,11 @@ public class SaxBugReportContentHandler extends DefaultHandler {
 			break;
 
 		// IGNORED ELEMENTS
-		case REPORTER_ACCESSIBLE:
-		case CLASSIFICATION_ID:
-		case CLASSIFICATION:
-		case CCLIST_ACCESSIBLE:
-		case EVERCONFIRMED:
+		// case REPORTER_ACCESSIBLE:
+		// case CLASSIFICATION_ID:
+		// case CLASSIFICATION:
+		// case CCLIST_ACCESSIBLE:
+		// case EVERCONFIRMED:
 		case BUGZILLA:
 			break;
 		case BUG:

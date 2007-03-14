@@ -11,11 +11,14 @@
 
 package org.eclipse.mylar.internal.bugzilla.core;
 
+import java.util.Locale;
+
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.mylar.context.core.MylarStatusHandler;
+import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.core.net.HtmlStreamTokenizer;
 import org.eclipse.mylar.tasks.core.QueryHitCollector;
+import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskList;
-import org.eclipse.mylar.tasks.core.web.HtmlStreamTokenizer;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -30,14 +33,14 @@ public class SaxBugzillaQueryContentHandler extends DefaultHandler {
 	/** The bug id */
 	private String id;
 
-	/** The description of the bug */
-	private String description;
+	/** The summary of the bug */
+	private String description = "";
 
 	/** The priority of the bug */
-	private String priority;
+	private String priority = Task.PriorityLevel.getDefault().toString();
 
 	/** The state of the bug */
-	private String state;
+	private String state = "";
 
 	private StringBuffer characters;
 
@@ -70,7 +73,7 @@ public class SaxBugzillaQueryContentHandler extends DefaultHandler {
 		characters = new StringBuffer();
 		BugzillaReportElement tag = BugzillaReportElement.UNKNOWN;
 		try {
-			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase());
+			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase(Locale.ENGLISH));
 			switch (tag) {
 			case LI:
 //				hit = new BugzillaQueryHit();
@@ -94,7 +97,7 @@ public class SaxBugzillaQueryContentHandler extends DefaultHandler {
 		
 		BugzillaReportElement tag = BugzillaReportElement.UNKNOWN;
 		try {
-			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase());
+			tag = BugzillaReportElement.valueOf(localName.trim().toUpperCase(Locale.ENGLISH));
 			switch (tag) {
 			case ID:
 				id = parsedText;

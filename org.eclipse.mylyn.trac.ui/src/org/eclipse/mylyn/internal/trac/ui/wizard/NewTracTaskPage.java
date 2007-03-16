@@ -20,10 +20,12 @@ import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.internal.trac.core.ITracClient;
 import org.eclipse.mylar.internal.trac.core.TracCorePlugin;
 import org.eclipse.mylar.internal.trac.core.TracException;
-import org.eclipse.mylar.internal.trac.core.TracOfflineTaskHandler;
 import org.eclipse.mylar.internal.trac.core.TracRepositoryConnector;
+import org.eclipse.mylar.internal.trac.core.TracTaskDataHandler;
 import org.eclipse.mylar.internal.trac.ui.TracUiPlugin;
+import org.eclipse.mylar.tasks.core.AbstractAttributeFactory;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
+import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.swt.SWT;
@@ -129,11 +131,12 @@ public class NewTracTaskPage extends WizardPage {
 			}
 		}
 
-		TracOfflineTaskHandler offlineHandler = (TracOfflineTaskHandler) connector.getTaskDataHandler();
-		this.taskData = new RepositoryTaskData(offlineHandler.getAttributeFactory(), TracCorePlugin.REPOSITORY_KIND,
-				taskRepository.getUrl(), TasksUiPlugin.getDefault().getNextNewRepositoryTaskId());
+		TracTaskDataHandler offlineHandler = (TracTaskDataHandler) connector.getTaskDataHandler();
+		AbstractAttributeFactory attributeFactory = offlineHandler.getAttributeFactory(taskRepository.getUrl(), taskRepository.getKind(), Task.DEFAULT_TASK_KIND);
+		this.taskData = new RepositoryTaskData(attributeFactory, TracCorePlugin.REPOSITORY_KIND,
+				taskRepository.getUrl(), TasksUiPlugin.getDefault().getNextNewRepositoryTaskId(), Task.DEFAULT_TASK_KIND);
 		this.taskData.setNew(true);
-		TracOfflineTaskHandler.createDefaultAttributes(offlineHandler.getAttributeFactory(), taskData, client, false);
+		TracTaskDataHandler.createDefaultAttributes(taskData.getAttributeFactory(), taskData, client, false);
 	}
 
 	public RepositoryTaskData getRepositoryTaskData() {

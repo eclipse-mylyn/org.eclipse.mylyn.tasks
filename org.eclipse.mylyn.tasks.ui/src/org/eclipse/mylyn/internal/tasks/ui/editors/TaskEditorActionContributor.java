@@ -31,10 +31,11 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylar.internal.tasks.ui.AddExistingTaskJob;
 import org.eclipse.mylar.internal.tasks.ui.IDynamicSubMenuContributor;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.actions.AttachFileAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.CopyTaskDetailsAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.OpenWithBrowserAction;
+import org.eclipse.mylar.internal.tasks.ui.actions.SynchronizeEditorAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.TaskActivateAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.TaskDeactivateAction;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
@@ -80,6 +81,8 @@ public class TaskEditorActionContributor extends MultiPageEditorActionBarContrib
 	private CopyTaskDetailsAction copyTaskDetailsAction = new CopyTaskDetailsAction(false);
 
 	private AttachFileAction attachFileAction = new AttachFileAction();
+	
+	private SynchronizeEditorAction synchronizeEditorAction = new SynchronizeEditorAction();
 
 	private GlobalAction cutAction;
 
@@ -181,10 +184,12 @@ public class TaskEditorActionContributor extends MultiPageEditorActionBarContrib
 					};
 					String text = category.getSummary();
 					action.setText(text);
-					action.setImageDescriptor(TaskListImages.CATEGORY);
+					action.setImageDescriptor(TasksUiImages.CATEGORY);
 					subMenuManager.add(action);
 				}
 			}
+			
+			copyTaskDetailsAction.selectionChanged(new StructuredSelection(editor.getSelection()));
 			manager.add(subMenuManager);
 			return;
 
@@ -198,14 +203,15 @@ public class TaskEditorActionContributor extends MultiPageEditorActionBarContrib
 		} else {
 			// TODO: refactor
 			IStructuredSelection selection = new StructuredSelection(task);
-
 			openWithBrowserAction.selectionChanged(selection);
 			copyTaskDetailsAction.selectionChanged(selection);
 			attachFileAction.selectionChanged(selection);
+			synchronizeEditorAction.selectionChanged(new StructuredSelection(this.getEditor()));
 
 			manager.add(openWithBrowserAction);
 			if (task instanceof AbstractRepositoryTask) {
 				manager.add(attachFileAction);
+				manager.add(synchronizeEditorAction);
 			}
 
 			if (task.isActive()) {

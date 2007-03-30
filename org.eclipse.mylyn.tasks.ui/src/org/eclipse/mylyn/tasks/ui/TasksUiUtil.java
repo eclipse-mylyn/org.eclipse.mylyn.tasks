@@ -35,7 +35,7 @@ import org.eclipse.jface.viewers.StructuredViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasks.ui.editors.CategoryEditorInput;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskRepositoriesView;
@@ -76,6 +76,8 @@ public class TasksUiUtil {
 
 	public static final String PREFS_PAGE_ID_COLORS_AND_FONTS = "org.eclipse.ui.preferencePages.ColorsAndFonts";
 
+	public static final String PREFS_PAGE_ID_NET_PROXY = "org.eclipse.net.ui.NetPreferences";
+	
 	/**
 	 * TODO: move
 	 */
@@ -85,15 +87,15 @@ public class TasksUiUtil {
 		}
 		switch (priorityLevel) {
 		case P1:
-			return TaskListImages.getImage(TaskListImages.PRIORITY_1);
+			return TasksUiImages.getImage(TasksUiImages.PRIORITY_1);
 		case P2:
-			return TaskListImages.getImage(TaskListImages.PRIORITY_2);
+			return TasksUiImages.getImage(TasksUiImages.PRIORITY_2);
 		case P3:
-			return TaskListImages.getImage(TaskListImages.PRIORITY_3);
+			return TasksUiImages.getImage(TasksUiImages.PRIORITY_3);
 		case P4:
-			return TaskListImages.getImage(TaskListImages.PRIORITY_4);
+			return TasksUiImages.getImage(TasksUiImages.PRIORITY_4);
 		case P5:
-			return TaskListImages.getImage(TaskListImages.PRIORITY_5);
+			return TasksUiImages.getImage(TasksUiImages.PRIORITY_5);
 		default:
 			return null;
 		}
@@ -236,6 +238,19 @@ public class TasksUiUtil {
 		openEditor(task, true, newTask);
 	}
 
+	private static String getTaskEditorId(final ITask task) {
+		String taskEditorId = TaskListPreferenceConstants.TASK_EDITOR_ID;
+		if (task instanceof AbstractRepositoryTask) {
+			AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
+			AbstractRepositoryConnectorUi repositoryUi = TasksUiPlugin.getRepositoryUi(repositoryTask.getRepositoryKind());
+			String customTaskEditorId = repositoryUi.getTaskEditorId(repositoryTask);
+			if (customTaskEditorId != null) {
+				taskEditorId = customTaskEditorId;
+			}
+		}
+		return taskEditorId;
+	}
+
 	/**
 	 * @param task
 	 * @param pageId
@@ -244,7 +259,7 @@ public class TasksUiUtil {
 	public static void openEditor(ITask task, String pageId) {
 		final IEditorInput editorInput = new TaskEditorInput(task, false);
 		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-		IEditorPart part = openEditor(editorInput, TaskListPreferenceConstants.TASK_EDITOR_ID, window.getActivePage());
+		IEditorPart part = openEditor(editorInput, getTaskEditorId(task), window.getActivePage());
 		if (part instanceof TaskEditor) {
 			((TaskEditor) part).setActivePage(pageId);
 		}
@@ -255,6 +270,8 @@ public class TasksUiUtil {
 	 */
 	public static void openEditor(final ITask task, boolean asyncExec, final boolean newTask) {
 
+		final String taskEditorId= getTaskEditorId(task);
+
 		final IEditorInput editorInput = new TaskEditorInput(task, newTask);
 
 		if (asyncExec) {
@@ -263,7 +280,7 @@ public class TasksUiUtil {
 					IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 					if (window != null) {
 						IWorkbenchPage page = window.getActivePage();
-						IEditorPart part = openEditor(editorInput, TaskListPreferenceConstants.TASK_EDITOR_ID, page);
+						IEditorPart part = openEditor(editorInput, taskEditorId, page);
 						if (newTask && part instanceof TaskEditor) {
 							TaskEditor taskEditor = (TaskEditor) part;
 							taskEditor.setFocusOfActivePage();
@@ -278,7 +295,7 @@ public class TasksUiUtil {
 			IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 			if (window != null) {
 				IWorkbenchPage page = window.getActivePage();
-				openEditor(editorInput, TaskListPreferenceConstants.TASK_EDITOR_ID, page);
+				openEditor(editorInput, taskEditorId, page);
 				if (task instanceof AbstractRepositoryTask) {
 					TasksUiPlugin.getSynchronizationManager().setTaskRead((AbstractRepositoryTask) task, true);
 				}

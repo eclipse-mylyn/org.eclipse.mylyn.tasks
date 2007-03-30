@@ -83,6 +83,8 @@ public interface IBugzillaConstants {
 	// (see also: https://bugzilla.mozilla.org/show_bug.cgi?id=136603https://bugzilla.mozilla.org/show_bug.cgi?id=136603)
 	public static final String URL_GET_SHOW_BUG_XML = "/show_bug.cgi?ctype=xml&excludefield=attachmentdata&id=";
 	
+	public static final String URL_GET_SHOW_BUG_XML_NOID = "/show_bug.cgi?ctype=xml&excludefield=attachmentdata";
+	
 	public static final String XML_ERROR_INVALIDBUGID = "invalidbugid";
 
 	public static final String XML_ERROR_NOTFOUND = "notfound";
@@ -93,11 +95,13 @@ public interface IBugzillaConstants {
 	
 	/** Supported bugzilla repository versions */
 	static public enum BugzillaServerVersion {
-		SERVER_218, SERVER_220, SERVER_222;
+		SERVER_218, SERVER_220, SERVER_222, SERVER_30;
 
 		@Override
 		public String toString() {
 			switch (this) {
+			case SERVER_30:
+				return "3.0";
 			case SERVER_222:
 				return "2.22";
 			case SERVER_220:
@@ -111,6 +115,8 @@ public interface IBugzillaConstants {
 
 		/** returns null if version string unknown* */
 		static public BugzillaServerVersion fromString(String version) {
+			if (version.equals(SERVER_30.toString()))
+				return SERVER_30;
 			if (version.equals(SERVER_222.toString()))
 				return SERVER_222;
 			if (version.equals(SERVER_220.toString()))
@@ -243,5 +249,7 @@ public interface IBugzillaConstants {
 	public static final String REPOSITORY_SETTING_SHORT_LOGIN = "bugzilla.shortLoginEnabled";
 
 	public static final String BUGZILLA_TASK_KIND = "Bug";
+
+	static final int MAX_URL_LENGTH = 2000;
 
 }

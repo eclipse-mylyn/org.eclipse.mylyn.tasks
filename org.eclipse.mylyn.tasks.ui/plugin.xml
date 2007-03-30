@@ -34,13 +34,6 @@
             icon="icons/eview16/repositories.gif"
             name="Task Repositories">
       </view>
-      <view
-            allowMultiple="false"
-            category="org.eclipse.mylar"
-            class="org.eclipse.mylar.internal.tasks.ui.views.TaskActivityView"
-            icon="icons/eview16/task-activity.gif"
-            id="org.eclipse.mylar.tasklist.activity"
-            name="Task Activity"/>
   	</extension>
      	
     <extension point="org.eclipse.ui.newWizards">
@@ -183,9 +176,9 @@
           contributorClass="org.eclipse.mylar.internal.tasks.ui.editors.TaskEditorActionContributor"
           icon="icons/eview16/task-list.gif"
           id="org.eclipse.mylar.tasklist.ui.planner.editor"
-          name="Task Planner"/>                      
+          name="Task Planner"/>     
   </extension>
-  
+
       <extension point="org.eclipse.ui.perspectiveExtensions">
           <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
@@ -271,11 +264,22 @@
 	   		targetID="org.eclipse.mylar.tasks.ui.views.TaskListView">
     <action
           class="org.eclipse.mylar.internal.tasks.ui.actions.RestoreTaskListAction"
+          icon="icons/etool16/import.gif"
           id="org.eclipse.mylar.tasks.ui.action.restore"
           label="Restore Tasks from History..."
           menubarPath="tasks"
           style="push">
     </action>
+
+  		<action
+          class="org.eclipse.mylar.internal.tasks.ui.actions.ShowTaskRepositoriesViewAction"
+          enablesFor="*"
+          icon="icons/eview16/repositories.gif"
+          id="org.eclipse.mylar.tasks.ui.open.repositories.view"
+          label="Show Task Repositries View"
+          menubarPath="tasks"
+          tooltip="Show Task Repositories View">
+         </action>
   		
   		<action
           class="org.eclipse.mylar.internal.tasks.ui.actions.SynchronizeAllAction"
@@ -287,7 +291,7 @@
           toolbarPath="new"
           tooltip="Synchronize All Tasks and Queries">
          </action>
-  		
+           		
   		<action
                class="org.eclipse.mylar.internal.tasks.ui.actions.NewRepositoryTaskAction"
                enablesFor="*"
@@ -509,16 +513,6 @@
      </colorDefinition>
      <colorDefinition
            categoryId="org.eclipse.mylar.tasklist.ui.presentation"
-           id="org.eclipse.mylar.tasklist.ui.colors.background.category"
-           isEditable="true"
-           label="Categories - Background"
-           value="234,233,237"> 
-         <description>
-            Background color of Task List categories and queries.
-         </description>
-     </colorDefinition>
-     <colorDefinition
-           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
            id="org.eclipse.mylar.tasks.ui.colors.incoming.background"
            isEditable="true"
            label="Task Editor - Incoming Changes"
@@ -527,6 +521,29 @@
             Background color of attributes with incoming changes.
          </description>
      </colorDefinition>  
+
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasks.ui.colors.category.gradient.start"
+           isEditable="true"
+           label="Task List - Category Gradient Top"
+           value="247,247,247"> 
+         <description>
+            Background start color for Task List category gradients.
+         </description>
+     </colorDefinition> 
+
+     <colorDefinition
+           categoryId="org.eclipse.mylar.tasklist.ui.presentation"
+           id="org.eclipse.mylar.tasks.ui.colors.category.gradient.end"
+           isEditable="true"
+           label="Task List - Category Gradient Bottom"
+           value="220,220,220"> 
+         <description>
+            Background end color for Task List category gradients.
+         </description>
+     </colorDefinition> 
+
 	<fontDefinition
        categoryId="org.eclipse.mylar.tasklist.ui.presentation"
        id="org.eclipse.mylar.tasklist.ui.fonts.task.editor.comment"
@@ -691,11 +708,12 @@
     <extension
           point="org.eclipse.ui.commands">
        <category
-             id="org.eclipse.mylar.tasks.category.taskRepository"
+             id="org.eclipse.mylar.tasks.ui.commands"
              name="Task Repositories">
        </category>
        <command
-             categoryId="org.eclipse.mylar.tasks.category.taskRepository"
+             category="org.eclipse.mylar.tasks.ui.commands"
+             categoryId="org.eclipse.mylar.tasks.ui.commands"
              defaultHandler="org.eclipse.mylar.internal.tasks.ui.commands.AddTaskRepositoryHandler"
              id="org.eclipse.mylar.tasks.command.addTaskRepository"
              name="Add Task Repository">
@@ -726,17 +744,7 @@
          </adapter>
       </factory>
    </extension>
-   <!--
-   <extension
-         point="org.eclipse.ui.workbench.texteditor.hyperlinkDetectors">
-      <hyperlinkDetector            
-            class="org.eclipse.mylar.tasks.ui.editors.TaskHyperlinkDetector"
-            id="org.eclipse.mylar.jira.ui.hyperlinkdetector"
-            name="Mylar Task"
-            targetId="org.eclipse.jdt.ui.javaCode">
-      </hyperlinkDetector>
-   </extension>
-   -->
+  
 </plugin>
 
    <!--

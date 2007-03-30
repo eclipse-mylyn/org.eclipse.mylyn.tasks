@@ -20,9 +20,9 @@ import org.eclipse.mylar.tasks.core.ITask;
  */
 public abstract class AbstractTaskListFilter {
 
-	public abstract boolean select(Object element);
+	public abstract boolean select(Object parent, Object element);
 
-	public boolean shouldAlwaysShow(ITask task) {
+	public boolean shouldAlwaysShow(Object parent, ITask task) {
 		return task.isActive();
 	}
 }

@@ -21,10 +21,11 @@ import java.util.Map;
  * Class representing a report attribute
  * 
  * @author Rob Elves
+ * 
  */
 public class RepositoryTaskAttribute implements Serializable {
 
-	private static final long serialVersionUID = 6383833576644618720L;
+	private static final long serialVersionUID = 5548885751645139746L;
 
 	/**
 	 * Key for the author of a comment.
@@ -35,7 +36,7 @@ public class RepositoryTaskAttribute implements Serializable {
 	public static final String USER_OWNER = "task.common.user.owner";
 
 	public static final String USER_CC = "task.common.user.cc";
-	
+
 	public static final String COMMENT_NEW = "task.common.comment.new";
 
 	public static final String COMMENT_TEXT = "task.common.comment.text";
@@ -120,6 +121,8 @@ public class RepositoryTaskAttribute implements Serializable {
 	 * Attribute's values (selected or added)
 	 */
 	private List<String> values = new ArrayList<String>();
+
+	private Map<String, String> metaData = new HashMap<String, String>();
 
 	public RepositoryTaskAttribute(String key, String name, boolean hidden) {
 		this.key = key;
@@ -235,7 +238,7 @@ public class RepositoryTaskAttribute implements Serializable {
 
 	@Override
 	public String toString() {
-		return getValue();
+		return getID() + ":" + values;
 	}
 
 	@Override
@@ -263,6 +266,16 @@ public class RepositoryTaskAttribute implements Serializable {
 		return true;
 	}
 
-	
-	
+	public void putMetaDataValue(String key, String value) {
+		metaData.put(key, value);
+	}
+
+	public String getMetaDataValue(String key) {
+		return metaData.get(key);
+	}
+
+	public void removeMetaDataValue(String key) {
+		metaData.remove(key);
+	}
+
 }

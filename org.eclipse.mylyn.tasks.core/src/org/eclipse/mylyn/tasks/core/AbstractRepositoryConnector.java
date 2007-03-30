@@ -164,6 +164,9 @@ public abstract class AbstractRepositoryConnector {
 	 * Of <code>tasks</code> provided, return all that have changed since last
 	 * synchronization of <code>repository</code>
 	 * 
+	 * All errors should be thrown as <code>CoreException</code> for the framework
+	 * to handle, since background synchronizations fail silently when disconnected.
+	 * 
 	 * TODO: Add progress monitor as parameter
 	 * 
 	 * @throws CoreException
@@ -181,6 +184,8 @@ public abstract class AbstractRepositoryConnector {
 		ContextCorePlugin.getContextManager().saveContext(task.getHandleIdentifier());
 		File sourceContextFile = ContextCorePlugin.getContextManager().getFileForContext(task.getHandleIdentifier());
 
+		RepositoryTaskSyncState previousState = task.getSyncState();
+		
 		if (sourceContextFile != null && sourceContextFile.exists()) {
 			IAttachmentHandler handler = getAttachmentHandler();
 			if (handler == null) {
@@ -195,11 +200,10 @@ public abstract class AbstractRepositoryConnector {
 				handler.uploadAttachment(repository, task, longComment, MYLAR_CONTEXT_DESCRIPTION, sourceContextFile,
 						APPLICATION_OCTET_STREAM, false);
 			} catch (CoreException e) {
-
 				// TODO: Calling method should be responsible for returning
 				// state of task. Wizard will have different behaviour than
 				// editor.
-				task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+				task.setSyncState(previousState);
 				throw e;
 			}
 		}

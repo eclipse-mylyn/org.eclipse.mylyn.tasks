@@ -59,7 +59,6 @@ import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
-import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 import org.eclipse.ui.themes.IThemeManager;
 
 /**
@@ -110,11 +109,7 @@ public abstract class AbstractNewRepositoryTaskEditor extends AbstractRepository
 		newSummary = taskData.getSummary();
 		repository = editorInput.getRepository();
 		connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(repository.getKind());
-		isDirty = false;
-		IWorkbenchSiteProgressService progressService = getProgressService();
-		if (progressService != null) {
-			progressService.showBusyForFamily(FAMILY_SUBMIT);
-		}
+		isDirty = false;		
 	}
 
 	@Override
@@ -221,7 +216,7 @@ public abstract class AbstractNewRepositoryTaskEditor extends AbstractRepository
 		if (newTaskSchedule.get(Calendar.HOUR_OF_DAY) >= scheduledEndHour) {
 			TasksUiPlugin.getTaskListManager().setSecheduledIn(newTaskSchedule, 1);
 		} else {
-			TasksUiPlugin.getTaskListManager().setScheduledToday(newTaskSchedule);
+			TasksUiPlugin.getTaskListManager().setScheduledEndOfDay(newTaskSchedule);
 		}
 		scheduledForDate.setDate(newTaskSchedule);
 		Button removeReminder = toolkit.createButton(sectionClient, "Clear", SWT.PUSH | SWT.CENTER);
@@ -328,7 +323,7 @@ public abstract class AbstractNewRepositoryTaskEditor extends AbstractRepository
 	protected class DescriptionListener implements Listener {
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new RepositoryTaskSelection(taskData.getId(), taskData.getRepositoryUrl(), "New Description",
+					new RepositoryTaskSelection(taskData.getId(), taskData.getRepositoryUrl(), taskData.getRepositoryKind(), "New Description",
 							false, taskData.getSummary()))));
 		}
 	}

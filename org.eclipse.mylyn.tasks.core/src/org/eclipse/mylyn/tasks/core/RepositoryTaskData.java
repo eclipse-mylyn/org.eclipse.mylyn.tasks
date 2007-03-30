@@ -27,7 +27,7 @@ import java.util.StringTokenizer;
  */
 public final class RepositoryTaskData extends AttributeContainer implements Serializable {
 
-	private static final long serialVersionUID = 2304501248225237689L;
+	private static final long serialVersionUID = 2304501248225237699L;
 
 	private boolean hasLocalChanges = false;
 
@@ -36,9 +36,9 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 	private String reportID;
 
 	private String repositoryURL;
-	
+
 	private String repositoryKind;
-	
+
 	private String taskKind;
 
 	private List<TaskComment> taskComments = new ArrayList<TaskComment>();
@@ -51,7 +51,8 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 	/** The repositoryOperations that can be done on the report */
 	private List<RepositoryOperation> repositoryOperations = new ArrayList<RepositoryOperation>();
 
-	public RepositoryTaskData(AbstractAttributeFactory factory, String repositoryKind, String repositoryURL, String id, String taskKind) {
+	public RepositoryTaskData(AbstractAttributeFactory factory, String repositoryKind, String repositoryURL, String id,
+			String taskKind) {
 		super(factory);
 		this.reportID = id;
 		this.repositoryKind = repositoryKind;
@@ -318,5 +319,4 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 	public String getTaskKind() {
 		return taskKind;
 	}
-
 }

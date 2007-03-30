@@ -15,6 +15,7 @@ import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasks.ui.wizards.CommonAddExistingTaskWizard;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
@@ -34,35 +35,49 @@ import org.eclipse.ui.PlatformUI;
  * @author Eugene Kuleshov
  */
 public abstract class AbstractRepositoryConnectorUi {
-	
+
 	private static final String LABEL_TASK_DEFAULT = "Task";
 
+	private boolean customNotificationHandling = false;
+	
 	/**
 	 * @return the unique type of the repository, e.g. "bugzilla"
 	 */
 	public abstract String getRepositoryType();
-		
+
 	public abstract AbstractRepositorySettingsPage getSettingsPage();
 
 	/**
 	 * @param repository
-	 * @param queryToEdit can be null
+	 * @param queryToEdit
+	 *            can be null
 	 */
 	public abstract IWizard getQueryWizard(TaskRepository repository, AbstractRepositoryQuery queryToEdit);
-	
+
 	public abstract IWizard getNewTaskWizard(TaskRepository taskRepository);
-		
+
 	public abstract boolean hasRichEditor();
-			
-	public abstract boolean hasSearchPage();
-	
+
 	/**
-	 * @param repositoryTask can be null
+	 * Override to return a custom task editor ID. If overriding this method the
+	 * connector becomes responsible for showing the additional pages handled by
+	 * the default task editor. As of Mylar 2.0M2 these are the Planning and
+	 * Context pages.
+	 */
+	public String getTaskEditorId(AbstractRepositoryTask repositoryTask) {
+		return TaskListPreferenceConstants.TASK_EDITOR_ID;
+	}
+
+	public abstract boolean hasSearchPage();
+
+	/**
+	 * @param repositoryTask
+	 *            can be null
 	 */
 	public String getTaskKindLabel(AbstractRepositoryTask repositoryTask) {
 		return LABEL_TASK_DEFAULT;
 	}
-	
+
 	public void openEditQueryDialog(AbstractRepositoryQuery query) {
 		try {
 			TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(query.getRepositoryKind(),
@@ -87,7 +102,7 @@ public abstract class AbstractRepositoryConnectorUi {
 			MylarStatusHandler.fail(e, e.getMessage(), true);
 		}
 	}
-		
+
 	public IWizard getAddExistingTaskWizard(TaskRepository repository) {
 		return new CommonAddExistingTaskWizard(repository);
 	}
@@ -107,10 +122,10 @@ public abstract class AbstractRepositoryConnectorUi {
 		TaskRepositoryManager repositoryManager = TasksUiPlugin.getRepositoryManager();
 		AbstractRepositoryConnector connector = repositoryManager.getRepositoryConnector(getRepositoryType());
 		String taskUrl = connector.getTaskWebUrl(repositoryUrl, id);
-		if(taskUrl == null) {
+		if (taskUrl == null) {
 			return false;
 		}
-		
+
 		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window == null) {
 			IWorkbenchWindow[] windows = PlatformUI.getWorkbench().getWorkbenchWindows();
@@ -122,15 +137,22 @@ public abstract class AbstractRepositoryConnectorUi {
 			return false;
 		}
 		IWorkbenchPage page = window.getActivePage();
-		
+
 		OpenRepositoryTaskJob job = new OpenRepositoryTaskJob(getRepositoryType(), repositoryUrl, id, taskUrl, page);
 		job.schedule();
 
 		return true;
 	}
-	
+
 	public IHyperlink[] findHyperlinks(TaskRepository repository, String text, int lineOffset, int regionOffset) {
-		return new IHyperlink[0];
+		return null;
 	}
 
+	public void setCustomNotificationHandling(boolean customNotifications) {
+		this.customNotificationHandling = customNotifications;
+	}
+	
+	public boolean hasCustomNotificationHandling() {
+		return customNotificationHandling;
+	}
 }

@@ -22,7 +22,7 @@ import org.eclipse.mylar.context.core.ContextCorePlugin;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.tasks.ui.RetrieveTitleFromUrlJob;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
 import org.eclipse.mylar.monitor.ui.MylarMonitorUiPlugin;
@@ -298,7 +298,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		form = managedForm.getForm();
 		toolkit = managedForm.getToolkit();
-		form.setImage(TaskListImages.getImage(TaskListImages.CALENDAR));
+//		form.setImage(TaskListImages.getImage(TaskListImages.CALENDAR));
 //		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
@@ -308,10 +308,10 @@ public class TaskPlanningEditor extends TaskFormPage {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 		// try {
 		if (task instanceof AbstractRepositoryTask) {
-			form.setText("Planning");
+			//form.setText("Planning");
 		} else {
 			createSummarySection(editorComposite);
-			form.setText("Task: " + task.getSummary());
+			//form.setText("Task: " + task.getSummary());
 		}
 		createPlanningSection(editorComposite);
 		createNotesSection(editorComposite);
@@ -367,7 +367,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		summary = toolkit.createText(summaryComposite, task.getSummary(), SWT.LEFT | SWT.FLAT);
 		summary.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
-		GridDataFactory.fillDefaults().grab(true, false).applyTo(summary);		
+		GridDataFactory.fillDefaults().minSize(100, SWT.DEFAULT).grab(true, false).applyTo(summary);		
 
 		if (task instanceof AbstractRepositoryTask) {
 			summary.setEnabled(false);
@@ -613,7 +613,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		
 		
 		ImageHyperlink clearScheduledDate = toolkit.createImageHyperlink(nameValueComp, SWT.NONE);
-		clearScheduledDate.setImage(TaskListImages.getImage(TaskListImages.REMOVE));
+		clearScheduledDate.setImage(TasksUiImages.getImage(TasksUiImages.REMOVE));
 		clearScheduledDate.setToolTipText(CLEAR);
 		clearScheduledDate.addHyperlinkListener(new HyperlinkAdapter() {
 
@@ -649,7 +649,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		toolkit.paintBordersFor(nameValueComp);
 
 		ImageHyperlink clearDueDate = toolkit.createImageHyperlink(nameValueComp, SWT.NONE);
-		clearDueDate.setImage(TaskListImages.getImage(TaskListImages.REMOVE));
+		clearDueDate.setImage(TasksUiImages.getImage(TasksUiImages.REMOVE));
 		clearDueDate.setToolTipText(CLEAR);
 		clearDueDate.addHyperlinkListener(new HyperlinkAdapter() {
 

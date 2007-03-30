@@ -98,7 +98,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	public static final String LABEL_VIEW_REPOSITORIES = "Task Repositories view";
 
 	public static final String PLUGIN_ID = "org.eclipse.mylar.tasklist";
-	
+
 	private static final String NAME_DATA_DIR = ".mylar";
 
 	private static final char DEFAULT_PATH_SEPARATOR = '/';
@@ -123,14 +123,15 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	private TaskListBackupManager taskListBackupManager;
 
-	private TaskDataManager offlineTaskManager;
+	private TaskDataManager taskDataManager;
 
 	private List<ITaskEditorFactory> taskEditors = new ArrayList<ITaskEditorFactory>();
 
 	private ArrayList<IHyperlinkDetector> hyperlinkDetectors = new ArrayList<IHyperlinkDetector>();
 
-	private TreeSet<AbstractTaskRepositoryLinkProvider> repositoryLinkProviders = new TreeSet<AbstractTaskRepositoryLinkProvider>(new OrderComparator());
-	
+	private TreeSet<AbstractTaskRepositoryLinkProvider> repositoryLinkProviders = new TreeSet<AbstractTaskRepositoryLinkProvider>(
+			new OrderComparator());
+
 	private TaskListWriter taskListWriter;
 
 	private ITaskHighlighter highlighter;
@@ -147,7 +148,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	private static final class OrderComparator implements Comparator<AbstractTaskRepositoryLinkProvider> {
 		public int compare(AbstractTaskRepositoryLinkProvider p1, AbstractTaskRepositoryLinkProvider p2) {
-			return p1.getOrder()-p2.getOrder(); 
+			return p1.getOrder() - p2.getOrder();
 		}
 	}
 
@@ -275,51 +276,57 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			Set<ITaskListNotification> notifications = new HashSet<ITaskListNotification>();
 			// Incoming Changes
 			for (TaskRepository repository : getRepositoryManager().getAllRepositories()) {
-				for (AbstractRepositoryTask repositoryTask : TasksUiPlugin.getTaskListManager().getTaskList()
-						.getRepositoryTasks(repository.getUrl())) {
-					if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING
-							&& repositoryTask.isNotified() == false) {
-						TaskListNotificationIncoming notification = new TaskListNotificationIncoming(repositoryTask);
+				AbstractRepositoryConnector connector = getRepositoryManager().getRepositoryConnector(
+						repository.getKind());
+				AbstractRepositoryConnectorUi connectorUi = getRepositoryUi(repository.getKind());
+				if (connectorUi != null && !connectorUi.hasCustomNotificationHandling()) {
+					for (AbstractRepositoryTask repositoryTask : TasksUiPlugin.getTaskListManager().getTaskList()
+							.getRepositoryTasks(repository.getUrl())) {
+						if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING
+								&& repositoryTask.isNotified() == false) {
+							TaskListNotificationIncoming notification = new TaskListNotificationIncoming(repositoryTask);
 
-						if (repositoryTask.getTaskData() != null) {
-							List<TaskComment> taskComments = repositoryTask.getTaskData().getComments();
-							if (taskComments != null && taskComments.size() > 0) {
-								TaskComment lastComment = taskComments.get(taskComments.size() - 1);
-								if (lastComment != null) {
-									notification.setDescription(lastComment.getText());
+							if (repositoryTask.getTaskData() != null) {
+								List<TaskComment> taskComments = repositoryTask.getTaskData().getComments();
+								if (taskComments != null && taskComments.size() > 0) {
+									TaskComment lastComment = taskComments.get(taskComments.size() - 1);
+									if (lastComment != null) {
+										notification.setDescription(lastComment.getText());
+									}
+								} else {
+									String description = repositoryTask.getTaskData().getDescription();
+									if (description != null) {
+										notification.setDescription(description);
+									}
 								}
-							} else {
-								String description = repositoryTask.getTaskData().getDescription();
-								if (description != null) {
-									notification.setDescription(description);
+
+								if (connector != null) {
+									ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
+									if (offlineHandler != null
+											&& repositoryTask.getTaskData().getLastModified() != null) {
+										Date modified = repositoryTask.getTaskData().getAttributeFactory()
+												.getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED,
+														repositoryTask.getTaskData().getLastModified());
+										notification.setDate(modified);
+									}
 								}
+
 							}
-
-							AbstractRepositoryConnector connector = getRepositoryManager().getRepositoryConnector(
-									repositoryTask.getRepositoryKind());
-							if (connector != null) {
-								ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
-								if (offlineHandler != null && repositoryTask.getTaskData().getLastModified() != null) {
-									Date modified = repositoryTask.getTaskData().getAttributeFactory().getDateForAttributeType(
-											RepositoryTaskAttribute.DATE_MODIFIED, repositoryTask.getTaskData()
-													.getLastModified());
-									notification.setDate(modified);
-								}
-							}
-
+							notifications.add(notification);
+							repositoryTask.setNotified(true);
 						}
-
-						notifications.add(notification);
-						repositoryTask.setNotified(true);
 					}
 				}
 			}
 			// New query hits
 			for (AbstractRepositoryQuery query : TasksUiPlugin.getTaskListManager().getTaskList().getQueries()) {
-				for (AbstractQueryHit hit : query.getHits()) {
-					if (hit.getCorrespondingTask() == null && hit.isNotified() == false) {
-						notifications.add(new TaskListNotificationQueryIncoming(hit));
-						hit.setNotified(true);
+				AbstractRepositoryConnectorUi connectorUi = getRepositoryUi(query.getRepositoryKind());
+				if (!connectorUi.hasCustomNotificationHandling()) {
+					for (AbstractQueryHit hit : query.getHits()) {
+						if (hit.getCorrespondingTask() == null && hit.isNotified() == false) {
+							notifications.add(new TaskListNotificationQueryIncoming(hit));
+							hit.setNotified(true);
+						}
 					}
 				}
 			}
@@ -340,7 +347,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			if (event.getProperty().equals(MylarPreferenceContstants.PREF_DATA_DIR)) {
 				if (event.getOldValue() instanceof String) {
 					reloadDataDirectory(true);
-				} 
+				}
 			}
 		}
 
@@ -372,7 +379,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			WorkspaceAwareContextStore contextStore = new WorkspaceAwareContextStore();
 			contextStore.init();
 			ContextCorePlugin.setContextStore(contextStore);
-			
+
 			WebClientUtil.initCommonsLoggingSettings();
 			initializeDefaultPreferences(getPreferenceStore());
 			taskListWriter = new TaskListWriter();
@@ -389,41 +396,45 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			// NOTE: initializing extensions in start(..) has caused race
 			// conditions previously
 			TasksUiExtensionReader.initStartupExtensions(taskListWriter);
-			
+
 			taskRepositoryManager.readRepositories(getRepositoriesFilePath());
-			
+
 			// add the automatically created templates
-			for(AbstractRepositoryConnector connector: taskRepositoryManager.getRepositoryConnectors()){
-				for(RepositoryTemplate template: connector.getTemplates()){
-					if(template.addAutomatically){
-						TaskRepository taskRepository = taskRepositoryManager.getRepository(connector.getRepositoryType(), template.repositoryUrl);
-						if(taskRepository == null){
-							taskRepository = new TaskRepository(connector.getRepositoryType(), template.repositoryUrl, template.version);
+			for (AbstractRepositoryConnector connector : taskRepositoryManager.getRepositoryConnectors()) {
+				for (RepositoryTemplate template : connector.getTemplates()) {
+					if (template.addAutomatically) {
+						TaskRepository taskRepository = taskRepositoryManager.getRepository(connector
+								.getRepositoryType(), template.repositoryUrl);
+						if (taskRepository == null) {
+							taskRepository = new TaskRepository(connector.getRepositoryType(), template.repositoryUrl,
+									template.version);
 							taskRepository.setRepositoryLabel(template.label);
+							taskRepository.setAnonymous(true);
 							taskRepositoryManager.addRepository(taskRepository, getRepositoriesFilePath());
 						}
 					}
 				}
 			}
-			
+
 			readOfflineReports();
 			for (ITaskListExternalizer externalizer : taskListWriter.getExternalizers()) {
 				if (externalizer instanceof DelegatingTaskExternalizer) {
-					((DelegatingTaskExternalizer) externalizer).init(offlineTaskManager);
+					((DelegatingTaskExternalizer) externalizer).init(taskDataManager);
 				}
 			}
-			
-			taskListWriter.setTaskDataManager(offlineTaskManager);
-			
-			// NOTE: task list must be read before Task List view can be initialized
+
+			taskListWriter.setTaskDataManager(taskDataManager);
+
+			// NOTE: task list must be read before Task List view can be
+			// initialized
 			taskListManager.init();
 			taskListManager.addActivityListener(CONTEXT_TASK_ACTIVITY_LISTENER);
 			taskListManager.readExistingOrCreateNewList();
 			initialized = true;
-			
+
 			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 				public void run() {
-					try {												
+					try {
 						TasksUiExtensionReader.initWorkbenchUiExtensions();
 						PlatformUI.getWorkbench().addWindowListener(WINDOW_LISTENER);
 
@@ -455,7 +466,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 						getPreferenceStore().addPropertyChangeListener(synchronizationScheduler);
 						getPreferenceStore().addPropertyChangeListener(taskListManager);
 
-						// TODO: get rid of this, hack to make decorators show up on startup
+						// TODO: get rid of this, hack to make decorators show
+						// up on startup
 						TaskRepositoriesView repositoriesView = TaskRepositoriesView.getFromActivePerspective();
 						if (repositoriesView != null) {
 							repositoriesView.getViewer().refresh();
@@ -477,17 +489,17 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		}
 	}
 
-	
 	private void checkForCredentials() {
-		for (TaskRepository repository: taskRepositoryManager.getAllRepositories()) {
-			if(!repository.isAnonymous() && ("".equals(repository.getUserName()) || "".equals(repository.getPassword()))) {
+		for (TaskRepository repository : taskRepositoryManager.getAllRepositories()) {
+			if (!repository.isAnonymous()
+					&& ("".equals(repository.getUserName()) || "".equals(repository.getPassword()))) {
 				try {
-					EditRepositoryWizard wizard = new EditRepositoryWizard(repository);					
+					EditRepositoryWizard wizard = new EditRepositoryWizard(repository);
 					Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 					if (wizard != null && shell != null && !shell.isDisposed()) {
 						WizardDialog dialog = new WizardDialog(shell, wizard);
 						dialog.create();
-						//dialog.setTitle("Repository Credentials Missing");
+						// dialog.setTitle("Repository Credentials Missing");
 						dialog.setErrorMessage("Authentication credentials missing.");
 						dialog.setBlockOnOpen(true);
 						if (dialog.open() == Dialog.CANCEL) {
@@ -502,8 +514,6 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		}
 	}
 
-	
-	
 	public void earlyStartup() {
 		// ignore
 	}
@@ -560,9 +570,10 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		getTaskListManager().getTaskActivationHistory().clear();
 		getRepositoryManager().readRepositories(getRepositoriesFilePath());
 		ContextCorePlugin.getContextManager().loadActivityMetaContext();
-		getTaskListManager().setTaskListFile(new File(getDataDirectory() + File.separator + ITasksUiConstants.DEFAULT_TASK_LIST_FILE));
+		getTaskListManager().setTaskListFile(
+				new File(getDataDirectory() + File.separator + ITasksUiConstants.DEFAULT_TASK_LIST_FILE));
 		getTaskListManager().readExistingOrCreateNewList();
-		getTaskListManager().parseTaskActivityInteractionHistory();
+		getTaskListManager().initActivityHistory();
 		checkForCredentials();
 	}
 
@@ -712,7 +723,6 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		return initialized;
 	}
 
-	// TODO: remove
 	public IHyperlinkDetector[] getTaskHyperlinkDetectors() {
 		return hyperlinkDetectors.toArray(new IHyperlinkDetector[1]);
 	}
@@ -726,7 +736,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		if (repositoryLinkProvider != null)
 			this.repositoryLinkProviders.add(repositoryLinkProvider);
 	}
-	
+
 	public TaskListBackupManager getBackupManager() {
 		return taskListBackupManager;
 	}
@@ -736,17 +746,15 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		IPath offlineReportsPath = getOfflineReportsFilePath();
 
 		try {
-			offlineTaskManager = new TaskDataManager(taskRepositoryManager, offlineReportsPath.toFile(), true);
+			taskDataManager = new TaskDataManager(taskRepositoryManager, offlineReportsPath.toFile(), true);
 		} catch (Throwable t) {
-			MylarStatusHandler
-					.log(t,
-							"Recreating offline task cache due to format update.");
+			MylarStatusHandler.log(t, "Recreating offline task cache due to format update.");
 			boolean deleted = offlineReportsPath.toFile().delete();
 			if (!deleted) {
 				MylarStatusHandler.log(t, "could not delete offline repository tasks file");
 			}
 			try {
-				offlineTaskManager = new TaskDataManager(taskRepositoryManager, offlineReportsPath.toFile(), false);
+				taskDataManager = new TaskDataManager(taskRepositoryManager, offlineReportsPath.toFile(), false);
 			} catch (Exception e1) {
 				MylarStatusHandler.log(e1, "could not reset offline repository tasks file");
 			}
@@ -764,10 +772,10 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	}
 
 	public TaskDataManager getTaskDataManager() {
-		if (offlineTaskManager == null) {
+		if (taskDataManager == null) {
 			MylarStatusHandler.fail(null, "Offline reports file not created, try restarting.", true);
 		}
-		return offlineTaskManager;
+		return taskDataManager;
 	}
 
 	public static void addRepositoryConnectorUi(AbstractRepositoryConnectorUi repositoryConnectorUi) {
@@ -797,7 +805,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			return false;
 		}
 
-		// find first provider that can link repository 
+		// find first provider that can link repository
 		for (AbstractTaskRepositoryLinkProvider linkProvider : repositoryLinkProviders) {
 			TaskRepository repository = linkProvider.getTaskRepository(resource, getRepositoryManager());
 			if (repository != null) {

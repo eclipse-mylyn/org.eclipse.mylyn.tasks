@@ -18,11 +18,12 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.editors.TaskEditorActionContributor;
 import org.eclipse.mylar.internal.tasks.ui.editors.TaskPlanningEditor;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
@@ -33,7 +34,6 @@ import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
 import org.eclipse.swt.browser.Browser;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
@@ -48,11 +48,12 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.editor.FormPage;
 import org.eclipse.ui.forms.editor.IFormPage;
-import org.eclipse.ui.forms.widgets.FormToolkit;
+import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 
 /**
  * @author Mik Kersten
  * @author Eric Booth (initial prototype)
+ * @author Rob Elves
  */
 public class TaskEditor extends FormEditor {
 
@@ -75,6 +76,8 @@ public class TaskEditor extends FormEditor {
 	private IEditorPart contentOutlineProvider = null;
 
 	private int browserPageIndex = -1;
+
+	public final Object FAMILY_SUBMIT = new Object();
 
 	public TaskEditor() {
 		super();
@@ -113,14 +116,20 @@ public class TaskEditor extends FormEditor {
 		return super.getActiveEditor();
 	}
 
-	private int createBrowserPage(String url) {
+	private int createBrowserPage(final String url) {
 		if (!TasksUiPlugin.getDefault().getPreferenceStore().getBoolean(
 				TaskListPreferenceConstants.REPORT_DISABLE_INTERNAL)) {
 			try {
 				webBrowser = new Browser(getContainer(), SWT.NONE);
 				int index = addPage(webBrowser);
 				setPageText(index, ISSUE_WEB_PAGE_LABEL);
-				webBrowser.setUrl(url);
+
+				PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+
+					public void run() {
+						webBrowser.setUrl(url);
+					}
+				});
 
 				boolean openWithBrowser = TasksUiPlugin.getDefault().getPreferenceStore().getBoolean(
 						TaskListPreferenceConstants.REPORT_OPEN_INTERNAL);
@@ -159,6 +168,27 @@ public class TaskEditor extends FormEditor {
 				formPages.add(page);
 		}
 		return (IFormPage[]) formPages.toArray(new IFormPage[formPages.size()]);
+	}
+
+	/**
+	 * Refresh editor with new contents (if any)
+	 */
+	public void refreshEditorContents() {
+		for (IFormPage page : getPages()) {
+			if (page instanceof AbstractRepositoryTaskEditor) {
+				AbstractRepositoryTaskEditor editor = (AbstractRepositoryTaskEditor) page;
+				editor.refreshEditor();
+			}
+		}
+		// if (webBrowser != null) {
+		// PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+		//
+		// public void run() {
+		// refresh to original url?
+		// webBrowser.refresh();
+		// }
+		// });
+		// }
 	}
 
 	/**
@@ -378,8 +408,9 @@ public class TaskEditor extends FormEditor {
 				taskEditorInput = (TaskEditorInput) getEditorInput();
 				task = taskEditorInput.getTask();
 				setPartName(taskEditorInput.getLabel());
+				setPageImage(0, TasksUiImages.getImage(TasksUiImages.CALENDAR));
 			}
-			
+
 			int selectedIndex = index;
 			for (ITaskEditorFactory factory : TasksUiPlugin.getDefault().getTaskEditorFactories()) {
 				if (factory.canCreateEditorFor(task) || factory.canCreateEditorFor(getEditorInput())) {
@@ -388,11 +419,15 @@ public class TaskEditor extends FormEditor {
 						IEditorInput input = task != null ? factory.createEditorInput(task) : getEditorInput();
 						if (editor != null && input != null) {
 							FormPage taskEditor = (FormPage) editor;
-							// repositoryTaskEditor.setParentEditor(this);
 							editor.init(getEditorSite(), input);
-							taskEditor.createPartControl(getContainer());
 							index = addPage(taskEditor);
+							if (input.getImageDescriptor() != null) {
+								setPageImage(index, TasksUiImages.getImage(input.getImageDescriptor()));
+							}
 							if (editor instanceof AbstractRepositoryTaskEditor) {
+
+								((AbstractRepositoryTaskEditor) editor).setParentEditor(this);
+
 								if (getEditorInput() instanceof RepositoryTaskEditorInput) {
 									RepositoryTaskEditorInput existingInput = (RepositoryTaskEditorInput) getEditorInput();
 									setPartName(existingInput.getName());
@@ -402,7 +437,7 @@ public class TaskEditor extends FormEditor {
 								}
 								setPageText(index, factory.getTitle());
 								selectedIndex = index;
-							} 
+							}
 						}
 
 						// HACK: overwrites if multiple present
@@ -417,6 +452,7 @@ public class TaskEditor extends FormEditor {
 			String urlToOpen = getUrl();
 			if (urlToOpen != null && !urlToOpen.equals("")) {
 				browserPageIndex = createBrowserPage(urlToOpen);
+				setPageImage(browserPageIndex, TasksUiImages.getImage(TasksUiImages.OVERLAY_WEB));
 				if (selectedIndex == 0 && taskEditorInput != null && !taskEditorInput.isNewTask()) {
 					selectedIndex = browserPageIndex;
 				}
@@ -427,21 +463,16 @@ public class TaskEditor extends FormEditor {
 			}
 
 			if (task instanceof AbstractRepositoryTask) {
-				setTitleImage(TaskListImages.getImage(TaskListImages.TASK_REPOSITORY));
+				setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY));
 			} else if (getEditorInput() instanceof AbstractTaskEditorInput) {
-				this.setTitleImage(TaskListImages.getImage(TaskListImages.TASK_REMOTE));
+				this.setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_REMOTE));
 			} else if (getUrl() != null) {
-				setTitleImage(TaskListImages.getImage(TaskListImages.TASK_WEB));
+				setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_WEB));
 			}
+
 		} catch (PartInitException e) {
 			MylarStatusHandler.fail(e, "failed to create task editor pages", false);
 		}
-	}
-
-	@Override
-	protected FormToolkit createToolkit(Display display) {
-		// Create a toolkit that shares colors between editors.
-		return new FormToolkit(PlatformUI.getWorkbench().getDisplay());
 	}
 
 	/**
@@ -453,6 +484,12 @@ public class TaskEditor extends FormEditor {
 		setTitleToolTip(name);
 	}
 
+	public void showBusy(boolean busy) {
+		// if (!this.getHeaderForm().getForm().isDisposed()) {
+		// this.getHeaderForm().getForm().setBusy(busy);
+		// }
+	}
+
 	public ISelection getSelection() {
 		if (getSite() != null && getSite().getSelectionProvider() != null) {
 			return getSite().getSelectionProvider().getSelection();
@@ -460,4 +497,97 @@ public class TaskEditor extends FormEditor {
 			return StructuredSelection.EMPTY;
 		}
 	}
+
+	// @Override
+	// protected void createHeaderContents(IManagedForm headerForm) {
+	// getToolkit().decorateFormHeading(headerForm.getForm().getForm());
+	// headerForm.getForm().setImage(TasksUiImages.getImage(TasksUiImages.TASK));
+	//
+	// IEditorInput input = getEditorInput();
+	// if (input instanceof TaskEditorInput) {
+	// ITask task = ((TaskEditorInput) input).getTask();
+	// if (task instanceof AbstractRepositoryTask) {
+	// setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
+	// setFormHeaderLabel((AbstractRepositoryTask) task);
+	// return;
+	// } else {
+	// getHeaderForm().getForm().setText("Task: " + task.getSummary());
+	// }
+	// } else if (input instanceof RepositoryTaskEditorInput) {
+	// ITask task = ((RepositoryTaskEditorInput) input).getRepositoryTask();
+	// if (task != null && task instanceof AbstractRepositoryTask) {
+	// setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
+	// setFormHeaderLabel((AbstractRepositoryTask) task);
+	// return;
+	// } else {
+	// RepositoryTaskData data = ((RepositoryTaskEditorInput)
+	// input).getTaskData();
+	// if (data != null) {
+	// setFormHeaderImage(data.getRepositoryKind());
+	// setFormHeaderLabel(data);
+	// }
+	// }
+	// }
+	// }
+
+	// private void setFormHeaderImage(String repositoryKind) {
+	// ImageDescriptor overlay =
+	// TasksUiPlugin.getDefault().getOverlayIcon(repositoryKind);
+	// ImageDescriptor imageDescriptor =
+	// TasksUiImages.createWithOverlay(TasksUiImages.REPOSITORY, overlay, false,
+	// false);
+	// getHeaderForm().getForm().setImage(TasksUiImages.getImage(imageDescriptor));
+	// }
+
+	// public Form getTopForm() {
+	// return this.getHeaderForm().getForm().getForm();
+	// }
+	//
+	// public void setMessage(String message, int type) {
+	// this.getHeaderForm().getForm().setMessage(message, type);
+	// }
+
+	protected IWorkbenchSiteProgressService getProgressService() {
+		Object siteService = getEditorSite().getAdapter(IWorkbenchSiteProgressService.class);
+		if (siteService != null)
+			return (IWorkbenchSiteProgressService) siteService;
+		return null;
+	}
+
+	// private void setFormHeaderLabel(RepositoryTaskData taskData) {
+	//
+	// String kindLabel = taskData.getTaskKind();
+	// String idLabel = taskData.getId();
+	//
+	// if (idLabel != null) {
+	// getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
+	// } else {
+	// getHeaderForm().getForm().setText(kindLabel);
+	// }
+	// }
+
+	// private void setFormHeaderLabel(AbstractRepositoryTask repositoryTask) {
+	//
+	// AbstractRepositoryConnectorUi connectorUi =
+	// TasksUiPlugin.getRepositoryUi(repositoryTask.getRepositoryKind());
+	// String kindLabel = "";
+	// if (connectorUi != null) {
+	// kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+	// }
+	//
+	// String idLabel = repositoryTask.getTaskKey();
+	//
+	// if (idLabel != null) {
+	// getHeaderForm().getForm().getForm().setText(kindLabel + " " + idLabel);
+	// } else {
+	// getHeaderForm().getForm().setText(kindLabel);
+	// }
+	// }
+
+	public void setMessage(String string, int warning) {
+		if (string != null) {
+			MessageDialog.openInformation(getSite().getShell(), "Task Editor", string);
+		}
+	}
+
 }

@@ -13,7 +13,6 @@ package org.eclipse.mylar.internal.bugzilla.core;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
@@ -26,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.security.auth.login.LoginException;
 
@@ -149,6 +149,12 @@ public class BugzillaClient {
 
 	private boolean authenticated;
 
+	private String htAuthUser;
+
+	private String htAuthPass;
+
+	private Map<String, String> configParameters;
+
 	private HttpClient httpClient = new HttpClient(new MultiThreadedHttpConnectionManager());
 
 	private class BugzillaRetryHandler extends DefaultHttpMethodRetryHandler {
@@ -158,7 +164,7 @@ public class BugzillaClient {
 
 		@Override
 		public boolean retryMethod(HttpMethod method, IOException exception, int executionCount) {
-			if(super.retryMethod(method, exception, executionCount)) {
+			if (super.retryMethod(method, exception, executionCount)) {
 				int soTimeout = httpClient.getHttpConnectionManager().getParams().getSoTimeout();
 				httpClient.getHttpConnectionManager().getParams().setSoTimeout(soTimeout * 2);
 				int connectTimeout = httpClient.getHttpConnectionManager().getParams().getConnectionTimeout();
@@ -168,12 +174,6 @@ public class BugzillaClient {
 			return false;
 		}
 	}
-	
-	private String htAuthUser;
-
-	private String htAuthPass;
-
-	private Map<String, String> configParameters;
 
 	public BugzillaClient(URL url, String username, String password, String htAuthUser, String htAuthPass,
 			String characterEncoding) {
@@ -221,22 +221,11 @@ public class BugzillaClient {
 				authenticate();
 			}
 
-			// System.err.println("\n\n>>>> " +
-			// httpClient.getParams().getParameter("http.useragent"));
-
-			// String requestPath = serverURL;//
-			// WebClientUtil.getRequestPath(serverURL);
-			// if (requestPath.contains(QUERY_DELIMITER)) {
-			// requestPath = requestPath.substring(0,
-			// requestPath.indexOf(QUERY_DELIMITER));
-			// }
 			GetMethod getMethod = new GetMethod(WebClientUtil.getRequestPath(requestURL));
 			if (requestURL.contains(QUERY_DELIMITER)) {
 				getMethod.setQueryString(requestURL.substring(requestURL.indexOf(QUERY_DELIMITER)));
 			}
 
-			// httpClient.getHttpConnectionManager().getParams().setSoTimeout(WebClientUtil.SOCKET_TIMEOUT);
-			// httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(WebClientUtil.CONNNECT_TIMEOUT);
 			getMethod.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset="
 					+ characterEncoding);
 
@@ -252,7 +241,8 @@ public class BugzillaClient {
 				code = httpClient.executeMethod(getMethod);
 			} catch (IOException e) {
 				getMethod.releaseConnection();
-				throw e;
+				throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
+						IMylarStatusConstants.IO_ERROR, repositoryUrl.toString(), e));
 			}
 
 			if (code == HttpURLConnection.HTTP_OK) {
@@ -266,10 +256,14 @@ public class BugzillaClient {
 			} else if (code == HttpURLConnection.HTTP_PROXY_AUTH) {
 				// throw new LoginException("Proxy Authentication Required");
 				authenticated = false;
+				getMethod.getResponseBody();
+				getMethod.releaseConnection();
 				throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 						IMylarStatusConstants.REPOSITORY_LOGIN_ERROR, repositoryUrl.toString(),
 						"Proxy authentication required"));
 			} else {
+				getMethod.getResponseBody();
+				getMethod.releaseConnection();
 				throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 						IMylarStatusConstants.NETWORK_ERROR, "Http error: " + HttpStatus.getStatusText(code)));
 				// throw new IOException("HttpClient connection error response
@@ -287,16 +281,7 @@ public class BugzillaClient {
 		String loginUrl = repositoryUrl + "/relogin.cgi";
 		GetMethod method = null;
 		try {
-			// httpClient.getParams().setAuthenticationPreemptive(true);
 			method = getConnect(loginUrl);
-			method.setFollowRedirects(false);
-			int code = httpClient.executeMethod(method);
-			if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
-				authenticated = false;
-				throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
-						IMylarStatusConstants.REPOSITORY_LOGIN_ERROR, repositoryUrl.toString(),
-						"HTTP authentication failed."));
-			}
 			BufferedReader responseReader = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream(),
 					characterEncoding));
 
@@ -340,55 +325,37 @@ public class BugzillaClient {
 					"Authentication credentials missing."));
 		}
 
-		WebClientUtil.setupHttpClient(httpClient, proxy, repositoryUrl.toString(), htAuthUser, htAuthPass);
-
-		NameValuePair[] formData = new NameValuePair[2];
-		formData[0] = new NameValuePair(IBugzillaConstants.POST_INPUT_BUGZILLA_LOGIN, username);
-		formData[1] = new NameValuePair(IBugzillaConstants.POST_INPUT_BUGZILLA_PASSWORD, password);
-
-		PostMethod method = new PostMethod(WebClientUtil.getRequestPath(repositoryUrl.toString()
-				+ IBugzillaConstants.URL_POST_LOGIN));
-
-		method.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=" + characterEncoding);
-		method.setRequestBody(formData);
-		method.setDoAuthentication(true);
-		method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new BugzillaRetryHandler());
-		// httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(WebClientUtil.CONNNECT_TIMEOUT);
-		method.setFollowRedirects(false);
+		PostMethod postMethod = null;
 
 		try {
+
+			WebClientUtil.setupHttpClient(httpClient, proxy, repositoryUrl.toString(), htAuthUser, htAuthPass);
+
+			NameValuePair[] formData = new NameValuePair[2];
+			formData[0] = new NameValuePair(IBugzillaConstants.POST_INPUT_BUGZILLA_LOGIN, username);
+			formData[1] = new NameValuePair(IBugzillaConstants.POST_INPUT_BUGZILLA_PASSWORD, password);
+
+			postMethod = new PostMethod(WebClientUtil.getRequestPath(repositoryUrl.toString()
+					+ IBugzillaConstants.URL_POST_LOGIN));
+
+			postMethod.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset="
+					+ characterEncoding);
+			postMethod.setRequestBody(formData);
+			postMethod.setDoAuthentication(true);
+			postMethod.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new BugzillaRetryHandler());
+			// httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(WebClientUtil.CONNNECT_TIMEOUT);
+			postMethod.setFollowRedirects(false);
+
 			httpClient.getParams().setAuthenticationPreemptive(true);
-			int code = httpClient.executeMethod(method);
+			int code = httpClient.executeMethod(postMethod);
 			if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
 				authenticated = false;
 				throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 						IMylarStatusConstants.REPOSITORY_LOGIN_ERROR, repositoryUrl.toString(),
 						"HTTP authentication failed."));
-				// throw new LoginException("HTTP authentication failed. Invalid
-				// username or password.");
-				// final InetAddress addr =
-				// InetAddress.getByName(repositoryUrl.getHost());
-				// PasswordAuthentication pw =
-				// Authenticator.requestPasswordAuthentication(repositoryUrl.getHost(),
-				// addr,
-				// WebClientUtil.getPort(repositoryUrl.getHost()), "HTTP", "Http
-				// Authentication!", null);
-				// credentials = new
-				// UsernamePasswordCredentials(pw.getUserName(), new
-				// String(pw.getPassword()));
-				// httpClient.getState().setCredentials(
-				// new AuthScope(AuthScope.ANY_HOST, AuthScope.ANY_PORT,
-				// AuthScope.ANY_REALM), credentials);
-				//
-				// code = httpClient.executeMethod(method);
-				// if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code ==
-				// HttpURLConnection.HTTP_FORBIDDEN) {
-				// throw new LoginException("HTTP authentication failed. Invalid
-				// username or password.");
-				// }
 			}
 			if (hasAuthenticationCredentials()) {
-				BufferedReader responseReader = new BufferedReader(new InputStreamReader(method
+				BufferedReader responseReader = new BufferedReader(new InputStreamReader(postMethod
 						.getResponseBodyAsStream(), characterEncoding));
 
 				HtmlStreamTokenizer tokenizer = new HtmlStreamTokenizer(responseReader, null);
@@ -400,6 +367,7 @@ public class BugzillaClient {
 							if (id != null && id.toLowerCase(Locale.ENGLISH).contains(LOGIN_REQUIRED)) {
 								// throw new
 								// LoginException(IBugzillaConstants.INVALID_CREDENTIALS);
+								responseReader.close();
 								authenticated = false;
 								throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 										IMylarStatusConstants.REPOSITORY_LOGIN_ERROR, repositoryUrl.toString(),
@@ -420,8 +388,8 @@ public class BugzillaClient {
 			throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 					IMylarStatusConstants.IO_ERROR, repositoryUrl.toString(), e));
 		} finally {
-			if (method != null) {
-				method.releaseConnection();
+			if (postMethod != null) {
+				postMethod.releaseConnection();
 			}
 			httpClient.getParams().setAuthenticationPreemptive(false);
 		}
@@ -437,7 +405,8 @@ public class BugzillaClient {
 				for (String type : VALID_CONFIG_CONTENT_TYPES) {
 					if (responseTypeHeader.getValue().toLowerCase(Locale.ENGLISH).contains(type)) {
 						taskData = new RepositoryTaskData(new BugzillaAttributeFactory(),
-								BugzillaCorePlugin.REPOSITORY_KIND, repositoryUrl.toString(), "" + id, Task.DEFAULT_TASK_KIND);
+								BugzillaCorePlugin.REPOSITORY_KIND, repositoryUrl.toString(), "" + id,
+								IBugzillaConstants.BUGZILLA_TASK_KIND);
 						setupExistingBugAttributes(repositoryUrl.toString(), taskData);
 						RepositoryReportFactory reportFactory = new RepositoryReportFactory(method
 								.getResponseBodyAsStream(), characterEncoding);
@@ -478,14 +447,13 @@ public class BugzillaClient {
 			}
 
 			method = getConnect(queryUrl);
-
 			if (method.getResponseHeader("Content-Type") != null) {
 				Header responseTypeHeader = method.getResponseHeader("Content-Type");
 				for (String type : VALID_CONFIG_CONTENT_TYPES) {
 					if (responseTypeHeader.getValue().toLowerCase(Locale.ENGLISH).contains(type)) {
 						RepositoryQueryResultsFactory queryFactory = new RepositoryQueryResultsFactory(method
 								.getResponseBodyAsStream(), characterEncoding);
-						queryFactory.performQuery(taskList, repositoryUrl.toString(), collector, query.getMaxHits());
+						queryFactory.performQuery(taskList, repositoryUrl.toString(), collector, QueryHitCollector.MAX_HITS);
 						return;
 					}
 				}
@@ -654,24 +622,20 @@ public class BugzillaClient {
 	 */
 	private PostMethod postFormData(String formUrl, NameValuePair[] formData) throws IOException, CoreException {
 
-		// DEBUG
-		// for (NameValuePair nameValuePair : formData) {
-		// System.err.println(">>> " + nameValuePair.getName() + " val: " +
-		// nameValuePair.getValue());
-		// }
+		PostMethod postMethod = null;
 
 		WebClientUtil.setupHttpClient(httpClient, proxy, repositoryUrl.toString(), htAuthUser, htAuthPass);
 		if (!authenticated && hasAuthenticationCredentials()) {
 			authenticate();
 		}
-	
-		PostMethod postMethod = new PostMethod(WebClientUtil.getRequestPath(repositoryUrl.toString() + formUrl));
+
+		postMethod = new PostMethod(WebClientUtil.getRequestPath(repositoryUrl.toString() + formUrl));
 		postMethod.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=" + characterEncoding);
-		
+
 		// Up the timout on sockets for posts
 		// Bug#175054
 		httpClient.getHttpConnectionManager().getParams().setSoTimeout(WebClientUtil.CONNNECT_TIMEOUT);
-		
+
 		postMethod.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new BugzillaRetryHandler());
 		postMethod.setRequestBody(formData);
 		postMethod.setDoAuthentication(true);
@@ -680,9 +644,11 @@ public class BugzillaClient {
 		if (status == HttpStatus.SC_OK) {
 			return postMethod;
 		} else {
+			postMethod.releaseConnection();
 			MylarStatusHandler.log("Post failed: " + HttpStatus.getStatusText(status), this);
 			throw new IOException("Communication error occurred during upload. \n\n" + HttpStatus.getStatusText(status));
 		}
+
 	}
 
 	public String postTaskData(RepositoryTaskData taskData) throws IOException, CoreException {
@@ -704,7 +670,6 @@ public class BugzillaClient {
 			formData = getPairsForExisting(taskData);
 		}
 
-		InputStream inputStream = null;
 		String result = null;
 		PostMethod method = null;
 		try {
@@ -717,8 +682,8 @@ public class BugzillaClient {
 			if (method == null) {
 				throw new IOException("Could not post form, client returned null method.");
 			}
-
-			BufferedReader in = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream()));
+			BufferedReader in = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream(), method
+					.getRequestCharSet()));
 			in.mark(10);
 			HtmlStreamTokenizer tokenizer = new HtmlStreamTokenizer(in, null);
 
@@ -784,9 +749,6 @@ public class BugzillaClient {
 					IMylarStatusConstants.INTERNAL_ERROR, "Unable to parse response from " + repositoryUrl.toString()
 							+ "."));
 		} finally {
-			if (inputStream != null) {
-				inputStream.close();
-			}
 			if (method != null) {
 				method.releaseConnection();
 			}
@@ -817,11 +779,6 @@ public class BugzillaClient {
 		if (taskData.getDescription().length() != 0) {
 			fields.put(KEY_COMMENT, new NameValuePair(KEY_COMMENT, taskData.getDescription()));
 		}
-
-		// for (String key: fields.keySet()) {
-		// System.err.println(">>>"+fields.get(key).getName()+" =
-		// "+fields.get(key).getValue());
-		// }
 
 		return fields.values().toArray(new NameValuePair[fields.size()]);
 
@@ -992,6 +949,8 @@ public class BugzillaClient {
 			throw new CoreException(new MylarStatus(Status.ERROR, BugzillaCorePlugin.PLUGIN_ID,
 					IMylarStatusConstants.INTERNAL_ERROR, "Unable to parse response from " + repositoryUrl.toString()
 							+ "."));
+		} finally {
+			in.close();
 		}
 	}
 
@@ -1028,6 +987,48 @@ public class BugzillaClient {
 			}
 		}
 		return null;
+	}
+
+	public Map<String, RepositoryTaskData> getTaskData(Set<String> taskIds) throws IOException, CoreException {
+		GetMethod method = null;
+		try {
+
+			// TODO: Handle too long of url (IBugzillaConstants.MAX_URL_LENGTH)
+			
+			String requestUrl = repositoryUrl + IBugzillaConstants.URL_GET_SHOW_BUG_XML_NOID;
+
+			HashMap<String, RepositoryTaskData> taskDataMap = new HashMap<String, RepositoryTaskData>();
+			RepositoryTaskData taskData = null;
+			for (String taskId : taskIds) {
+				requestUrl += "&id=" + taskId;
+				taskData = new RepositoryTaskData(new BugzillaAttributeFactory(), BugzillaCorePlugin.REPOSITORY_KIND,
+						repositoryUrl.toString(), taskId, Task.DEFAULT_TASK_KIND);
+				setupExistingBugAttributes(repositoryUrl.toString(), taskData);
+				taskDataMap.put(taskId, taskData);
+			}
+
+			method = getConnect(requestUrl);
+			if (method.getResponseHeader("Content-Type") != null) {
+				Header responseTypeHeader = method.getResponseHeader("Content-Type");
+				for (String type : VALID_CONFIG_CONTENT_TYPES) {
+					if (responseTypeHeader.getValue().toLowerCase(Locale.ENGLISH).contains(type)) {
+						MultiBugReportFactory factory = new MultiBugReportFactory(method.getResponseBodyAsStream(),
+								characterEncoding);
+						factory.populateReport(taskDataMap);
+						return taskDataMap;
+					}
+				}
+			}
+
+			parseHtmlError(new BufferedReader(
+					new InputStreamReader(method.getResponseBodyAsStream(), characterEncoding)));
+
+			return null;
+		} finally {
+			if (method != null) {
+				method.releaseConnection();
+			}
+		}
 	}
 
 }

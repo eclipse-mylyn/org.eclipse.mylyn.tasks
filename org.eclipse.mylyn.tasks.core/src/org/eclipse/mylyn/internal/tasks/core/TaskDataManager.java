@@ -23,7 +23,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.tasks.core.AbstractAttributeFactory;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
@@ -37,6 +45,8 @@ import org.eclipse.mylar.tasks.core.TaskRepositoryManager;
  * @author Rob Elves
  */
 public class TaskDataManager {
+
+	private static final int SAVE_INTERVAL = 30 * 1000;
 
 	private File file;
 
@@ -56,6 +66,12 @@ public class TaskDataManager {
 
 	private TaskRepositoryManager taskRepositoryManager;
 
+	private Job saveJob;
+
+	private Timer saveTimer;
+
+	private boolean saveRequested = false;
+
 	public TaskDataManager(TaskRepositoryManager taskRepositoryManager, File file, boolean read) throws IOException,
 			ClassNotFoundException {
 		this.taskRepositoryManager = taskRepositoryManager;
@@ -65,32 +81,35 @@ public class TaskDataManager {
 		} else {
 			dataStore = new OfflineDataStore();
 		}
+
+		saveTimer = new Timer();
+		saveTimer.schedule(new CheckSaveRequired(), SAVE_INTERVAL, SAVE_INTERVAL);
 	}
 
 	private Map<String, RepositoryTaskData> getOldDataMap() {
 		if (oldTaskDataMap == null) {
-			oldTaskDataMap = Collections.synchronizedMap(dataStore.getOldDataMap());
+			oldTaskDataMap = dataStore.getOldDataMap();
 		}
 		return oldTaskDataMap;
 	}
 
 	private Map<String, Set<RepositoryTaskAttribute>> getLocalChangesMap() {
 		if (localChangesMap == null) {
-			localChangesMap = Collections.synchronizedMap(dataStore.getLocalEdits());
+			localChangesMap = dataStore.getLocalEdits();
 		}
 		return localChangesMap;
 	}
 
 	private synchronized Map<String, RepositoryTaskData> getNewDataMap() {
 		if (newTaskDataMap == null) {
-			newTaskDataMap = Collections.synchronizedMap(dataStore.getNewDataMap());
+			newTaskDataMap = dataStore.getNewDataMap();
 		}
 		return newTaskDataMap;
 	}
 
 	private synchronized Map<String, RepositoryTaskData> getUnsubmittedTaskData() {
 		if (unsubmittedTaskData == null) {
-			unsubmittedTaskData = Collections.synchronizedMap(dataStore.getUnsubmittedTaskData());
+			unsubmittedTaskData = dataStore.getUnsubmittedTaskData();
 		}
 		return unsubmittedTaskData;
 	}
@@ -100,7 +119,6 @@ public class TaskDataManager {
 	 * taskData is held and can be retrieved via getOldTaskData()
 	 */
 	public void push(String taskHandle, RepositoryTaskData newEntry) {
-//		String handle = AbstractRepositoryTask.getHandle(newEntry.getRepositoryUrl(), newEntry.getId());
 		RepositoryTaskData moveToOld = getNewDataMap().get(taskHandle);
 		synchronized (file) {
 			if (moveToOld != null) {
@@ -110,6 +128,7 @@ public class TaskDataManager {
 			}
 			getNewDataMap().put(taskHandle, newEntry);
 		}
+		dataStateChanged();
 	}
 
 	/**
@@ -118,20 +137,10 @@ public class TaskDataManager {
 	 * @param newData
 	 */
 	public void replace(String handle, RepositoryTaskData newData) {
-//		String handle = AbstractRepositoryTask.getHandle(newData.getRepositoryUrl(), newData.getId());
 		synchronized (file) {
 			getNewDataMap().put(handle, newData);
 		}
-	}
-
-	/**
-	 * Add an unsubmitted RepositoryTaskData to the offline reports file.
-	 */
-	public void putUnsubmitted(String handle, RepositoryTaskData newEntry) {
-//		String handle = AbstractRepositoryTask.getHandle(newEntry.getRepositoryUrl(), newEntry.getId());
-		synchronized (file) {
-			getUnsubmittedTaskData().put(handle, newEntry);
-		}
+		dataStateChanged();
 	}
 
 	public Map<String, RepositoryTaskData> getUnsubmitted() {
@@ -142,20 +151,16 @@ public class TaskDataManager {
 		synchronized (file) {
 			getUnsubmittedTaskData().remove(handle);
 		}
-	}
-
-	public void clearUnsubmitted() {
-		synchronized (file) {
-			getUnsubmittedTaskData().clear();
-		}
+		dataStateChanged();
 	}
 
 	/**
-	 * @return Get the next available temporary taskId. This taskId is given to new
-	 *         unsubmitted repository tasks. Incremented each time this method
-	 *         is called.
+	 * @return Get the next available temporary taskId. This taskId is given to
+	 *         new unsubmitted repository tasks. Incremented each time this
+	 *         method is called.
 	 */
 	public String getNewRepositoryTaskId() {
+		dataStateChanged();
 		return "" + dataStore.getNextTaskId();
 	}
 
@@ -211,14 +216,6 @@ public class TaskDataManager {
 
 	}
 
-//	/**
-//	 * @return editable copy of task data with any edits applied
-//	 */
-//	public RepositoryTaskData getEditableCopy(String handle) {
-//		String handle = AbstractRepositoryTask.getHandle(repositoryUrl, taskId);
-//		return getEditableCopy(handle);
-//	}
-
 	public void saveEdits(String handle, Set<RepositoryTaskAttribute> attributes) {
 		synchronized (file) {
 			Set<RepositoryTaskAttribute> edits = getLocalChangesMap().get(handle);
@@ -231,6 +228,7 @@ public class TaskDataManager {
 				edits.addAll(attributes);
 			}
 		}
+		dataStateChanged();
 	}
 
 	public Set<RepositoryTaskAttribute> getEdits(String handle) {
@@ -247,6 +245,7 @@ public class TaskDataManager {
 		synchronized (file) {
 			getLocalChangesMap().remove(handle);
 		}
+		dataStateChanged();
 	}
 
 	/**
@@ -262,30 +261,12 @@ public class TaskDataManager {
 		return data;
 	}
 
-//	/**
-//	 * Returns the most recent copy of the task data.
-//	 * 
-//	 * @return offline task data, null if no data found
-//	 */
-//	public RepositoryTaskData getRepsitoryTaskData(String repositoryUrl, String taskId) {
-//		String handle = AbstractRepositoryTask.getHandle(repositoryUrl, taskId);
-//		return getRepositoryTaskData(handle);
-//	}
-
 	/**
 	 * Returns the old copy if exists, null otherwise.
 	 */
 	public RepositoryTaskData getOldRepositoryTaskData(String handle) {
 		return getOldDataMap().get(handle);
 	}
-
-//	/**
-//	 * Returns the old copy if exists, null otherwise.
-//	 */
-//	public RepositoryTaskData getOldRepositoryTaskData(String repositoryUrl, String taskId) {
-//		String handle = AbstractRepositoryTask.getHandle(repositoryUrl, taskId);
-//		return getOldRepositoryTaskData(handle);
-//	}
 
 	/**
 	 * Remove some bugs from the offline reports list
@@ -295,7 +276,7 @@ public class TaskDataManager {
 	 */
 	public void remove(List<String> handlesToRemove) {
 		synchronized (file) {
-			for (String handle: handlesToRemove) {
+			for (String handle : handlesToRemove) {
 				remove(handle);
 			}
 		}
@@ -309,6 +290,19 @@ public class TaskDataManager {
 	}
 
 	/**
+	 * Make both new and old the same so that no deltas will be revealed.
+	 */
+	public void clearIncoming(String handle) {
+		RepositoryTaskData newData = getNewDataMap().get(handle);
+		if (newData != null) {
+			synchronized (file) {
+				getOldDataMap().put(handle, newData);
+			}
+		}
+		dataStateChanged();
+	}
+
+	/**
 	 * force a reset of all data maps
 	 */
 	public void clear() {
@@ -318,6 +312,7 @@ public class TaskDataManager {
 			newTaskDataMap = null;
 			unsubmittedTaskData = null;
 			localChangesMap = null;
+			saveRequested = false;
 		}
 	}
 
@@ -331,21 +326,10 @@ public class TaskDataManager {
 		AbstractRepositoryConnector connector = taskRepositoryManager.getRepositoryConnector(taskData
 				.getRepositoryKind());
 		if (connector != null && connector.getTaskDataHandler() != null) {
-			AbstractAttributeFactory factory = connector.getTaskDataHandler().getAttributeFactory(taskData.getRepositoryUrl(), taskData.getRepositoryKind(), taskData.getTaskKind());
+			AbstractAttributeFactory factory = connector.getTaskDataHandler().getAttributeFactory(
+					taskData.getRepositoryUrl(), taskData.getRepositoryKind(), taskData.getTaskKind());
 			if (factory != null) {
 				taskData.setAttributeFactory(factory);
-			}
-		}
-	}
-
-	/**
-	 * Make both new and old the same so that no deltas will be revealed.
-	 */
-	public void clearIncoming(String handle) {
-		RepositoryTaskData newData = getNewDataMap().get(handle);
-		if (newData != null) {
-			synchronized (file) {
-				getOldDataMap().put(handle, newData);
 			}
 		}
 	}
@@ -378,23 +362,72 @@ public class TaskDataManager {
 		}
 	}
 
-	/** save task data to offline file */
-	public void save() {
-		synchronized (file) {
+	private void dataStateChanged() {
+		synchronized (saveTimer) {
+			saveRequested = true;
+		}
+	}
 
-			ObjectOutputStream out = null;
-			try {
-				out = new ObjectOutputStream(new FileOutputStream(file));
-				out.writeObject(dataStore);
-				out.close();
-			} catch (IOException e) {
-				MylarStatusHandler.fail(e, "Could not write to offline reports file.", false);
-			} finally {
-				if (out != null) {
+	/**
+	 * PUBLIC FOR TESTING ONLY Launch a save job Saving is managed by
+	 * TaskDataManager
+	 */
+	public void save(boolean force) {
+
+		if (!force) {
+			saveJob = new TaskDataSaveJob();
+			saveJob.setPriority(Job.LONG);
+			saveJob.setSystem(true);
+			saveJob.schedule();
+		} else {
+			new TaskDataSaveJob().run(new NullProgressMonitor());
+		}
+	}
+
+	private class TaskDataSaveJob extends Job {
+
+		public TaskDataSaveJob() {
+			super("Saving task data");
+		}
+
+		@Override
+		protected IStatus run(IProgressMonitor monitor) {
+			synchronized (file) {
+				if (Platform.isRunning()) {
+					ObjectOutputStream out = null;
 					try {
+						out = new ObjectOutputStream(new FileOutputStream(file));
+						out.writeObject(dataStore);
 						out.close();
 					} catch (IOException e) {
-						// ignore
+						MylarStatusHandler.fail(e, "Could not write to offline reports file.", false);
+					} finally {
+						if (out != null) {
+							try {
+								out.close();
+							} catch (IOException e) {
+								// ignore
+							}
+						}
+					}
+				}
+			}
+			return Status.OK_STATUS;
+		}
+
+	};
+
+	class CheckSaveRequired extends TimerTask {
+
+		@Override
+		public void run() {
+			if (!Platform.isRunning()) {
+				return;
+			} else {
+				synchronized (saveTimer) {
+					if (saveRequested) {
+						save(false);
+						saveRequested = false;
 					}
 				}
 			}

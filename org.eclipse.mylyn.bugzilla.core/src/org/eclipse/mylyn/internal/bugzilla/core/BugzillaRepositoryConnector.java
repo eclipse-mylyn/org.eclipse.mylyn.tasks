@@ -47,8 +47,6 @@ import org.eclipse.mylar.tasks.core.UnrecognizedReponseException;
  */
 public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
-	private static final int MAX_URL_LENGTH = 2000;
-
 	private static final String BUG_ID = "&bug_id=";
 
 	private static final String CHANGED_BUGS_CGI_ENDDATE = "&chfieldto=Now";
@@ -116,11 +114,11 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		AbstractRepositoryTask repositoryTask = null;
 		if (task == null) {
 			RepositoryTaskData taskData = null;
-			taskData = taskDataHandler.getTaskData(repository, id);
+			taskData = taskDataHandler.getTaskData(repository, id);			
 			if (taskData != null) {
 				repositoryTask = new BugzillaTask(repository.getUrl(), "" + bugId, taskData.getId() + ": "
 						+ taskData.getDescription(), true);
-				repositoryTask.setTaskData(taskData);
+				repositoryTask.setTaskData(taskData);				
 				taskList.addTask(repositoryTask);
 			}
 		} else if (task instanceof AbstractRepositoryTask) {
@@ -158,7 +156,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 				AbstractRepositoryTask task = itr.next();
 				String newurlQueryString = URLEncoder.encode(task.getTaskId() + ",", repository.getCharacterEncoding());
 				if ((urlQueryString.length() + newurlQueryString.length() + IBugzillaConstants.CONTENT_TYPE_RDF
-						.length()) > MAX_URL_LENGTH) {
+						.length()) > IBugzillaConstants.MAX_URL_LENGTH) {
 					queryForChanged(repository, changedTasks, urlQueryString);
 					queryCounter = 0;
 					urlQueryString = urlQueryBase + BUG_ID;
@@ -181,7 +179,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 	private void queryForChanged(TaskRepository repository, Set<AbstractRepositoryTask> changedTasks,
 			String urlQueryString) throws UnsupportedEncodingException, CoreException {
 		QueryHitCollector collector = new QueryHitCollector(taskList);
-		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(repository.getUrl(), urlQueryString, "", "-1",
+		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(repository.getUrl(), urlQueryString, "",
 				taskList);
 
 		performQuery(query, repository, new NullProgressMonitor(), collector);

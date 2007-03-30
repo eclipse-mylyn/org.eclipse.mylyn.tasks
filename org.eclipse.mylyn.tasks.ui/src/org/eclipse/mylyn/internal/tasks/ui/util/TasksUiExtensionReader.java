@@ -23,7 +23,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.hyperlink.IHyperlinkDetector;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasks.ui.IDynamicSubMenuContributor;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.ITaskListExternalizer;
 import org.eclipse.mylar.tasks.core.RepositoryTemplate;
@@ -73,6 +73,8 @@ public class TasksUiExtensionReader {
 	public static final String ELMNT_REPOSITORY_CONNECTOR = "connectorCore";
 	
 	public static final String ATTR_USER_MANAGED = "userManaged";
+	
+	public static final String ATTR_CUSTOM_NOTIFICATIONS = "customNotifications";
 
 	public static final String ELMNT_REPOSITORY_LINK_PROVIDER = "linkProvider";
 	
@@ -159,7 +161,6 @@ public class TasksUiExtensionReader {
 					if (elements[j].getName().equals(ELMNT_EDITOR_FACTORY)) {
 						readEditorFactory(elements[j]);
 					} else if (elements[j].getName().equals(ELMNT_HYPERLINK_DETECTOR)) {
-						// TODO:remove
 						readHyperlinkDetector(elements[j]);
 					}
 				}
@@ -250,8 +251,7 @@ public class TasksUiExtensionReader {
 				if(userManagedString != null){
 					boolean userManaged = Boolean.parseBoolean(userManagedString);
 					repositoryConnector.setUserManaged(userManaged);					
-				}
-				
+				}				
 			} else {
 				MylarStatusHandler.log("could not not load connector core: " + connectorCore, null);
 			}
@@ -263,17 +263,24 @@ public class TasksUiExtensionReader {
 
 	private static void readRepositoryConnectorUi(IConfigurationElement element) {
 		try {
-			Object connectorUi = element.createExecutableExtension(ATTR_CLASS);
-			if (connectorUi instanceof AbstractRepositoryConnectorUi) {
+			Object connectorUiObject = element.createExecutableExtension(ATTR_CLASS);
+			if (connectorUiObject instanceof AbstractRepositoryConnectorUi) {
+				AbstractRepositoryConnectorUi connectorUi = (AbstractRepositoryConnectorUi)connectorUiObject;
 				TasksUiPlugin.addRepositoryConnectorUi((AbstractRepositoryConnectorUi) connectorUi);
 
+				String customNotificationsString = element.getAttribute(ATTR_CUSTOM_NOTIFICATIONS);
+				if(customNotificationsString != null){
+					boolean customNotifications = Boolean.parseBoolean(customNotificationsString);
+					connectorUi.setCustomNotificationHandling(customNotifications);					
+				}
+				
 				String iconPath = element.getAttribute(ATTR_BRANDING_ICON);
 				if (iconPath != null) {
 					ImageDescriptor descriptor = AbstractUIPlugin.imageDescriptorFromPlugin(element.getContributor()
 							.getName(), iconPath);
 					if (descriptor != null) {
 						TasksUiPlugin.getDefault().addBrandingIcon(((AbstractRepositoryConnectorUi)connectorUi).getRepositoryType(),
-								TaskListImages.getImage(descriptor));
+								TasksUiImages.getImage(descriptor));
 					}
 				}
 				String overlayIconPath = element.getAttribute(ATTR_OVERLAY_ICON);
@@ -286,7 +293,7 @@ public class TasksUiExtensionReader {
 					}
 				}
 			} else {
-				MylarStatusHandler.log("could not not load connector ui: " + connectorUi, null);
+				MylarStatusHandler.log("could not not load connector ui: " + connectorUiObject, null);
 			}
 
 		} catch (CoreException e) {

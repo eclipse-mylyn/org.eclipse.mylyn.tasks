@@ -14,20 +14,15 @@ package org.eclipse.mylar.bugzilla.tests;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.net.InetAddress;
-import java.net.Proxy;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.httpclient.params.HttpConnectionParams;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylar.context.core.ContextCorePlugin;
-import org.eclipse.mylar.core.net.SslProtocolSocketFactory;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaClient;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaQueryHit;
@@ -59,11 +54,11 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		BugzillaTask badId = (BugzillaTask) connector.createTaskFromExistingKey(repository, "bad-id");
 		assertNull(badId);
 
-		BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, "1");
-		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
+		BugzillaTask task = generateLocalTaskAndDownload("1");//(BugzillaTask) connector.createTaskFromExistingKey(repository, "1");
+//		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
 		assertNotNull(task);
-		assertEquals(RepositoryTaskSyncState.INCOMING, task.getSyncState());
-		TasksUiPlugin.getSynchronizationManager().setTaskRead(task, true);
+//		assertEquals(RepositoryTaskSyncState.INCOMING, task.getSyncState());
+//		TasksUiPlugin.getSynchronizationManager().setTaskRead(task, true);
 		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
 
 		BugzillaTask retrievedTask = (BugzillaTask) taskList.getTask(task.getHandleIdentifier());
@@ -93,7 +88,7 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		//		
 		String queryUrl = "http://mylar.eclipse.org/bugs218/buglist.cgi?query_format=advanced&short_desc_type=allwordssubstr&short_desc=search-match-test&product=TestProduct&long_desc_type=substring&long_desc=&bug_file_loc_type=allwordssubstr&bug_file_loc=&deadlinefrom=&deadlineto=&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=&emailassigned_to2=1&emailreporter2=1&emailcc2=1&emailtype2=substring&email2=&bugidtype=include&bug_id=&votes=&chfieldfrom=&chfieldto=Now&chfieldvalue=&cmdtype=doit&order=Reuse+same+sort+as+last+time&field0-0-0=noop&type0-0-0=noop&value0-0-0=";
 		BugzillaRepositoryQuery bugzillaQuery = new BugzillaRepositoryQuery(repository.getUrl(), queryUrl, "search",
-				"-1", taskList);
+				taskList);
 
 		SearchHitCollector collector = new SearchHitCollector(TasksUiPlugin.getTaskListManager().getTaskList(),
 				repository, bugzillaQuery);
@@ -115,12 +110,14 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 
 	public void testContextAttachFailure() throws Exception {
 		init218();
-		BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, "3");
-		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
-
+		BugzillaTask task = this.generateLocalTaskAndDownload("3");
+		//BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, "3");
+		//TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
+		//TasksUiPlugin.getSynchronizationManager().setTaskRead(task, true);
 		assertNotNull(task.getTaskData());
 		TasksUiPlugin.getTaskListManager().activateTask(task);
 		File sourceContextFile = ContextCorePlugin.getContextManager().getFileForContext(task.getHandleIdentifier());
+		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
 		sourceContextFile.createNewFile();
 		sourceContextFile.deleteOnExit();
 		repository.setAuthenticationCredentials("wrong", "wrong");
@@ -138,16 +135,16 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		init222();
 
 		// Get the task
-		BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, "3");
-		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
+		BugzillaTask task = generateLocalTaskAndDownload("3");//(BugzillaTask) connector.createTaskFromExistingKey(repository, "3");
+		//TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
 
 		TasksUiPlugin.getTaskListManager().getTaskList().moveToRoot(task);
 		assertTrue(task.isDownloaded());
 		int numComments = task.getTaskData().getComments().size();
 		// (The initial local copy from server)
-		assertEquals(RepositoryTaskSyncState.INCOMING, task.getSyncState());
-		TasksUiPlugin.getSynchronizationManager().setTaskRead(task, true);
-		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
+//		assertEquals(RepositoryTaskSyncState.INCOMING, task.getSyncState());
+//		TasksUiPlugin.getSynchronizationManager().setTaskRead(task, true);
+//		assertEquals(RepositoryTaskSyncState.SYNCHRONIZED, task.getSyncState());
 
 		// Modify it
 		String newCommentText = "BugzillaRepositoryClientTest.testSynchronize(): " + (new Date()).toString();
@@ -228,14 +225,14 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 	public void testUniqueQueryHitObjects() {
 		init222();
 		BugzillaRepositoryQuery query1 = new BugzillaRepositoryQuery(IBugzillaConstants.TEST_BUGZILLA_222_URL,
-				"queryurl", "description1", "-1", taskList);
+				"queryurl", "description1", taskList);
 		BugzillaQueryHit query1Hit = new BugzillaQueryHit(taskList, "description1", "P1",
 				IBugzillaConstants.TEST_BUGZILLA_222_URL, "1", null, "status");
 		query1.addHit(query1Hit);
 		taskList.addQuery(query1);
 
 		BugzillaRepositoryQuery query2 = new BugzillaRepositoryQuery(IBugzillaConstants.TEST_BUGZILLA_222_URL,
-				"queryurl2", "description2", "-1", taskList);
+				"queryurl2", "description2", taskList);
 		BugzillaQueryHit query2Hit = new BugzillaQueryHit(taskList, "description2", "P1",
 				IBugzillaConstants.TEST_BUGZILLA_222_URL, "1", null, "status");
 		query2.addHit(query2Hit);
@@ -285,8 +282,8 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		init222();
 		int bugId = 33;
 		String taskNumber = "" + bugId;
-		BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, taskNumber);
-		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
+		BugzillaTask task = generateLocalTaskAndDownload(taskNumber);//(BugzillaTask) connector.createTaskFromExistingKey(repository, taskNumber);
+		//TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
 
 		assertNotNull(task);
 		assertTrue(task.isDownloaded());
@@ -461,6 +458,7 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		ArrayList<String> taskDataList = new ArrayList<String>();
 		taskDataList.add(task7.getHandleIdentifier());
 		TasksUiPlugin.getDefault().getTaskDataManager().remove(taskDataList);
+		
 		assertNull(TasksUiPlugin.getDefault().getTaskDataManager().getRepositoryTaskData(
 				RepositoryTaskHandleUtil.getHandle(IBugzillaConstants.TEST_BUGZILLA_222_URL, "7")));
 
@@ -479,7 +477,7 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 			priority = "P1";
 			recentTaskData.setAttributeValue(BugzillaReportElement.PRIORITY.getKeyString(), priority);
 		}
-
+		task7.setTaskData(null); // all task data gone now for task7
 		connector.getTaskDataHandler().postTaskData(repository, recentTaskData);
 		TasksUiPlugin.getSynchronizationManager().synchronizeChanged(connector, repository);
 		assertEquals(RepositoryTaskSyncState.INCOMING, task7.getSyncState());
@@ -579,35 +577,6 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 
 	}
 
-	public void testTrustAllSslProtocolSocketFactory() throws Exception {
-		SslProtocolSocketFactory factory = new SslProtocolSocketFactory(Proxy.NO_PROXY);
-		Socket s;
-
-		s = factory.createSocket("mylar.eclipse.org", 80);
-		assertNotNull(s);
-		assertTrue(s.isConnected());
-		s.close();
-
-		InetAddress anyHost = new Socket().getLocalAddress();
-
-		s = factory.createSocket("mylar.eclipse.org", 80, anyHost, 0);
-		assertNotNull(s);
-		assertTrue(s.isConnected());
-		s.close();
-
-		HttpConnectionParams params = new HttpConnectionParams();
-		s = factory.createSocket("mylar.eclipse.org", 80, anyHost, 0, null);
-		assertNotNull(s);
-		assertTrue(s.isConnected());
-		s.close();
-
-		params.setConnectionTimeout(1000);
-		s = factory.createSocket("mylar.eclipse.org", 80, anyHost, 0, params);
-		assertNotNull(s);
-		assertTrue(s.isConnected());
-		s.close();
-	}
-
 	private String generateNewDay() {
 		int year = 2006;
 		int month = (int) (Math.random() * 12 + 1);
@@ -622,7 +591,7 @@ public class BugzillaRepositoryConnectorTest extends AbstractBugzillaTest {
 		init222();
 		int bugId = 19;
 		String taskNumber = "" + bugId;
-		BugzillaTask task = (BugzillaTask) connector.createTaskFromExistingKey(repository, taskNumber);
+		BugzillaTask task = (BugzillaTask) generateLocalTaskAndDownload(taskNumber);//connector.createTaskFromExistingKey(repository, taskNumber);
 		TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, true, null);
 
 		assertNotNull(task);

@@ -20,7 +20,7 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
@@ -60,7 +60,7 @@ class SynchronizeTaskJob extends Job {
 	public IStatus run(IProgressMonitor monitor) {
 		try {
 			monitor.beginTask(LABEL_SYNCHRONIZE_TASK, repositoryTasks.size());
-			setProperty(IProgressConstants.ICON_PROPERTY, TaskListImages.REPOSITORY_SYNCHRONIZE);
+			setProperty(IProgressConstants.ICON_PROPERTY, TasksUiImages.REPOSITORY_SYNCHRONIZE);
 
 			for (final AbstractRepositoryTask repositoryTask : repositoryTasks) {
 				if (monitor.isCanceled()) {
@@ -88,7 +88,7 @@ class SynchronizeTaskJob extends Job {
 
 				monitor.worked(1);
 			}
-			TasksUiPlugin.getDefault().getTaskDataManager().save();
+			// TasksUiPlugin.getDefault().getTaskDataManager().save();
 
 		} catch (Exception e) {
 			MylarStatusHandler.fail(e, "Could not download report", false);
@@ -100,38 +100,38 @@ class SynchronizeTaskJob extends Job {
 	}
 
 	private void syncTask(IProgressMonitor monitor, final AbstractRepositoryTask repositoryTask) throws CoreException {
-		boolean hasLocalChanges = repositoryTask.isDirty();
-		if (forceSync || !hasLocalChanges || !repositoryTask.isDownloaded()) {
-			monitor.setTaskName(LABEL_SYNCHRONIZING + repositoryTask.getSummary());
+		// boolean hasLocalChanges = repositoryTask.isDirty();
+		// if (forceSync || !repositoryTask.isDownloaded()) {
+		monitor.setTaskName(LABEL_SYNCHRONIZING + repositoryTask.getSummary());
 
-			final TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
-					repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
-			if (repository == null) {
-				throw new CoreException(new Status(IStatus.ERROR, TasksUiPlugin.PLUGIN_ID, 0,
-						"Associated repository could not be found. Ensure proper repository configuration of "
-								+ repositoryTask.getRepositoryUrl() + " in " + TasksUiPlugin.LABEL_VIEW_REPOSITORIES
-								+ ".", null));
-			}
-			
-			TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(repositoryTask);
-			ITaskDataHandler taskDataHandler = connector.getTaskDataHandler();
-			if (taskDataHandler != null) {
-				String taskId = repositoryTask.getTaskId();
-				RepositoryTaskData downloadedTaskData = taskDataHandler.getTaskData(repository, taskId);
+		final TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
+				repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
+		if (repository == null) {
+			throw new CoreException(new Status(IStatus.ERROR, TasksUiPlugin.PLUGIN_ID, 0,
+					"Associated repository could not be found. Ensure proper repository configuration of "
+							+ repositoryTask.getRepositoryUrl() + " in " + TasksUiPlugin.LABEL_VIEW_REPOSITORIES + ".",
+					null));
+		}
 
-				if (downloadedTaskData != null) {
-					if (TasksUiPlugin.getSynchronizationManager().saveIncoming(repositoryTask, downloadedTaskData,
-							forceSync)) {
+		TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(repositoryTask);
+		ITaskDataHandler taskDataHandler = connector.getTaskDataHandler();
+		if (taskDataHandler != null) {
+			String taskId = repositoryTask.getTaskId();
+			RepositoryTaskData downloadedTaskData = taskDataHandler.getTaskData(repository, taskId);
 
-						TasksUiPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(repositoryTask);
+			if (downloadedTaskData != null) {
+				if (TasksUiPlugin.getSynchronizationManager().saveIncoming(repositoryTask, downloadedTaskData,
+						forceSync)) {
 
-					}
-				} else {
-					connector.updateTask(repository, repositoryTask);
+					TasksUiPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(repositoryTask);
+
 				}
 			} else {
 				connector.updateTask(repository, repositoryTask);
 			}
+		} else {
+			connector.updateTask(repository, repositoryTask);
 		}
 	}
+	// }
 }

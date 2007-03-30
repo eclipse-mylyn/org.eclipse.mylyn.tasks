@@ -83,6 +83,30 @@ public class BugzillaQueryTest extends TestCase {
 		// part of the bug
 		assertEquals("P1", taskData.getAttributeValue(BugzillaReportElement.PRIORITY.getKeyString()));
 	}
+	
+	// TODO: Uncomment when bug#176513 completed
+//	public void testGetBugs() throws Exception {
+//		HashSet<String> taskIds = new HashSet<String>();
+//		taskIds.add("1");
+//		taskIds.add("2");
+//		taskIds.add("4");
+//		Map<String, RepositoryTaskData> taskDataMap = handler.getTaskData(repository, taskIds);
+//		assertNotNull(taskDataMap);
+//		RepositoryTaskData taskData = taskDataMap.get("1");
+//		assertEquals("user@mylar.eclipse.org", taskData.getAssignedTo());
+//		assertEquals("foo", taskData.getDescription());
+//		// You can use the getAttributeValue to pull up the information on any
+//		// part of the bug
+//		assertEquals("P1", taskData.getAttributeValue(BugzillaReportElement.PRIORITY.getKeyString()));
+//		
+//		taskData = taskDataMap.get("2");
+//		assertEquals("nhapke@cs.ubc.ca", taskData.getAssignedTo());
+//		assertEquals("search-match-test 1", taskData.getDescription());
+//		
+//		taskData = taskDataMap.get("4");
+//		assertEquals("relves@cs.ubc.ca", taskData.getReporter());
+//		assertEquals("Test", taskData.getDescription());
+//	}
 
 	// README
 	// public void testPostBug() throws Exception {
@@ -111,7 +135,7 @@ public class BugzillaQueryTest extends TestCase {
 		BugzillaRepositoryConnector connector = new BugzillaRepositoryConnector();
 		connector.init(taskList);
 		BugzillaRepositoryQuery query = new BugzillaRepositoryQuery(repository.getUrl(), queryUrlString, "summary",
-				"-1", taskList);
+				taskList);
 		connector.performQuery(query, repository, new NullProgressMonitor(), collector);
 		assertEquals(2, collector.getHits().size());
 		for (AbstractQueryHit hit : collector.getHits()) {

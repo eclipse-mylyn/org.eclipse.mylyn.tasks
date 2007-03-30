@@ -80,6 +80,15 @@ public class TaskRepositoryManager {
 		}
 	}
 
+	public boolean hasUserManagedRepositoryConnectors() {
+		for (AbstractRepositoryConnector connector : repositoryConnectors.values()) {
+			if (connector.isUserManaged()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void addRepository(TaskRepository repository, String repositoryFilePath) {
 		Set<TaskRepository> repositories;
 		if (!repositoryMap.containsKey(repository.getKind())) {
@@ -115,7 +124,17 @@ public class TaskRepositoryManager {
 		listeners.remove(listener);
 	}
 
+	/* Public for testing. */
+	public static String stripSlashes(String url) {
+		StringBuilder sb = new StringBuilder(url.trim());
+		while (sb.length() > 0 && sb.charAt(sb.length() - 1) == '/') {
+			sb.deleteCharAt(sb.length() - 1);
+		}
+		return sb.toString();
+	}
+	
 	public TaskRepository getRepository(String kind, String urlString) {
+		urlString = stripSlashes(urlString);
 		if (repositoryMap.containsKey(kind)) {
 			for (TaskRepository repository : repositoryMap.get(kind)) {
 				if (repository.getUrl().equals(urlString)) {
@@ -130,6 +149,7 @@ public class TaskRepositoryManager {
 	 * @return first repository that matches the given url
 	 */
 	public TaskRepository getRepository(String urlString) {
+		urlString = stripSlashes(urlString);
 		for (String kind : repositoryMap.keySet()) {
 			for (TaskRepository repository : repositoryMap.get(kind)) {
 				if (repository.getUrl().equals(urlString)) {
@@ -175,7 +195,7 @@ public class TaskRepositoryManager {
 		if (activeTasks.size() == 1) {
 			ITask activeTask = activeTasks.get(0);
 			if (activeTask instanceof AbstractRepositoryTask) {
-				String repositoryUrl = ((AbstractRepositoryTask)activeTask).getRepositoryUrl();
+				String repositoryUrl = ((AbstractRepositoryTask) activeTask).getRepositoryUrl();
 				for (TaskRepository repository : getRepositories(repositoryKind)) {
 					if (repository.getUrl().equals(repositoryUrl)) {
 						return repository;
@@ -233,7 +253,11 @@ public class TaskRepositoryManager {
 				if (repositories != null && repositories.size() > 0) {
 					for (TaskRepository repository : repositories) {
 
-						if(removeHttpAuthMigration(repository)) {
+						if (removeHttpAuthMigration(repository)) {
+							migration = true;
+						}
+
+						if (migrateAnonymousRepository(repository)) {
 							migration = true;
 						}
 
@@ -244,7 +268,7 @@ public class TaskRepositoryManager {
 						}
 					}
 				}
-				if(migration) {
+				if (migration) {
 					saveRepositories(repositoriesFilePath);
 				}
 			}
@@ -261,6 +285,19 @@ public class TaskRepositoryManager {
 			repository.removeProperty(TaskRepository.AUTH_HTTP_PASSWORD);
 			if (httpusername.length() > 0 && httppassword.length() > 0) {
 				repository.setHttpAuthenticationCredentials(httpusername, httppassword);
+			}
+			return true;
+		}
+		return false;
+	}
+
+	// Migration 2.0M1 - 2.0M2
+	private boolean migrateAnonymousRepository(TaskRepository repository) {
+		if (repository.getProperty(TaskRepository.ANONYMOUS_LOGIN) == null) {			
+			if ((repository.getUserName() == null || repository.getPassword() == null) || ("".equals(repository.getUserName()) && "".equals(repository.getPassword()))) {
+				repository.setAnonymous(true);
+			} else {
+				repository.setAnonymous(false);
 			}
 			return true;
 		}

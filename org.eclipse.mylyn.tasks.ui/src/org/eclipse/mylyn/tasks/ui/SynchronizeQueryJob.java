@@ -23,8 +23,9 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.DateUtil;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
@@ -79,7 +80,7 @@ class SynchronizeQueryJob extends Job {
 			repositoryQuery.setStatus(null);
 
 			monitor.setTaskName("Synchronizing: " + repositoryQuery.getSummary());
-			setProperty(IProgressConstants.ICON_PROPERTY, TaskListImages.REPOSITORY_SYNCHRONIZE);
+			setProperty(IProgressConstants.ICON_PROPERTY, TasksUiImages.REPOSITORY_SYNCHRONIZE);
 			TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
 					repositoryQuery.getRepositoryKind(), repositoryQuery.getRepositoryUrl());
 			if (repository == null) {
@@ -93,6 +94,11 @@ class SynchronizeQueryJob extends Job {
 				if (resultingStatus.getSeverity() == IStatus.CANCEL) {
 					// do nothing
 				} else if (resultingStatus.isOK()) {
+
+					if (collector.getHits().size() >= QueryHitCollector.MAX_HITS) {
+						MylarStatusHandler.log(QueryHitCollector.MAX_HITS_REACHED+"\n"+repositoryQuery.getSummary(), this);
+					}
+
 					repositoryQuery.updateHits(collector.getHits(), taskList);
 					Set<AbstractQueryHit> temp = hitsToSynch.get(repository);
 					if (temp == null) {
@@ -111,7 +117,6 @@ class SynchronizeQueryJob extends Job {
 								break;
 						}
 					}
-
 
 					if (synchTasks) {
 						repositories.add(repository);
@@ -207,7 +212,7 @@ class SynchronizeQueryJob extends Job {
 					}
 				}
 
-				TasksUiPlugin.getDefault().getTaskDataManager().save();
+				// TasksUiPlugin.getDefault().getTaskDataManager().save();
 			} finally {
 				monitor.done();
 			}

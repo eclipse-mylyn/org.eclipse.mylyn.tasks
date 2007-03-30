@@ -17,7 +17,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.tasks.ui.ITasksUiConstants;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.RepositoryAttachment;
@@ -47,7 +47,7 @@ public class ContextRetrieveWizard extends Wizard {
 				task.getRepositoryUrl());
 		this.task = task;
 		setWindowTitle(TITLE);
-		setDefaultPageImageDescriptor(TaskListImages.BANNER_REPOSITORY_CONTEXT);
+		setDefaultPageImageDescriptor(TasksUiImages.BANNER_REPOSITORY_CONTEXT);
 	}
 
 	@Override
@@ -59,18 +59,22 @@ public class ContextRetrieveWizard extends Wizard {
 
 	@Override
 	public final boolean performFinish() {
+		RepositoryAttachment attachment = wizardPage.getSelectedContext();
+		retrieveContext(task, attachment);
+		return true;
+	}
 
-		RepositoryAttachment delegate = wizardPage.getSelectedContext();
-		AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(
-				this.repository.getKind());
+	// TOOD: move to API?
+	public static void retrieveContext(AbstractRepositoryTask task, RepositoryAttachment attachment) {
+		AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(task);
+		TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(attachment.getRepositoryUrl());
+
 		try {
-			boolean wasActive = false;
 			if (task.isActive()) {
-				wasActive = true;
 				TasksUiPlugin.getTaskListManager().deactivateTask(task);
 			}
 			try {
-				if (!connector.retrieveContext(repository, task, delegate, TasksUiPlugin.getDefault().getDataDirectory())) {
+				if (!connector.retrieveContext(repository, task, attachment, TasksUiPlugin.getDefault().getDataDirectory())) {
 					MessageDialog.openInformation(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
 							ITasksUiConstants.TITLE_DIALOG, AbstractRepositoryConnector.MESSAGE_ATTACHMENTS_NOT_SUPPORTED
 									+ connector.getLabel());
@@ -78,16 +82,12 @@ public class ContextRetrieveWizard extends Wizard {
 					TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
 				}
 			} finally {
-				if (wasActive) {
-					TasksUiPlugin.getTaskListManager().activateTask(task);
-				}
+				TasksUiPlugin.getTaskListManager().activateTask(task);
 			}
 		} catch (CoreException e) {
 			ErrorDialog.openError(null, ITasksUiConstants.TITLE_DIALOG, "Retrieval of task context FAILED.", e.getStatus());
 			MylarStatusHandler.log(e.getStatus());
-			return false;
 		}
-		return true;
 	}
 
 }

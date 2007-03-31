@@ -80,8 +80,7 @@ public class NewTaskWizard extends Wizard implements INewWizard {
 					try {
 						if (!taskDataHandler.initializeTaskData(taskRepository, taskData, monitor)) {
 							throw new CoreException(new MylarStatus(IStatus.ERROR,
-									TasksUiPlugin.PLUGIN_ID, MylarStatus.REPOSITORY_ERROR, "The selected repository does not support creating new tasks."));
-						}
+									TasksUiPlugin.PLUGIN_ID, MylarStatus.REPOSITORY_ERROR, "The selected repository does not support creating new tasks."));						}
 					} catch (CoreException e) {
 						throw new InvocationTargetException(e);
 					}

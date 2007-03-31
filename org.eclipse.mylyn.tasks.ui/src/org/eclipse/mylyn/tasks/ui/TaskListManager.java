@@ -274,9 +274,10 @@ public class TaskListManager implements IPropertyChangeListener {
 			parseInteractionEvent(event);
 		}
 		taskActivityHistoryInitialized = true;
+		parseFutureReminders();
 	}
 
-	private void parseFutureReminders() {
+	public void parseFutureReminders() {
 		activityFuture.clear();
 		activityNextWeek.clear();
 
@@ -318,7 +319,7 @@ public class TaskListManager implements IPropertyChangeListener {
 			}
 
 			Date schedDate = task.getScheduledForDate();
-			if (schedDate == null) {
+			if (schedDate == null || isOverdue(task)) {
 				schedDate = task.getDueDate();
 			}
 
@@ -343,7 +344,8 @@ public class TaskListManager implements IPropertyChangeListener {
 
 				for (DateRangeContainer day : activityWeekDays) {
 					if (day.includes(tempCalendar) && !day.getChildren().contains(task)) {
-						day.addTask(new DateRangeActivityDelegate(day, task, tempCalendar, tempCalendar));
+						day.addTask(new DateRangeActivityDelegate(day, task, tempCalendar, tempCalendar, this
+								.getElapsedTime(task)));
 					}
 				}
 			}
@@ -749,7 +751,7 @@ public class TaskListManager implements IPropertyChangeListener {
 			}
 
 			resetActivity();
-			parseFutureReminders();
+			// parseFutureReminders();
 			taskListInitialized = true;
 			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
 				listener.taskListRead();
@@ -765,7 +767,7 @@ public class TaskListManager implements IPropertyChangeListener {
 	 * Only to be called upon initial startup by plugin.
 	 */
 	public void initActivityHistory() {
-		resetAndRollOver();// parseTaskActivityInteractionHistory();
+		resetAndRollOver();
 		taskActivityHistory.loadPersistentHistory();
 	}
 
@@ -990,7 +992,7 @@ public class TaskListManager implements IPropertyChangeListener {
 	 * @return true if task due date != null and has past
 	 */
 	public boolean isOverdue(ITask task) {
-		return (task.getDueDate() != null && new Date().after(task.getDueDate()));
+		return (!task.isCompleted() && task.getDueDate() != null && new Date().after(task.getDueDate()));
 	}
 
 	public void propertyChange(PropertyChangeEvent event) {
@@ -1019,7 +1021,6 @@ public class TaskListManager implements IPropertyChangeListener {
 			}
 		}
 		resetActivity();
-		parseFutureReminders();
 		parseTaskActivityInteractionHistory();
 		for (ITaskActivityListener listener : activityListeners) {
 			listener.calendarChanged();

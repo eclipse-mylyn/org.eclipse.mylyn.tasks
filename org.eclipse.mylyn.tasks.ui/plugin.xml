@@ -178,7 +178,7 @@
           id="org.eclipse.mylar.tasklist.ui.planner.editor"
           name="Task Planner"/>     
   </extension>
-
+  
       <extension point="org.eclipse.ui.perspectiveExtensions">
           <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
@@ -538,7 +538,7 @@
            id="org.eclipse.mylar.tasks.ui.colors.category.gradient.end"
            isEditable="true"
            label="Task List - Category Gradient Bottom"
-           value="220,220,220"> 
+           value="234,233,237"> <!-- was all 220 -->
          <description>
             Background end color for Task List category gradients.
          </description>

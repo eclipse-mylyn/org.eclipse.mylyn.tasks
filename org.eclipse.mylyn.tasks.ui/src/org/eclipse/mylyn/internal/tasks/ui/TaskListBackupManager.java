@@ -40,7 +40,7 @@ import org.eclipse.ui.progress.IProgressService;
 public class TaskListBackupManager implements IPropertyChangeListener {
 
 	private static final String TITLE_TASKLIST_BACKUP = "Tasklist Backup";
-
+  
 	private static final String BACKUP_JOB_NAME = "Scheduled task data backup";
 
 	public static final String BACKUP_FAILURE_MESSAGE = "Could not backup task data. Check backup preferences.\n";
@@ -48,7 +48,7 @@ public class TaskListBackupManager implements IPropertyChangeListener {
 	private static final long SECOND = 1000;
 
 	private static final long MINUTE = 60 * SECOND;
-
+  
 	private static final long HOUR = 60 * MINUTE;
 
 	private static final long DAY = 24 * HOUR;
@@ -167,10 +167,10 @@ public class TaskListBackupManager implements IPropertyChangeListener {
 //					backupFiles.add(file);
 //				}
 //			}
-//		}
+//		} 
 //
 //		File[] backupFileArray = backupFiles.toArray(new File[backupFiles.size()]);
-//
+//   
 //		if (backupFileArray != null && backupFileArray.length > 0) {
 //			Arrays.sort(backupFileArray, new Comparator<File>() {
 //				public int compare(File file1, File file2) {
@@ -187,7 +187,7 @@ public class TaskListBackupManager implements IPropertyChangeListener {
 //	}
 
 	class CheckBackupRequired extends TimerTask {
-
+  
 		@Override
 		public void run() {
 			if (!Platform.isRunning() || TasksUiPlugin.getDefault() == null) {

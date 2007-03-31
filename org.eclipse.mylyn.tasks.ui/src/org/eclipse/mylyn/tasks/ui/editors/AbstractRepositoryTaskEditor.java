@@ -992,14 +992,6 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 					text.setLayoutData(textData);
 					toolkit.paintBordersFor(textFieldComposite);
 					text.setData(attribute);
-					text.addListener(SWT.KeyUp, new Listener() {
-						public void handleEvent(Event event) {
-							String newValue = text.getText();
-							RepositoryTaskAttribute attribute = (RepositoryTaskAttribute) text.getData();
-							attribute.setValue(newValue);
-							attributeChanged(attribute);
-						}
-					});
 				}
 
 				currentCol += 2;
@@ -1958,10 +1950,17 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 	}
 
+	// once the following bug is fixed, this check for first focus is probably
+	// not needed -> Bug# 172033: Restore editor focus
+	private boolean firstFocus = true;
+
 	@Override
 	public void setFocus() {
 		if (summaryText != null && !summaryText.isDisposed()) {
-			summaryText.setFocus();
+			if (firstFocus) {
+				summaryText.setFocus();
+				firstFocus = false;
+			}
 		} else {
 			form.setFocus();
 		}

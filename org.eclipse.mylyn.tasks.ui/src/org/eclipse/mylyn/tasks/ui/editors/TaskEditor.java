@@ -233,7 +233,9 @@ public class TaskEditor extends FormEditor {
 	}
 
 	public void notifyTaskChanged() {
-		TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
+		if (task != null) {
+			TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
+		}
 	}
 
 	@Override
@@ -408,7 +410,7 @@ public class TaskEditor extends FormEditor {
 				taskEditorInput = (TaskEditorInput) getEditorInput();
 				task = taskEditorInput.getTask();
 				setPartName(taskEditorInput.getLabel());
-				setPageImage(0, TasksUiImages.getImage(TasksUiImages.CALENDAR));
+				setPageImage(0, TasksUiImages.getImage(TasksUiImages.CALENDAR_SMALL));
 			}
 
 			int selectedIndex = index;
@@ -452,7 +454,7 @@ public class TaskEditor extends FormEditor {
 			String urlToOpen = getUrl();
 			if (urlToOpen != null && !urlToOpen.equals("")) {
 				browserPageIndex = createBrowserPage(urlToOpen);
-				setPageImage(browserPageIndex, TasksUiImages.getImage(TasksUiImages.OVERLAY_WEB));
+				setPageImage(browserPageIndex, TasksUiImages.getImage(TasksUiImages.BROWSER_SMALL));
 				if (selectedIndex == 0 && taskEditorInput != null && !taskEditorInput.isNewTask()) {
 					selectedIndex = browserPageIndex;
 				}
@@ -472,6 +474,15 @@ public class TaskEditor extends FormEditor {
 
 		} catch (PartInitException e) {
 			MylarStatusHandler.fail(e, "failed to create task editor pages", false);
+		}
+	}
+
+	@Override
+	public void setFocus() {
+		if (getActivePageInstance() instanceof AbstractNewRepositoryTaskEditor) {
+			getActivePageInstance().setFocus();
+		} else {
+			super.setFocus();
 		}
 	}
 

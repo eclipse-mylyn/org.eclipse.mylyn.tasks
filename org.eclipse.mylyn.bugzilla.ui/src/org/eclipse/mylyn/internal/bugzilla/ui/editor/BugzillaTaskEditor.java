@@ -212,6 +212,18 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 			Text urlField = createTextField(composite, attribute, SWT.FLAT);
 			GridDataFactory.fillDefaults().hint(135, SWT.DEFAULT).applyTo(urlField);
 		}
+		
+		attribute = this.taskData.getAttribute(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString());
+		if(attribute == null){
+			this.taskData.setAttributeValue(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString(), "");
+			attribute = this.taskData.getAttribute(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString());
+		}
+		if (attribute != null && !attribute.isReadOnly()) {
+			Label label = createLabel(composite, attribute);
+			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
+			Text whiteboardField = createTextField(composite, attribute, SWT.FLAT);
+			GridDataFactory.fillDefaults().hint(135, SWT.DEFAULT).applyTo(whiteboardField);
+		}
 
 		addVoting(composite);
 
@@ -235,7 +247,8 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 				BugzillaReportElement.CCLIST_ACCESSIBLE.getKeyString(),
 				BugzillaReportElement.ESTIMATED_TIME.getKeyString(),
 				BugzillaReportElement.REMAINING_TIME.getKeyString(), BugzillaReportElement.ACTUAL_TIME.getKeyString(),
-				BugzillaReportElement.DEADLINE.getKeyString() };
+				BugzillaReportElement.DEADLINE.getKeyString(),
+				BugzillaReportElement.STATUS_WHITEBOARD.getKeyString()};
 		for (String key : customAttributeKeys) {
 			RepositoryTaskAttribute attribute = taskData.getAttribute(key);
 			if (hasChanged(attribute)) {

@@ -615,11 +615,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 
 		if (taskData == null) {
-
-			parentEditor.setMessage(
-					"Task data not available. Press synchronize button (right) to retrieve latest data.",
-					IMessageProvider.WARNING);
-
+			// NOTE: leave this in for 3.2
+			GridLayout warningLayout = new GridLayout(2, false);
+			Composite warningComposite = toolkit.createComposite(editorComposite);
+			warningComposite.setLayout(warningLayout);
+			Label warning = toolkit.createLabel(warningComposite, "");
+			warning.setImage(TasksUiImages.getImage(TasksUiImages.WARNING));
+			toolkit.createLabel(warningComposite,
+					"Task data not available. If connected, synchronize the task and reopen.");
 		} else {
 
 			createSections();

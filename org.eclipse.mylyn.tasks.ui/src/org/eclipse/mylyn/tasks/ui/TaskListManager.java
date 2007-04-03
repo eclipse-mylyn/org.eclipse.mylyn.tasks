@@ -271,7 +271,11 @@ public class TaskListManager implements IPropertyChangeListener {
 		List<InteractionEvent> events = ContextCorePlugin.getContextManager().getActivityHistoryMetaContext()
 				.getInteractionHistory();
 		for (InteractionEvent event : events) {
-			parseInteractionEvent(event);
+			try {
+				parseInteractionEvent(event);
+			} catch (Exception e) {
+				MylarStatusHandler.fail(e, "Error parsing interaction event", false);
+			}
 		}
 		taskActivityHistoryInitialized = true;
 		parseFutureReminders();
@@ -387,7 +391,7 @@ public class TaskListManager implements IPropertyChangeListener {
 					currentHandle = event.getStructureHandle();
 				}
 			} else if (event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)) {
-				if (!currentHandle.equals("")) {
+				if (currentTask != null && !currentHandle.equals("")) {
 					long active = event.getEndDate().getTime() - event.getDate().getTime();
 
 					// add to running total
@@ -405,9 +409,7 @@ public class TaskListManager implements IPropertyChangeListener {
 					} else {
 						taskElapsedTimeMap.put(currentTask, active);
 					}
-
 				}
-
 			}
 		} else if (event.getDelta().equals(MylarContextManager.ACTIVITY_DELTA_DEACTIVATED)) {
 			if (!event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)

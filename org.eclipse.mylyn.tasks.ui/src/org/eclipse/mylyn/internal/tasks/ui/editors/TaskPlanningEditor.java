@@ -206,11 +206,9 @@ public class TaskPlanningEditor extends TaskFormPage {
 				summary.setText(updateTask.getSummary());
 				TaskPlanningEditor.this.markDirty(wasDirty);
 			}
-			if (parentEditor != null) {
+			if (parentEditor != null && updateTask != null) {
 				parentEditor.changeTitle();
-			}
-			if (form != null && updateTask != null) {
-				form.setText(updateTask.getSummary());
+				parentEditor.updateTitle(updateTask.getSummary());
 			}
 		}
 

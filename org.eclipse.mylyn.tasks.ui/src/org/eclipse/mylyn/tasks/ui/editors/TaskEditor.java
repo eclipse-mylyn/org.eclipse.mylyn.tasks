@@ -493,6 +493,7 @@ public class TaskEditor extends FormEditor {
 		// setContentDescription(name);
 		setPartName(name);
 		setTitleToolTip(name);
+//		updateFormTitle();
 	}
 
 	public void showBusy(boolean busy) {

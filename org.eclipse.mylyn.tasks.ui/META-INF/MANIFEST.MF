@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Mylar Tasks UI Plug-in
 Bundle-SymbolicName: org.eclipse.mylar.tasks.ui;singleton:=true
-Bundle-Version: 2.0.0.v20070328-2130
+Bundle-Version: 2.0.0.v20070403-1300
 Bundle-Activator: org.eclipse.mylar.tasks.ui.TasksUiPlugin
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
@@ -20,8 +20,7 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.ide,
  org.eclipse.search,
  org.eclipse.mylar.monitor.core,
- org.eclipse.mylar,
- org.eclipse.ui.net
+ org.eclipse.mylar
 Eclipse-AutoStart: true
 Bundle-Vendor: Eclipse.org
 Export-Package: org.eclipse.mylar.internal.tasks.ui,

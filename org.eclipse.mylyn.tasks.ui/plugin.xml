@@ -179,20 +179,12 @@
           name="Task Planner"/>     
   </extension>
   
-  	<extension
-          point="org.eclipse.mylar.tasks.ui.editors">
-       <hyperlinkDetector
-             class="org.eclipse.mylar.tasks.ui.editors.TaskHyperlinkDetector"
-             id="org.eclipse.mylar.java.hyperlink.detector.tasks"/>
-    </extension>
-  
       <extension point="org.eclipse.ui.perspectiveExtensions">
           <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
                <viewShortcut id="org.eclipse.mylar.tasks.ui.views.TaskListView"/>
                <view
                      closeable="true"
                      id="org.eclipse.mylar.tasks.ui.views.TaskListView"
-                     minimized="false"
                      moveable="true"
                      ratio="0.5"
                      relationship="top"
@@ -217,7 +209,6 @@
 	         <view
                 closeable="true"
                 id="org.eclipse.mylar.tasks.ui.views.TaskListView"
-                minimized="false"
                 relationship="left"
                 relative="org.eclipse.ui.views.TaskList">
          </view>
@@ -241,7 +232,6 @@
        <perspectiveExtension targetID="org.eclipse.team.cvs.ui.cvsPerspective">
         <view
               id="org.eclipse.mylar.tasklist.repositories"
-              minimized="false"
               ratio="0.7"
               relationship="bottom"
               relative="org.eclipse.team.ccvs.ui.RepositoriesView"
@@ -251,7 +241,6 @@
      <perspectiveExtension targetID="org.tigris.subversion.subclipse.ui.svnPerspective">
         <view
               id="org.eclipse.mylar.tasklist.repositories"
-              minimized="false"
               ratio="0.7"
               relationship="bottom"
               relative="org.tigris.subversion.subclipse.ui.repository.RepositoriesView"
@@ -261,7 +250,6 @@
      <perspectiveExtension targetID="org.eclipse.team.ui.TeamSynchronizingPerspective">
         <view
               id="org.eclipse.mylar.tasklist.repositories"
-              minimized="false"
               ratio="0.7"
               relationship="bottom"
               relative="org.eclipse.team.sync.views.SynchronizeView"
@@ -550,7 +538,7 @@
            id="org.eclipse.mylar.tasks.ui.colors.category.gradient.end"
            isEditable="true"
            label="Task List - Category Gradient Bottom"
-           value="220,220,220"> 
+           value="234,233,237"> <!-- was all 220 -->
          <description>
             Background end color for Task List category gradients.
          </description>
@@ -755,15 +743,6 @@
                type="org.eclipse.search.ui.ISearchPageScoreComputer">
          </adapter>
       </factory>
-   </extension>
-        <extension
-         point="org.eclipse.ui.workbench.texteditor.hyperlinkDetectors">
-      <hyperlinkDetector            
-            class="org.eclipse.mylar.tasks.ui.editors.TaskHyperlinkDetector"
-            id="org.eclipse.mylar.jira.ui.hyperlinkdetector"
-            name="Mylar Task"
-            targetId="org.eclipse.ui.DefaultTextEditor">
-      </hyperlinkDetector>
    </extension>
   
 </plugin>

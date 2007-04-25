@@ -22,7 +22,7 @@ import org.eclipse.mylar.context.core.ContextCorePlugin;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.tasks.ui.RetrieveTitleFromUrlJob;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.actions.NewLocalTaskAction;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
 import org.eclipse.mylar.monitor.ui.MylarMonitorUiPlugin;
@@ -57,7 +57,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.ExpansionEvent;
@@ -206,11 +206,9 @@ public class TaskPlanningEditor extends TaskFormPage {
 				summary.setText(updateTask.getSummary());
 				TaskPlanningEditor.this.markDirty(wasDirty);
 			}
-			if (parentEditor != null) {
+			if (parentEditor != null && updateTask != null) {
 				parentEditor.changeTitle();
-			}
-			if (form != null && updateTask != null) {
-				form.setText(updateTask.getSummary());
+				parentEditor.updateTitle(updateTask.getSummary());
 			}
 		}
 
@@ -342,7 +340,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		layout.marginHeight = 3;
 		nameValueComp.setLayout(layout);
 		toolkit.createLabel(nameValueComp, label, SWT.NONE).setForeground(
-				toolkit.getColors().getColor(IFormColors.TITLE));
+				toolkit.getColors().getColor(FormColors.TITLE));
 		Text text;
 		if ((SWT.READ_ONLY & style) == SWT.READ_ONLY) {
 			text = new Text(nameValueComp, style);
@@ -392,7 +390,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		GridLayout nameValueLayout = new GridLayout(2, false);
 		nameValueLayout.marginHeight = 3;
 		nameValueComp.setLayout(nameValueLayout);
-		toolkit.createLabel(nameValueComp, "Priority:").setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		toolkit.createLabel(nameValueComp, "Priority:").setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		priorityCombo = new CCombo(nameValueComp, SWT.FLAT);
 		priorityCombo.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 		toolkit.paintBordersFor(nameValueComp);
@@ -422,7 +420,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		nameValueComp = toolkit.createComposite(statusComposite);
 		nameValueComp.setLayout(new GridLayout(2, false));
-		toolkit.createLabel(nameValueComp, "Status:").setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		toolkit.createLabel(nameValueComp, "Status:").setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		statusCombo = new CCombo(nameValueComp, SWT.FLAT);
 		statusCombo.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 		toolkit.paintBordersFor(nameValueComp);
@@ -472,7 +470,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		GridDataFactory.fillDefaults().grab(true, false).applyTo(urlComposite);
 
 		Label label = toolkit.createLabel(urlComposite, "URL:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		issueReportURL = toolkit.createText(urlComposite, task.getTaskUrl(), SWT.FLAT);
 		issueReportURL.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
@@ -584,7 +582,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		Composite nameValueComp = makeComposite(sectionClient, 3);
 		Label label = toolkit.createLabel(nameValueComp, LABEL_SCHEDULE);
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		datePicker = new DatePicker(nameValueComp, SWT.FLAT, DatePicker.LABEL_CHOOSE);
 
@@ -613,7 +611,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		
 		
 		ImageHyperlink clearScheduledDate = toolkit.createImageHyperlink(nameValueComp, SWT.NONE);
-		clearScheduledDate.setImage(TaskListImages.getImage(TaskListImages.REMOVE));
+		clearScheduledDate.setImage(TasksUiImages.getImage(TasksUiImages.REMOVE));
 		clearScheduledDate.setToolTipText(CLEAR);
 		clearScheduledDate.addHyperlinkListener(new HyperlinkAdapter() {
 
@@ -627,11 +625,12 @@ public class TaskPlanningEditor extends TaskFormPage {
 		
 		nameValueComp = makeComposite(sectionClient, 3);
 		label = toolkit.createLabel(nameValueComp, LABEL_DUE);
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		dueDatePicker = new DatePicker(nameValueComp, SWT.FLAT, DatePicker.LABEL_CHOOSE);
 
 		calendar = Calendar.getInstance();
+				
 		if (task.getDueDate() != null) {
 			calendar.setTime(task.getDueDate());
 			dueDatePicker.setDate(calendar);
@@ -649,7 +648,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		toolkit.paintBordersFor(nameValueComp);
 
 		ImageHyperlink clearDueDate = toolkit.createImageHyperlink(nameValueComp, SWT.NONE);
-		clearDueDate.setImage(TaskListImages.getImage(TaskListImages.REMOVE));
+		clearDueDate.setImage(TasksUiImages.getImage(TasksUiImages.REMOVE));
 		clearDueDate.setToolTipText(CLEAR);
 		clearDueDate.addHyperlinkListener(new HyperlinkAdapter() {
 
@@ -661,10 +660,15 @@ public class TaskPlanningEditor extends TaskFormPage {
 		});
 
 		
+		if (task instanceof AbstractRepositoryTask) {
+			dueDatePicker.setEnabled(false);
+			clearDueDate.setEnabled(false);
+		}
+		
 		// Estimated time
 		nameValueComp = makeComposite(sectionClient, 2);
 		label = toolkit.createLabel(nameValueComp, "Estimated hours:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		estimated = new Spinner(nameValueComp, SWT.NONE);
 		toolkit.adapt(estimated, true, true);
@@ -690,7 +694,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		// GridDataFactory.fillDefaults().span(2, 1).align(SWT.LEFT,
 		// SWT.DEFAULT).applyTo(nameValueComp);
 		label = toolkit.createLabel(nameValueComp, "Active:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		label.setToolTipText(DESCRIPTION_ESTIMATED);
 
 		String elapsedTimeString = NO_TIME_ELAPSED;

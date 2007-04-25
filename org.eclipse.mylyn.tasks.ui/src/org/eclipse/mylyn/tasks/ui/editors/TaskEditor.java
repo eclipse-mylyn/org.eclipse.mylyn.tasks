@@ -18,19 +18,17 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
-import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.editors.TaskEditorActionContributor;
 import org.eclipse.mylar.internal.tasks.ui.editors.TaskPlanningEditor;
 import org.eclipse.mylar.internal.tasks.ui.views.TaskListView;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.ITask;
-import org.eclipse.mylar.tasks.core.RepositoryTaskData;
-import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
@@ -47,11 +45,9 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.forms.IManagedForm;
+import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.editor.FormPage;
 import org.eclipse.ui.forms.editor.IFormPage;
-import org.eclipse.ui.forms.editor.SharedHeaderFormEditor;
-import org.eclipse.ui.forms.widgets.Form;
 import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 
 /**
@@ -59,7 +55,7 @@ import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
  * @author Eric Booth (initial prototype)
  * @author Rob Elves
  */
-public class TaskEditor extends SharedHeaderFormEditor {
+public class TaskEditor extends FormEditor {
 
 	private static final String ISSUE_WEB_PAGE_LABEL = "Browser";
 
@@ -237,7 +233,9 @@ public class TaskEditor extends SharedHeaderFormEditor {
 	}
 
 	public void notifyTaskChanged() {
-		TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
+		if (task != null) {
+			TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(task);
+		}
 	}
 
 	@Override
@@ -412,7 +410,7 @@ public class TaskEditor extends SharedHeaderFormEditor {
 				taskEditorInput = (TaskEditorInput) getEditorInput();
 				task = taskEditorInput.getTask();
 				setPartName(taskEditorInput.getLabel());
-				setPageImage(0, TaskListImages.getImage(TaskListImages.CALENDAR));
+				setPageImage(0, TasksUiImages.getImage(TasksUiImages.CALENDAR_SMALL));
 			}
 
 			int selectedIndex = index;
@@ -426,7 +424,7 @@ public class TaskEditor extends SharedHeaderFormEditor {
 							editor.init(getEditorSite(), input);
 							index = addPage(taskEditor);
 							if (input.getImageDescriptor() != null) {
-								setPageImage(index, TaskListImages.getImage(input.getImageDescriptor()));
+								setPageImage(index, TasksUiImages.getImage(input.getImageDescriptor()));
 							}
 							if (editor instanceof AbstractRepositoryTaskEditor) {
 
@@ -456,7 +454,7 @@ public class TaskEditor extends SharedHeaderFormEditor {
 			String urlToOpen = getUrl();
 			if (urlToOpen != null && !urlToOpen.equals("")) {
 				browserPageIndex = createBrowserPage(urlToOpen);
-				setPageImage(browserPageIndex, TaskListImages.getImage(TaskListImages.OVERLAY_WEB));
+				setPageImage(browserPageIndex, TasksUiImages.getImage(TasksUiImages.BROWSER_SMALL));
 				if (selectedIndex == 0 && taskEditorInput != null && !taskEditorInput.isNewTask()) {
 					selectedIndex = browserPageIndex;
 				}
@@ -467,15 +465,24 @@ public class TaskEditor extends SharedHeaderFormEditor {
 			}
 
 			if (task instanceof AbstractRepositoryTask) {
-				setTitleImage(TaskListImages.getImage(TaskListImages.TASK_REPOSITORY));
+				setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY));
 			} else if (getEditorInput() instanceof AbstractTaskEditorInput) {
-				this.setTitleImage(TaskListImages.getImage(TaskListImages.TASK_REMOTE));
+				this.setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_REMOTE));
 			} else if (getUrl() != null) {
-				setTitleImage(TaskListImages.getImage(TaskListImages.TASK_WEB));
+				setTitleImage(TasksUiImages.getImage(TasksUiImages.TASK_WEB));
 			}
 
 		} catch (PartInitException e) {
 			MylarStatusHandler.fail(e, "failed to create task editor pages", false);
+		}
+	}
+
+	@Override
+	public void setFocus() {
+		if (getActivePageInstance() instanceof AbstractNewRepositoryTaskEditor) {
+			getActivePageInstance().setFocus();
+		} else {
+			super.setFocus();
 		}
 	}
 
@@ -486,12 +493,13 @@ public class TaskEditor extends SharedHeaderFormEditor {
 		// setContentDescription(name);
 		setPartName(name);
 		setTitleToolTip(name);
+//		updateFormTitle();
 	}
 
 	public void showBusy(boolean busy) {
-		if (!this.getHeaderForm().getForm().isDisposed()) {
-			this.getHeaderForm().getForm().setBusy(busy);
-		}
+		// if (!this.getHeaderForm().getForm().isDisposed()) {
+		// this.getHeaderForm().getForm().setBusy(busy);
+		// }
 	}
 
 	public ISelection getSelection() {
@@ -502,51 +510,54 @@ public class TaskEditor extends SharedHeaderFormEditor {
 		}
 	}
 
-	@Override
-	protected void createHeaderContents(IManagedForm headerForm) {
-		getToolkit().decorateFormHeading(headerForm.getForm().getForm());
-		headerForm.getForm().setImage(TaskListImages.getImage(TaskListImages.TASK));
+	// @Override
+	// protected void createHeaderContents(IManagedForm headerForm) {
+	// getToolkit().decorateFormHeading(headerForm.getForm().getForm());
+	// headerForm.getForm().setImage(TasksUiImages.getImage(TasksUiImages.TASK));
+	//
+	// IEditorInput input = getEditorInput();
+	// if (input instanceof TaskEditorInput) {
+	// ITask task = ((TaskEditorInput) input).getTask();
+	// if (task instanceof AbstractRepositoryTask) {
+	// setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
+	// setFormHeaderLabel((AbstractRepositoryTask) task);
+	// return;
+	// } else {
+	// getHeaderForm().getForm().setText("Task: " + task.getSummary());
+	// }
+	// } else if (input instanceof RepositoryTaskEditorInput) {
+	// ITask task = ((RepositoryTaskEditorInput) input).getRepositoryTask();
+	// if (task != null && task instanceof AbstractRepositoryTask) {
+	// setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
+	// setFormHeaderLabel((AbstractRepositoryTask) task);
+	// return;
+	// } else {
+	// RepositoryTaskData data = ((RepositoryTaskEditorInput)
+	// input).getTaskData();
+	// if (data != null) {
+	// setFormHeaderImage(data.getRepositoryKind());
+	// setFormHeaderLabel(data);
+	// }
+	// }
+	// }
+	// }
 
-		IEditorInput input = getEditorInput();
-		if (input instanceof TaskEditorInput) {
-			ITask task = ((TaskEditorInput) input).getTask();
-			if (task instanceof AbstractRepositoryTask) {
-				setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
-				setFormHeaderLabel((AbstractRepositoryTask) task);
-				return;
-			} else {
-				getHeaderForm().getForm().setText("Task: " + task.getSummary());
-			}
-		} else if (input instanceof RepositoryTaskEditorInput) {
-			ITask task = ((RepositoryTaskEditorInput) input).getRepositoryTask();
-			if (task != null && task instanceof AbstractRepositoryTask) {
-				setFormHeaderImage(((AbstractRepositoryTask) task).getRepositoryKind());
-				setFormHeaderLabel((AbstractRepositoryTask) task);
-				return;
-			} else {
-				RepositoryTaskData data = ((RepositoryTaskEditorInput) input).getTaskData();
-				if (data != null) {
-					setFormHeaderImage(data.getRepositoryKind());
-					setFormHeaderLabel(data);
-				}
-			}
-		}
-	}
+	// private void setFormHeaderImage(String repositoryKind) {
+	// ImageDescriptor overlay =
+	// TasksUiPlugin.getDefault().getOverlayIcon(repositoryKind);
+	// ImageDescriptor imageDescriptor =
+	// TasksUiImages.createWithOverlay(TasksUiImages.REPOSITORY, overlay, false,
+	// false);
+	// getHeaderForm().getForm().setImage(TasksUiImages.getImage(imageDescriptor));
+	// }
 
-	private void setFormHeaderImage(String repositoryKind) {
-		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repositoryKind);
-		ImageDescriptor imageDescriptor = TaskListImages.createWithOverlay(TaskListImages.REPOSITORY, overlay, false,
-				false);
-		getHeaderForm().getForm().setImage(TaskListImages.getImage(imageDescriptor));
-	}
-
-	public Form getTopForm() {
-		return this.getHeaderForm().getForm().getForm();
-	}
-
-	public void setMessage(String message, int type) {
-		this.getHeaderForm().getForm().setMessage(message, type);
-	}
+	// public Form getTopForm() {
+	// return this.getHeaderForm().getForm().getForm();
+	// }
+	//
+	// public void setMessage(String message, int type) {
+	// this.getHeaderForm().getForm().setMessage(message, type);
+	// }
 
 	protected IWorkbenchSiteProgressService getProgressService() {
 		Object siteService = getEditorSite().getAdapter(IWorkbenchSiteProgressService.class);
@@ -555,32 +566,39 @@ public class TaskEditor extends SharedHeaderFormEditor {
 		return null;
 	}
 
-	private void setFormHeaderLabel(RepositoryTaskData taskData) {
+	// private void setFormHeaderLabel(RepositoryTaskData taskData) {
+	//
+	// String kindLabel = taskData.getTaskKind();
+	// String idLabel = taskData.getId();
+	//
+	// if (idLabel != null) {
+	// getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
+	// } else {
+	// getHeaderForm().getForm().setText(kindLabel);
+	// }
+	// }
 
-		String kindLabel = taskData.getTaskKind();
-		String idLabel = taskData.getId();
+	// private void setFormHeaderLabel(AbstractRepositoryTask repositoryTask) {
+	//
+	// AbstractRepositoryConnectorUi connectorUi =
+	// TasksUiPlugin.getRepositoryUi(repositoryTask.getRepositoryKind());
+	// String kindLabel = "";
+	// if (connectorUi != null) {
+	// kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+	// }
+	//
+	// String idLabel = repositoryTask.getTaskKey();
+	//
+	// if (idLabel != null) {
+	// getHeaderForm().getForm().getForm().setText(kindLabel + " " + idLabel);
+	// } else {
+	// getHeaderForm().getForm().setText(kindLabel);
+	// }
+	// }
 
-		if (idLabel != null) {
-			getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
-		} else {
-			getHeaderForm().getForm().setText(kindLabel);
-		}
-	}
-
-	private void setFormHeaderLabel(AbstractRepositoryTask repositoryTask) {
-
-		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getRepositoryUi(repositoryTask.getRepositoryKind());
-		String kindLabel = "";
-		if (connectorUi != null) {
-			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
-		}
-
-		String idLabel = repositoryTask.getTaskKey();
-
-		if (idLabel != null) {
-			getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
-		} else {
-			getHeaderForm().getForm().setText(kindLabel);
+	public void setMessage(String string, int warning) {
+		if (string != null) {
+			MessageDialog.openInformation(getSite().getShell(), "Task Editor", string);
 		}
 	}
 

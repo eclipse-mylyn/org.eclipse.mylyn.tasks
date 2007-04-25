@@ -42,6 +42,7 @@ import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.util.SafeRunnable;
@@ -60,7 +61,7 @@ import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.core.util.DateUtil;
 import org.eclipse.mylar.internal.tasks.core.CommentQuoter;
 import org.eclipse.mylar.internal.tasks.ui.TaskListColorsAndFonts;
-import org.eclipse.mylar.internal.tasks.ui.TaskListImages;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.internal.tasks.ui.actions.AttachFileAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.CopyToClipboardAction;
 import org.eclipse.mylar.internal.tasks.ui.actions.SaveRemoteFileAction;
@@ -88,6 +89,7 @@ import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskComment;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask.RepositoryTaskSyncState;
+import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
@@ -134,7 +136,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.RetargetAction;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
@@ -579,15 +581,33 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		toolkit = managedForm.getToolkit();
 		registerDropListener(form);
 
-		// ImageDescriptor overlay =
-		// TasksUiPlugin.getDefault().getOverlayIcon(repository.getKind());
-		// ImageDescriptor imageDescriptor =
-		// TaskListImages.createWithOverlay(TaskListImages.REPOSITORY, overlay,
-		// false,
-		// false);
-		// form.setImage(TaskListImages.getImage(imageDescriptor));
+		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repository.getKind());
+		ImageDescriptor imageDescriptor = TasksUiImages.createWithOverlay(TasksUiImages.REPOSITORY, overlay, false,
+				false);
+		form.setImage(TasksUiImages.getImage(imageDescriptor));
 
-		// toolkit.decorateFormHeading(form.getForm());
+		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getRepositoryUi(repository.getKind());
+		kindLabel = "";
+		if (connectorUi != null) {
+			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+		}
+		String idLabel = "";
+
+		if (repositoryTask != null) {
+			idLabel = repositoryTask.getTaskKey();
+		} else {
+			idLabel = taskData.getId();
+		}
+
+		if (taskData != null && taskData.isNew()) {
+			form.setText("New " + kindLabel);
+		} else if(idLabel != null){
+			form.setText(kindLabel + " " + idLabel);
+		} else {
+			form.setText(kindLabel);
+		}
+
+//		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
 		GridLayout editorLayout = new GridLayout();
@@ -595,11 +615,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 
 		if (taskData == null) {
-
-			parentEditor.setMessage(
-					"Task data not available. Press synchronize button (right) to retrieve latest data.",
-					IMessageProvider.WARNING);
-
+			// NOTE: leave this in for 3.2
+			GridLayout warningLayout = new GridLayout(2, false);
+			Composite warningComposite = toolkit.createComposite(editorComposite);
+			warningComposite.setLayout(warningLayout);
+			Label warning = toolkit.createLabel(warningComposite, "");
+			warning.setImage(TasksUiImages.getImage(TasksUiImages.WARNING));
+			toolkit.createLabel(warningComposite,
+					"Task data not available. If connected, synchronize the task and reopen.");
 		} else {
 
 			createSections();
@@ -658,7 +681,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				Hyperlink link = new Hyperlink(composite, SWT.NONE);
 				link.setText(label);
 				link.setFont(TITLE_FONT);
-				link.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+				link.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 				link.addHyperlinkListener(new HyperlinkAdapter() {
 
 					@Override
@@ -671,19 +694,19 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			}
 		};
 
-		if (parentEditor.getTopForm() != null) {
-			parentEditor.getTopForm().getToolBarManager().add(repositoryLabelControl);
+		if (form != null) {
+			form.getToolBarManager().add(repositoryLabelControl);
 			if (repositoryTask != null) {
 				SynchronizeEditorAction synchronizeEditorAction = new SynchronizeEditorAction();
 				synchronizeEditorAction.selectionChanged(new StructuredSelection(this));
-				parentEditor.getTopForm().getToolBarManager().add(synchronizeEditorAction);
+				form.getToolBarManager().add(synchronizeEditorAction);
 			}
 
 			// Header drop down menu additions:
 			// form.getForm().getMenuManager().add(new
 			// SynchronizeSelectedAction());
 
-			parentEditor.getTopForm().getToolBarManager().update(true);
+			form.getToolBarManager().update(true);
 		}
 
 		// if (form.getToolBarManager() != null) {
@@ -759,7 +782,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			Composite nameValue = toolkit.createComposite(headerInfoComposite);
 			nameValue.setLayout(new GridLayout(2, false));
 			Label label = toolkit.createLabel(nameValue, "ID:");// .setFont(TITLE_FONT);
-			label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+			label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 			// toolkit.createText(nameValue, idLabel, SWT.FLAT | SWT.READ_ONLY);
 			Text text = new Text(nameValue, SWT.FLAT | SWT.READ_ONLY);
 			toolkit.adapt(text, true, true);
@@ -808,7 +831,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			ImageHyperlink hyperlink = toolkit.createImageHyperlink(headerInfoComposite, SWT.NONE);
 			hyperlink.setText(linkName);
 			hyperlink.setToolTipText(kindLabel + " " + LABEL_HISTORY);
-			hyperlink.setImage(TaskListImages.getImage(TaskListImages.TASK_REPOSITORY_HISTORY));
+			hyperlink.setImage(TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY_HISTORY));
 			hyperlink.addHyperlinkListener(new HyperlinkAdapter() {
 				@Override
 				public void linkActivated(HyperlinkEvent e) {
@@ -879,7 +902,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		} else {
 			label = toolkit.createLabel(composite, attribute.getName());
 		}
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		return label;
 	}
 
@@ -972,14 +995,6 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 					text.setLayoutData(textData);
 					toolkit.paintBordersFor(textFieldComposite);
 					text.setData(attribute);
-					text.addListener(SWT.KeyUp, new Listener() {
-						public void handleEvent(Event event) {
-							String newValue = text.getText();
-							RepositoryTaskAttribute attribute = (RepositoryTaskAttribute) text.getData();
-							attribute.setValue(newValue);
-							attributeChanged(attribute);
-						}
-					});
 				}
 
 				currentCol += 2;
@@ -1482,7 +1497,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			final String commentBody) {
 		final ImageHyperlink replyLink = new ImageHyperlink(section, SWT.NULL);
 		toolkit.adapt(replyLink, true, true);
-		replyLink.setImage(TaskListImages.getImage(TaskListImages.REPLY));
+		replyLink.setImage(TasksUiImages.getImage(TasksUiImages.REPLY));
 		replyLink.setToolTipText(LABEL_REPLY);
 		// no need for the background - transparency will take care of it
 		replyLink.setBackground(null);
@@ -1645,7 +1660,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		ImageHyperlink hyperlink = new ImageHyperlink(commentsSection, SWT.NONE);
 		toolkit.adapt(hyperlink, true, true);
 		hyperlink.setBackground(null);
-		hyperlink.setImage(TaskListImages.getImage(TaskListImages.EXPAND_ALL));
+		hyperlink.setImage(TasksUiImages.getImage(TasksUiImages.EXPAND_ALL));
 		hyperlink.addHyperlinkListener(new HyperlinkAdapter() {
 			public void linkActivated(HyperlinkEvent e) {
 				revealAllComments();
@@ -1681,7 +1696,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				foundNew = true;
 			}
 
-			expandableComposite.setTitleBarForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+			expandableComposite.setTitleBarForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 			expandableComposite.setText(taskComment.getNumber() + ": " + taskComment.getAuthorName() + ", "
 					+ formatDate(taskComment.getCreated()));
@@ -1938,10 +1953,17 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 	}
 
+	// once the following bug is fixed, this check for first focus is probably
+	// not needed -> Bug# 172033: Restore editor focus
+	private boolean firstFocus = true;
+
 	@Override
 	public void setFocus() {
 		if (summaryText != null && !summaryText.isDisposed()) {
-			summaryText.setFocus();
+			if (firstFocus) {
+				summaryText.setFocus();
+				firstFocus = false;
+			}
 		} else {
 			form.setFocus();
 		}
@@ -2441,7 +2463,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 	protected void addAttachContextButton(Composite buttonComposite, ITask task) {
 		attachContextButton = toolkit.createButton(buttonComposite, "Attach Context", SWT.CHECK);
-		attachContextButton.setImage(TaskListImages.getImage(TaskListImages.CONTEXT_ATTACH));
+		attachContextButton.setImage(TasksUiImages.getImage(TasksUiImages.CONTEXT_ATTACH));
 	}
 
 	/**
@@ -2474,7 +2496,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		final Button addSelfButton = toolkit.createButton(composite, "Add me to CC", SWT.CHECK);
 		addSelfButton.setSelection(RepositoryTaskAttribute.TRUE.equals(taskData
 				.getAttributeValue(RepositoryTaskAttribute.ADD_SELF_CC)));
-		addSelfButton.setImage(TaskListImages.getImage(TaskListImages.PERSON));
+		addSelfButton.setImage(TasksUiImages.getImage(TasksUiImages.PERSON));
 		addSelfButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {

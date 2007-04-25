@@ -25,7 +25,7 @@ import org.eclipse.swt.graphics.Point;
 /**
  * @author Mik Kersten
  */
-public class TaskListImages {
+public class TasksUiImages {
 
 	private static ImageRegistry imageRegistry;
 
@@ -35,6 +35,8 @@ public class TaskListImages {
 
 	private static final String T_TOOL = "etool16";
 
+	private static final String T_OBJ = "obj16";
+	
 	private static final String T_WIZBAN = "wizban";
 	
 	private static final String T_OVR = "ovr16";
@@ -47,6 +49,8 @@ public class TaskListImages {
 
 	public static final ImageDescriptor REPOSITORY = create("eview16", "repository.gif");
 
+	public static final ImageDescriptor REPOSITORY_SMALL = create(T_OBJ, "repository-small.gif");
+	
 	public static final ImageDescriptor REPOSITORY_NEW = create("etool16", "repository-new.gif");
 
 	public static final ImageDescriptor REPOSITORIES = create("eview16", "repositories.gif");
@@ -81,6 +85,8 @@ public class TaskListImages {
 
 	public static final ImageDescriptor OVERLAY_WEB = create(T_TOOL, "overlay-web.gif");
  
+	public static final ImageDescriptor BROWSER_SMALL = create(T_OBJ, "browser-small.gif"); 
+	
 	public static final ImageDescriptor OVERLAY_SYNCHRONIZING = create(T_EVIEW, "overlay-synchronizing.gif");
 
 	public static final ImageDescriptor OVERLAY_HAS_DUE = create(T_EVIEW, "overlay-has-due.gif");
@@ -113,7 +119,7 @@ public class TaskListImages {
 
 	public static final ImageDescriptor CONTEXT_TRANSFER = create(T_TOOL, "context-transfer.gif");
 	
-	public static final ImageDescriptor ATTACHMENT_PATCH = create(T_TOOL, "attachment-patch.gif");
+	public static final ImageDescriptor ATTACHMENT_PATCH = create(T_OBJ, "attachment-patch.gif");
 	
 	public static final ImageDescriptor OVERLAY_INCOMMING = create(T_EVIEW, "overlay-incoming.gif");
 
@@ -175,6 +181,8 @@ public class TaskListImages {
 	
 	public static final ImageDescriptor REFRESH = create(T_ELCL, "refresh.gif");
 
+	public static final ImageDescriptor REFRESH_SMALL = create(T_ELCL, "refresh-small.gif");
+	
 	public static final ImageDescriptor TASK_ACTIVE = createSize(create(T_TOOL, "task-active.gif"), SIZE);
 
 	public static final ImageDescriptor TASK_ACTIVE_CENTERED = createSize(create(T_TOOL, "task-active-centered.gif"), SIZE);
@@ -208,14 +216,16 @@ public class TaskListImages {
 
 	public static final ImageDescriptor CALENDAR = create(T_TOOL, "calendar.gif");
 
+	public static final ImageDescriptor CALENDAR_SMALL = create(T_OBJ, "calendar-small.gif");
+	
 	public static final ImageDescriptor BANNER_REPOSITORY = create(T_WIZBAN, "banner-repository.gif");
 	
 	public static final ImageDescriptor BANNER_REPOSITORY_CONTEXT = create(T_WIZBAN, "banner-repository-context.gif");
 
 	public static final ImageDescriptor BANNER_IMPORT = create(T_WIZBAN, "banner-import.gif");
 	
-	public static final ImageDescriptor STATUS_WARNING = createWithOverlay(TaskListImages.STATUS_NORMAL,
-								TaskListImages.OVERLAY_WARNING, false, true);
+	public static final ImageDescriptor STATUS_WARNING = createWithOverlay(TasksUiImages.STATUS_NORMAL,
+								TasksUiImages.OVERLAY_WARNING, false, true);
 
 	public static final ImageDescriptor BLANK = create(T_ELCL, "blank.gif");
 

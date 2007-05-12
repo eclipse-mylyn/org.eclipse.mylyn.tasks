@@ -39,7 +39,7 @@ public class TaskListFilteredTree extends AbstractMylarFilteredTree {
 		super(parent, treeStyle, filter);
 	}
 
-	private static final String LABEL_NO_ACTIVE = "<no active task>";
+	public static final String LABEL_NO_ACTIVE = "<no active task>";
 
 	private Hyperlink activeTaskLabel;
 
@@ -52,6 +52,19 @@ public class TaskListFilteredTree extends AbstractMylarFilteredTree {
 	private int completeTasks;
 
 	private int incompleteTime;
+
+//	@Override
+//	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
+//		// Use a single Composite for the Tree to being able to use the
+//		// TreeColumnLayout. See Bug 177891 for more details.
+//		Composite container = new Composite(parent, SWT.None);
+//		GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
+//		gridData.verticalIndent = 0;
+//		gridData.horizontalIndent = 0;
+//		container.setLayoutData(gridData);
+//		container.setLayout(new ColumnLayout());
+//		return super.doCreateTreeViewer(container, style);
+//	}
 
 	@Override
 	protected Composite createProgressComposite(Composite container) {
@@ -153,9 +166,9 @@ public class TaskListFilteredTree extends AbstractMylarFilteredTree {
 			public void run() {
 				if (PlatformUI.isWorkbenchRunning() && !taskProgressBar.isDisposed()) {
 					taskProgressBar.reset(completeTime, (completeTime + incompleteTime));
-					taskProgressBar.setToolTipText("Workweek Progress" + "\n     Tasks: " + completeTasks + " of "
-							+ totalTasks + " scheduled" + "\n     Hours: " + completeTime + " of "
-							+ (completeTime + incompleteTime) + " estimated");
+					taskProgressBar.setToolTipText("Workweek Progress" 
+							+ "\n     Hours: " + completeTime + " of " + (completeTime + incompleteTime) + " estimated"
+							+ "\n     Tasks: " + completeTasks + " of " + totalTasks + " scheduled" );
 				}
 			}
 		});
@@ -196,6 +209,10 @@ public class TaskListFilteredTree extends AbstractMylarFilteredTree {
 	}
 
 	public void indicateActiveTask(ITask task) {
+		if (filterComposite.isDisposed()) {
+			return;
+		}
+
 		String text = task.getSummary();
 		activeTaskLabel.setText(text);
 		activeTaskLabel.setUnderlined(true);
@@ -208,6 +225,10 @@ public class TaskListFilteredTree extends AbstractMylarFilteredTree {
 	}
 
 	public void indicateNoActiveTask() {
+		if (filterComposite.isDisposed()) {
+			return;
+		}
+
 		activeTaskLabel.setText(LABEL_NO_ACTIVE);
 		activeTaskLabel.setUnderlined(false);
 		activeTaskLabel.setToolTipText("");

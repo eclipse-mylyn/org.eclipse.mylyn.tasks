@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ISaveContext;
+import org.eclipse.core.resources.ISaveParticipant;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -65,12 +67,11 @@ import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.DateRangeContainer;
-import org.eclipse.mylar.tasks.core.DelegatingTaskExternalizer;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskActivityListener;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
-import org.eclipse.mylar.tasks.core.ITaskListExternalizer;
 import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
+import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.RepositoryTemplate;
 import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskComment;
@@ -145,6 +146,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	private Map<String, ImageDescriptor> overlayIcons = new HashMap<String, ImageDescriptor>();
 
 	private boolean eclipse_3_3_workbench = false;
+
+	private ISaveParticipant saveParticipant;
 
 	private static final class OrderComparator implements Comparator<AbstractTaskRepositoryLinkProvider> {
 		public int compare(AbstractTaskRepositoryLinkProvider p1, AbstractTaskRepositoryLinkProvider p2) {
@@ -249,7 +252,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		}
 
 		public void windowClosed(IWorkbenchWindow window) {
-			taskListManager.saveTaskList();
+			// ignore
 		}
 	};
 
@@ -284,34 +287,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 							.getRepositoryTasks(repository.getUrl())) {
 						if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING
 								&& repositoryTask.isNotified() == false) {
-							TaskListNotificationIncoming notification = new TaskListNotificationIncoming(repositoryTask);
-
-							if (repositoryTask.getTaskData() != null) {
-								List<TaskComment> taskComments = repositoryTask.getTaskData().getComments();
-								if (taskComments != null && taskComments.size() > 0) {
-									TaskComment lastComment = taskComments.get(taskComments.size() - 1);
-									if (lastComment != null) {
-										notification.setDescription(lastComment.getText());
-									}
-								} else {
-									String description = repositoryTask.getTaskData().getDescription();
-									if (description != null) {
-										notification.setDescription(description);
-									}
-								}
-
-								if (connector != null) {
-									ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
-									if (offlineHandler != null
-											&& repositoryTask.getTaskData().getLastModified() != null) {
-										Date modified = repositoryTask.getTaskData().getAttributeFactory()
-												.getDateForAttributeType(RepositoryTaskAttribute.DATE_MODIFIED,
-														repositoryTask.getTaskData().getLastModified());
-										notification.setDate(modified);
-									}
-								}
-
-							}
+							TaskListNotificationIncoming notification = getIncommingNotification(connector,
+									repositoryTask);
 							notifications.add(notification);
 							repositoryTask.setNotified(true);
 						}
@@ -399,31 +376,31 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 			taskRepositoryManager.readRepositories(getRepositoriesFilePath());
 
+			// instantiates taskDataManager
+			readOfflineReports();
+
 			// add the automatically created templates
 			for (AbstractRepositoryConnector connector : taskRepositoryManager.getRepositoryConnectors()) {
+				connector.setTaskDataManager(taskDataManager);
+
 				for (RepositoryTemplate template : connector.getTemplates()) {
 					if (template.addAutomatically) {
-						TaskRepository taskRepository = taskRepositoryManager.getRepository(connector
-								.getRepositoryType(), template.repositoryUrl);
-						if (taskRepository == null) {
-							taskRepository = new TaskRepository(connector.getRepositoryType(), template.repositoryUrl,
-									template.version);
-							taskRepository.setRepositoryLabel(template.label);
-							taskRepository.setAnonymous(true);
-							taskRepositoryManager.addRepository(taskRepository, getRepositoriesFilePath());
+						try {
+							TaskRepository taskRepository = taskRepositoryManager.getRepository(connector
+									.getRepositoryType(), template.repositoryUrl);
+							if (taskRepository == null) {
+								taskRepository = new TaskRepository(connector.getRepositoryType(),
+										template.repositoryUrl, template.version);
+								taskRepository.setRepositoryLabel(template.label);
+								taskRepository.setAnonymous(true);
+								taskRepositoryManager.addRepository(taskRepository, getRepositoriesFilePath());
+							}
+						} catch (Throwable t) {
+							MylarStatusHandler.fail(t, "Could not load repository template", false);
 						}
 					}
 				}
 			}
-
-			readOfflineReports();
-			for (ITaskListExternalizer externalizer : taskListWriter.getExternalizers()) {
-				if (externalizer instanceof DelegatingTaskExternalizer) {
-					((DelegatingTaskExternalizer) externalizer).init(taskDataManager);
-				}
-			}
-
-			taskListWriter.setTaskDataManager(taskDataManager);
 
 			// NOTE: task list must be read before Task List view can be
 			// initialized
@@ -431,11 +408,37 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 			taskListManager.addActivityListener(CONTEXT_TASK_ACTIVITY_LISTENER);
 			taskListManager.readExistingOrCreateNewList();
 			initialized = true;
+			
+			saveParticipant = new ISaveParticipant() {
+
+				public void doneSaving(ISaveContext context) {
+				}
+
+				public void prepareToSave(ISaveContext context) throws CoreException {
+				}
+
+				public void rollback(ISaveContext context) {
+				}
+
+				public void saving(ISaveContext context) throws CoreException {
+					if (context.getKind() == ISaveContext.FULL_SAVE) {
+						taskListManager.saveTaskList();
+						taskDataManager.stop();
+					}
+				}
+			};
+			ResourcesPlugin.getWorkspace().addSaveParticipant(this, saveParticipant);
 
 			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 				public void run() {
+					// NOTE: failure in one part of the initialization should
+					// not prevent others
 					try {
+						// Needs to run after workbench is loaded because it
+						// relies on images.
 						TasksUiExtensionReader.initWorkbenchUiExtensions();
+
+						// TasksUiExtensionReader.initWorkbenchUiExtensions();
 						PlatformUI.getWorkbench().addWindowListener(WINDOW_LISTENER);
 
 						// Needs to happen asynchronously to avoid bug 159706
@@ -443,19 +446,31 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 							taskListManager.activateTask(taskListManager.getTaskList().getActiveTask());
 						}
 						taskListManager.initActivityHistory();
+					} catch (Throwable t) {
+						MylarStatusHandler.fail(t, "Could not initialize task activity", false);
+					}
 
+					try {
 						taskListNotificationManager = new TaskListNotificationManager();
 						taskListNotificationManager.addNotificationProvider(REMINDER_NOTIFICATION_PROVIDER);
 						taskListNotificationManager.addNotificationProvider(INCOMING_NOTIFICATION_PROVIDER);
 						taskListNotificationManager.startNotification(NOTIFICATION_DELAY);
 						getPreferenceStore().addPropertyChangeListener(taskListNotificationManager);
+					} catch (Throwable t) {
+						MylarStatusHandler.fail(t, "Could not initialize notifications", false);
+					}
 
+					try {
 						taskListBackupManager = new TaskListBackupManager();
 						getPreferenceStore().addPropertyChangeListener(taskListBackupManager);
 
 						synchronizationScheduler = new TaskListSynchronizationScheduler(true);
 						synchronizationScheduler.startSynchJob();
+					} catch (Throwable t) {
+						MylarStatusHandler.fail(t, "Could not initialize task list backup and synchronization", false);
+					}
 
+					try {
 						taskListSaveManager = new TaskListSaveManager();
 						taskListManager.setTaskListSaveManager(taskListSaveManager);
 
@@ -473,8 +488,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 							repositoriesView.getViewer().refresh();
 						}
 						checkForCredentials();
-					} catch (Exception e) {
-						MylarStatusHandler.fail(e, "Mylar Tasks UI start failed", false);
+					} catch (Throwable t) {
+						MylarStatusHandler.fail(t, "Could not finish Tasks UI initialization", false);
 					}
 				}
 			});
@@ -492,7 +507,8 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	private void checkForCredentials() {
 		for (TaskRepository repository : taskRepositoryManager.getAllRepositories()) {
 			if (!repository.isAnonymous()
-					&& ("".equals(repository.getUserName()) || "".equals(repository.getPassword()))) {
+					&& (repository.getUserName() == null || repository.getPassword() == null
+							|| "".equals(repository.getUserName()) || "".equals(repository.getPassword()))) {
 				try {
 					EditRepositoryWizard wizard = new EditRepositoryWizard(repository);
 					Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
@@ -520,9 +536,12 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	@Override
 	public void stop(BundleContext context) throws Exception {
-		super.stop(context);
-		INSTANCE = null;
 		try {
+
+			if (ResourcesPlugin.getWorkspace() != null) {
+				ResourcesPlugin.getWorkspace().removeSaveParticipant(this);
+			}
+
 			if (PlatformUI.isWorkbenchRunning()) {
 				getPreferenceStore().removePropertyChangeListener(taskListNotificationManager);
 				getPreferenceStore().removePropertyChangeListener(taskListBackupManager);
@@ -537,9 +556,12 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 							PREFERENCE_LISTENER);
 				}
 				PlatformUI.getWorkbench().removeWindowListener(WINDOW_LISTENER);
+				INSTANCE = null;
 			}
 		} catch (Exception e) {
 			MylarStatusHandler.log(e, "Mylar Task List stop terminated abnormally");
+		} finally {
+			super.stop(context);
 		}
 	}
 
@@ -553,8 +575,6 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 
 	public void setDataDirectory(String newPath) {
 		getTaskListManager().saveTaskList();
-		// getTaskListSaveManager().saveTaskList(true);
-		// taskListSaveManager.saveTaskList(true, false);
 		ContextCorePlugin.getContextManager().saveActivityHistoryContext();
 		getPreferenceStore().setValue(MylarPreferenceContstants.PREF_DATA_DIR, newPath);
 		ContextCorePlugin.getDefault().getContextStore().contextStoreMoved();
@@ -580,7 +600,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	@Override
 	protected void initializeDefaultPreferences(IPreferenceStore store) {
 		store.setDefault(MylarPreferenceContstants.PREF_DATA_DIR, getDefaultDataDirectory());
-
+		store.setDefault(TaskListPreferenceConstants.FILTER_SUBTASKS, true);
 		store.setDefault(TaskListPreferenceConstants.NOTIFICATIONS_ENABLED, true);
 		store.setDefault(TaskListPreferenceConstants.SELECTED_PRIORITY, Task.PriorityLevel.P5.toString());
 		store.setDefault(TaskListPreferenceConstants.REPORT_OPEN_EDITOR, true);
@@ -748,7 +768,7 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 		try {
 			taskDataManager = new TaskDataManager(taskRepositoryManager, offlineReportsPath.toFile(), true);
 		} catch (Throwable t) {
-			MylarStatusHandler.log(t, "Recreating offline task cache due to format update.");
+			MylarStatusHandler.log("Recreating offline task cache due to format update.", this);
 			boolean deleted = offlineReportsPath.toFile().delete();
 			if (!deleted) {
 				MylarStatusHandler.log(t, "could not delete offline repository tasks file");
@@ -887,4 +907,90 @@ public class TasksUiPlugin extends AbstractUIPlugin implements IStartup {
 	public String getNextNewRepositoryTaskId() {
 		return getTaskDataManager().getNewRepositoryTaskId();
 	}
+
+	public static TaskListNotificationIncoming getIncommingNotification(AbstractRepositoryConnector connector,
+			AbstractRepositoryTask repositoryTask) {
+		
+		TaskListNotificationIncoming notification = new TaskListNotificationIncoming(repositoryTask);
+
+		RepositoryTaskData newTaskData = getDefault().getTaskDataManager().getNewTaskData(
+				repositoryTask.getHandleIdentifier());
+
+		RepositoryTaskData oldTaskData = getDefault().getTaskDataManager().getOldTaskData(
+				repositoryTask.getHandleIdentifier());
+
+		
+		if (newTaskData != null && oldTaskData != null) {
+			
+			String descriptionText = getChangedDescription(newTaskData, oldTaskData);
+			if(descriptionText != null){
+				notification.setDescription(descriptionText);
+			}
+			
+			if (connector != null) {
+				ITaskDataHandler offlineHandler = connector.getTaskDataHandler();
+				if (offlineHandler != null && newTaskData.getLastModified() != null) {
+					Date modified = newTaskData.getAttributeFactory().getDateForAttributeType(
+							RepositoryTaskAttribute.DATE_MODIFIED, newTaskData.getLastModified());
+					notification.setDate(modified);
+				}
+			}
+
+		} else {
+			notification.setDescription("Open to view changes");
+		}
+		return notification;
+	}
+	
+	private static String getChangedDescription(RepositoryTaskData newTaskData, RepositoryTaskData oldTaskData){
+		
+		String descriptionText = "";
+		
+		if(newTaskData.getComments().size() > oldTaskData.getComments().size()){
+			List<TaskComment> taskComments = newTaskData.getComments();
+			if (taskComments != null && taskComments.size() > 0) {
+				TaskComment lastComment = taskComments.get(taskComments.size() - 1);
+				if (lastComment != null) {
+					descriptionText += "Comment by " + lastComment.getAuthor() + ":\n  ";
+					String commentText = lastComment.getText();
+					if (commentText.length() > 60) {
+						commentText = commentText.substring(0, 55) + "...";
+					}
+					descriptionText += commentText;
+				}
+			}
+		}
+		
+		boolean attributeChanged = false;
+		
+		for(RepositoryTaskAttribute newAttribute: newTaskData.getAttributes()){
+			RepositoryTaskAttribute oldAttribute = oldTaskData.getAttribute(newAttribute.getID());
+			if (oldAttribute == null){
+				attributeChanged = true;
+				break;
+			}
+			if (oldAttribute.getValue() != null && !oldAttribute.getValue().equals(newAttribute.getValue())) {
+				attributeChanged = true;
+				break;
+			} else if (oldAttribute.getValues() != null && !oldAttribute.getValues().equals(newAttribute.getValues())) {
+				attributeChanged = true;
+				break;
+			}
+		}
+		
+		if(attributeChanged){
+			if (descriptionText.equals("")){
+				descriptionText += "Attributes changed";
+			} 
+		}
+//		else {
+//			String description = taskData.getDescription();
+//			if (description != null) {
+//				notification.setDescription(description);
+//			}
+//		}
+		
+		return descriptionText;
+	}
+
 }

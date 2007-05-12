@@ -175,7 +175,7 @@ public class TaskEditorActionContributor extends MultiPageEditorActionBarContrib
 					.getTaskListManager().getTaskList().getCategories());
 			
 			// This is added to solve Bug 180252
-			categories.add(TasksUiPlugin.getTaskListManager().getTaskList().getRootCategory());
+			categories.add(TasksUiPlugin.getTaskListManager().getTaskList().getUncategorizedCategory());
 			Collections.sort(categories);
 			for (final AbstractTaskContainer category : categories) {
 				if (!category.equals(TasksUiPlugin.getTaskListManager().getTaskList().getArchiveContainer())) {
@@ -209,6 +209,7 @@ public class TaskEditorActionContributor extends MultiPageEditorActionBarContrib
 			openWithBrowserAction.selectionChanged(selection);
 			copyTaskDetailsAction.selectionChanged(selection);
 			attachFileAction.selectionChanged(selection);
+			attachFileAction.setEditor(editor);
 			synchronizeEditorAction.selectionChanged(new StructuredSelection(this.getEditor()));
 
 			manager.add(openWithBrowserAction);

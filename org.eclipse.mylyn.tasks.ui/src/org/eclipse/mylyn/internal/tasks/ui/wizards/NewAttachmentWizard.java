@@ -14,29 +14,37 @@ package org.eclipse.mylar.internal.tasks.ui.wizards;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.mylar.context.core.ContextCorePlugin;
+import org.eclipse.mylar.core.MylarStatusHandler;
+import org.eclipse.mylar.internal.tasks.core.RepositoryTaskHandleUtil;
 import org.eclipse.mylar.internal.tasks.ui.ITasksUiConstants;
 import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
-import org.eclipse.mylar.internal.tasks.ui.util.WebBrowserDialog;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.IAttachmentHandler;
+import org.eclipse.mylar.tasks.core.IMylarStatusConstants;
+import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.LocalAttachment;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask.RepositoryTaskSyncState;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
+import org.eclipse.mylar.tasks.ui.TasksUiUtil;
+import org.eclipse.mylar.tasks.ui.editors.AbstractTaskEditorInput;
+import org.eclipse.mylar.tasks.ui.editors.TaskEditor;
+import org.eclipse.mylar.tasks.ui.editors.TaskEditorInput;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
@@ -140,20 +148,25 @@ public class NewAttachmentWizard extends Wizard {
 		}
 
 		// upload the attachment
-		AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(
+		final AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(
 				repository.getKind());
 		final IAttachmentHandler attachmentHandler = connector.getAttachmentHandler();
 		if (attachmentHandler == null) {
 			return false;
 		}
+
 		final boolean attachContext = attachPage.getAttachContext();
 
-		Job submitJob = new Job("Submitting attachment") {
-			@Override
-			protected IStatus run(IProgressMonitor monitor) {
-				AbstractRepositoryConnector connector = TasksUiPlugin.getRepositoryManager().getRepositoryConnector(
-						repository.getKind());
+		IRunnableWithProgress op = new IRunnableWithProgress() {
+			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				try {
+					if (monitor == null) {
+						monitor = new NullProgressMonitor();
+					}
+					monitor.beginTask("Attaching file...", IProgressMonitor.UNKNOWN);
+					task.setSubmitting(true);
+					task.setSyncState(RepositoryTaskSyncState.OUTGOING);
+
 					attachmentHandler.uploadAttachment(repository, task, attachment.getComment(), attachment
 							.getDescription(), new File(attachment.getFilePath()), attachment.getContentType(),
 							attachment.isPatch());
@@ -165,52 +178,101 @@ public class NewAttachmentWizard extends Wizard {
 						}
 					}
 
+					if (monitor.isCanceled()) {
+						throw new OperationCanceledException();
+					}
+
 					if (attachContext) {
 						connector.attachContext(repository, task, "");
-						// attachContext sets outgoing state but we want to
-						// recieve incoming
-						// on synchronization. This could result in lost edits
-						// so need to
-						// review the whole attachment interaction.
-						task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
 					}
-
-				} catch (final CoreException e) {
-					if (e.getStatus().getCode() == Status.INFO) {
-						PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-							public void run() {
-								WebBrowserDialog.openAcceptAgreement(null, "Upload Error", e.getStatus().getMessage(),
-										e.getStatus().getException().getMessage());
-							}
-						});
-					} else if (e.getStatus().getCode() == Status.ERROR) {
-						PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-							public void run() {
-								MessageDialog.openError(null, "Upload Error", e.getStatus().getMessage());
-							}
-						});
-					}
+				} catch (CoreException e) {
+					throw new InvocationTargetException(e);
+				} finally {
+					monitor.done();
 				}
 
-				TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, false, new JobChangeAdapter() {
-					@Override
-					public void done(final IJobChangeEvent event) {
-						if (event.getResult().getException() != null) {
-							PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-								public void run() {
-									MessageDialog.openError(Display.getDefault().getActiveShell(),
-											ITasksUiConstants.TITLE_DIALOG, event.getResult().getMessage());
-								}
-							});
-						}
-					}
-				});
-				return Status.OK_STATUS;
 			}
+
 		};
 
-		submitJob.schedule();
+		try {
+			getContainer().run(true, true, op);
+
+			TasksUiPlugin.getSynchronizationManager().synchronize(connector, task, false, new JobChangeAdapter() {
+				@Override
+				public void done(final IJobChangeEvent event) {
+					PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+						public void run() {
+							if (event.getResult().getException() != null) {
+
+								MessageDialog.openError(Display.getDefault().getActiveShell(),
+										ITasksUiConstants.TITLE_DIALOG, event.getResult().getMessage());
+
+							}
+							forceRefreshInplace(task);
+						}
+					});
+				}
+			});
+
+		} catch (InvocationTargetException e1) {
+			task.setSubmitting(false);
+			task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+			if (e1.getCause() != null && e1.getCause() instanceof CoreException) {
+				handleSubmitError((CoreException) e1.getCause());
+
+			} else {
+				MylarStatusHandler.fail(e1, "Attachment failure", true);
+			}
+			return false;
+		} catch (InterruptedException e1) {
+			task.setSubmitting(false);
+			task.setSyncState(RepositoryTaskSyncState.SYNCHRONIZED);
+		}
+
 		return true;
+	}
+
+	/**
+	 * If task is open, force inplace refresh Must be called from UI thread.
+	 */
+	public static boolean forceRefreshInplace(ITask task) {
+		if (task instanceof AbstractRepositoryTask) {
+			String handleTarget = task.getHandleIdentifier();
+			for (TaskEditor editor : TasksUiUtil.getActiveRepositoryTaskEditors()) {
+				if (editor.getEditorInput() instanceof AbstractTaskEditorInput) {
+					AbstractTaskEditorInput input = (AbstractTaskEditorInput) editor.getEditorInput();
+					if (input.getTaskData() != null) {
+						String handle = RepositoryTaskHandleUtil.getHandle(input.getTaskData().getRepositoryUrl(),
+								input.getTaskData().getId());
+						if (handle.equals(handleTarget)) {
+							editor.refreshEditorContents();
+							editor.getEditorSite().getPage().activate(editor);
+							return true;
+						}
+					}
+				} else if (editor.getEditorInput() instanceof TaskEditorInput) {
+					TaskEditorInput input = (TaskEditorInput) editor.getEditorInput();
+					if (input.getTask().getHandleIdentifier().equals(handleTarget)) {
+						editor.refreshEditorContents();
+						editor.getEditorSite().getPage().activate(editor);
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	
+	private void handleSubmitError(final CoreException exception) {
+		if (exception.getStatus().getCode() == IMylarStatusConstants.REPOSITORY_LOGIN_ERROR) {
+			if (TasksUiUtil.openEditRepositoryWizard(repository) == MessageDialog.OK) {
+				// performFinish();
+			}
+		} else {
+			MylarStatusHandler.displayStatus("Attachment failed", exception.getStatus());
+		}
 	}
 
 	protected boolean hasContext() {

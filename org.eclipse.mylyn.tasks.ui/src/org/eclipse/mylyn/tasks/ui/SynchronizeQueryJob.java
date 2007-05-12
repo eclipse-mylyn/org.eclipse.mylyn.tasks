@@ -29,13 +29,13 @@ import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
-import org.eclipse.mylar.tasks.core.IMylarStatusConstants;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
-import org.eclipse.mylar.tasks.core.MylarStatus;
 import org.eclipse.mylar.tasks.core.QueryHitCollector;
+import org.eclipse.mylar.tasks.core.RepositoryStatus;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskList;
 import org.eclipse.mylar.tasks.core.TaskRepository;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressConstants;
 
 /**
@@ -44,7 +44,7 @@ import org.eclipse.ui.progress.IProgressConstants;
  */
 class SynchronizeQueryJob extends Job {
 
-	private static final int NUM_HITS_TO_PRIME = 20;
+	// private static final int NUM_HITS_TO_PRIME = 20;
 
 	private final AbstractRepositoryConnector connector;
 
@@ -59,7 +59,9 @@ class SynchronizeQueryJob extends Job {
 	private boolean synchTasks;
 
 	private TaskList taskList;
-
+	
+	private boolean forced = false;
+	
 	public SynchronizeQueryJob(RepositorySynchronizationManager synchronizationManager,
 			AbstractRepositoryConnector connector, Set<AbstractRepositoryQuery> queries, TaskList taskList) {
 		super(JOB_LABEL + ": " + connector.getRepositoryType());
@@ -69,6 +71,22 @@ class SynchronizeQueryJob extends Job {
 		this.repositories = new HashSet<TaskRepository>();
 		this.hitsToSynch = new HashMap<TaskRepository, Set<AbstractQueryHit>>();
 
+	}
+
+	/**
+	 * Returns true, if synchronization was triggered manually and not by an
+	 * automatic background job.
+	 */
+	public boolean isForced() {
+		return forced;
+	}
+	
+	/**
+	 * Indicates a manual synchronization. If set to true, a dialog will be
+	 * displayed in case of errors.
+	 */
+	public void setForced(boolean forced) {
+		this.forced = forced;
 	}
 
 	@Override
@@ -84,19 +102,20 @@ class SynchronizeQueryJob extends Job {
 			TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
 					repositoryQuery.getRepositoryKind(), repositoryQuery.getRepositoryUrl());
 			if (repository == null) {
-				repositoryQuery.setStatus(new MylarStatus(Status.ERROR, TasksUiPlugin.PLUGIN_ID,
-						IMylarStatusConstants.REPOSITORY_NOT_FOUND, repositoryQuery.getRepositoryUrl()));
+				repositoryQuery.setStatus(RepositoryStatus.createNotFoundError(repositoryQuery.getRepositoryUrl(),
+						TasksUiPlugin.PLUGIN_ID));
 			} else {
 
 				QueryHitCollector collector = new QueryHitCollector(TasksUiPlugin.getTaskListManager().getTaskList());
-				IStatus resultingStatus = connector.performQuery(repositoryQuery, repository, monitor, collector);
+				final IStatus resultingStatus = connector.performQuery(repositoryQuery, repository, monitor, collector);
 
 				if (resultingStatus.getSeverity() == IStatus.CANCEL) {
 					// do nothing
 				} else if (resultingStatus.isOK()) {
 
 					if (collector.getHits().size() >= QueryHitCollector.MAX_HITS) {
-						MylarStatusHandler.log(QueryHitCollector.MAX_HITS_REACHED+"\n"+repositoryQuery.getSummary(), this);
+						MylarStatusHandler.log(
+								QueryHitCollector.MAX_HITS_REACHED + "\n" + repositoryQuery.getSummary(), this);
 					}
 
 					repositoryQuery.updateHits(collector.getHits(), taskList);
@@ -109,12 +128,12 @@ class SynchronizeQueryJob extends Job {
 						for (AbstractQueryHit hit : collector.getHits()) {
 							if (!temp.contains(hit)
 									&& hit.getCorrespondingTask() == null
-									&& TasksUiPlugin.getDefault().getTaskDataManager().getRepositoryTaskData(
+									&& TasksUiPlugin.getDefault().getTaskDataManager().getNewTaskData(
 											hit.getHandleIdentifier()) == null) {
 								temp.add(hit);
 							}
-							if (temp.size() > NUM_HITS_TO_PRIME)
-								break;
+							// if (temp.size() > NUM_HITS_TO_PRIME)
+							// break;
 						}
 					}
 
@@ -129,6 +148,13 @@ class SynchronizeQueryJob extends Job {
 					repositoryQuery.setLastRefreshTimeStamp(DateUtil.getFormattedDate(new Date(), "MMM d, H:mm:ss"));
 				} else {
 					repositoryQuery.setStatus(resultingStatus);
+					if (isForced()) {
+						PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+							public void run() {
+								MylarStatusHandler.displayStatus("Query Synchronization Failed", resultingStatus);
+							}
+						});
+					}
 				}
 			}
 
@@ -203,10 +229,8 @@ class SynchronizeQueryJob extends Job {
 							continue;
 						}
 						if (taskData != null) {
-							if (hit.getCorrespondingTask() != null) {
-								hit.getCorrespondingTask().setTaskData(taskData);
-							}
-							TasksUiPlugin.getDefault().getTaskDataManager().push(hit.getHandleIdentifier(), taskData);
+							TasksUiPlugin.getDefault().getTaskDataManager().setNewTaskData(hit.getHandleIdentifier(),
+									taskData);
 						}
 						monitor.worked(1);
 					}

@@ -35,8 +35,9 @@ import org.eclipse.mylar.context.core.IMylarContext;
 import org.eclipse.mylar.context.core.IMylarContextListener;
 import org.eclipse.mylar.context.core.IMylarElement;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.context.core.MylarContextManager;
+import org.eclipse.mylar.internal.context.core.ContextManager;
 import org.eclipse.mylar.internal.tasks.core.RepositoryTaskHandleUtil;
+import org.eclipse.mylar.internal.tasks.core.TaskDataManager;
 import org.eclipse.mylar.internal.tasks.core.WebTask;
 import org.eclipse.mylar.internal.tasks.ui.TaskListPreferenceConstants;
 import org.eclipse.mylar.internal.tasks.ui.WorkspaceAwareContextStore;
@@ -53,6 +54,9 @@ import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskActivityListener;
 import org.eclipse.mylar.tasks.core.ITaskListChangeListener;
 import org.eclipse.mylar.tasks.core.ITaskListElement;
+import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
+import org.eclipse.mylar.tasks.core.RepositoryTaskData;
+import org.eclipse.mylar.tasks.core.Task;
 import org.eclipse.mylar.tasks.core.TaskList;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.core.TaskRepositoryManager;
@@ -167,14 +171,10 @@ public class TaskListManager implements IPropertyChangeListener {
 			// ignore
 		}
 
-		public void presentationSettingsChanging(UpdateKind kind) {
+		public void contextCleared(IMylarContext context) {
 			// ignore
 		}
-
-		public void presentationSettingsChanged(UpdateKind kind) {
-			// ignore
-		}
-
+		
 		public void interestChanged(List<IMylarElement> elements) {
 			List<InteractionEvent> events = ContextCorePlugin.getContextManager().getActivityHistoryMetaContext()
 					.getInteractionHistory();
@@ -271,11 +271,7 @@ public class TaskListManager implements IPropertyChangeListener {
 		List<InteractionEvent> events = ContextCorePlugin.getContextManager().getActivityHistoryMetaContext()
 				.getInteractionHistory();
 		for (InteractionEvent event : events) {
-			try {
-				parseInteractionEvent(event);
-			} catch (Exception e) {
-				MylarStatusHandler.fail(e, "Error parsing interaction event", false);
-			}
+			parseInteractionEvent(event);
 		}
 		taskActivityHistoryInitialized = true;
 		parseFutureReminders();
@@ -358,70 +354,74 @@ public class TaskListManager implements IPropertyChangeListener {
 
 	/** public for testing * */
 	public void parseInteractionEvent(InteractionEvent event) {
+		try {
+			if (event.getDelta().equals(ContextManager.ACTIVITY_DELTA_ACTIVATED)) {
+				if (!event.getStructureHandle().equals(ContextManager.ACTIVITY_HANDLE_ATTENTION)) {
 
-		if (event.getDelta().equals(MylarContextManager.ACTIVITY_DELTA_ACTIVATED)) {
-			if (!event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)) {
+					ITask activatedTask = TasksUiPlugin.getTaskListManager().getTaskList().getTask(
+							event.getStructureHandle());
 
-				ITask activatedTask = TasksUiPlugin.getTaskListManager().getTaskList().getTask(
-						event.getStructureHandle());
+					if (currentTask != null && activatedTask != null) {
+						if (!currentTask.equals(activatedTask)) {
 
-				if (currentTask != null && activatedTask != null) {
-					if (!currentTask.equals(activatedTask)) {
-
-						GregorianCalendar calendarEnd = new GregorianCalendar();
-						calendarEnd.setFirstDayOfWeek(startDay);
-						calendarEnd.setTime(event.getDate());
-						calendarEnd.getTime();
-						// Activation of different task before deactivation of
-						// previous, log was inconsistent,
-						// finish what we started
-						taskDeactivated(calendarEnd);
-					} else {
-						// skip re-activations of same task
-						return;
-					}
-				}
-
-				currentTask = activatedTask;
-				if (currentTask != null) {
-					GregorianCalendar calendar = new GregorianCalendar();
-					calendar.setFirstDayOfWeek(startDay);
-					calendar.setTime(event.getDate());
-					currentTaskStart = calendar;
-					currentHandle = event.getStructureHandle();
-				}
-			} else if (event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)) {
-				if (currentTask != null && !currentHandle.equals("")) {
-					long active = event.getEndDate().getTime() - event.getDate().getTime();
-
-					// add to running total
-					if (taskElapsedTimeMap.containsKey(currentTask)) {
-						long pastTime = taskElapsedTimeMap.get(currentTask);
-						taskElapsedTimeMap.put(currentTask, pastTime + active);
-						timeTicks++;
-						if (taskActivityHistoryInitialized && timeTicks > 3) {
-							// Save incase of system failure.
-							// TODO: request asynchronous save
-							ContextCorePlugin.getContextManager().saveActivityHistoryContext();
-							timeTicks = 0;
+							GregorianCalendar calendarEnd = new GregorianCalendar();
+							calendarEnd.setFirstDayOfWeek(startDay);
+							calendarEnd.setTime(event.getDate());
+							calendarEnd.getTime();
+							// Activation of different task before deactivation
+							// of
+							// previous, log was inconsistent,
+							// finish what we started
+							taskDeactivated(calendarEnd);
+						} else {
+							// skip re-activations of same task
+							return;
 						}
+					}
 
-					} else {
-						taskElapsedTimeMap.put(currentTask, active);
+					currentTask = activatedTask;
+					if (currentTask != null) {
+						GregorianCalendar calendar = new GregorianCalendar();
+						calendar.setFirstDayOfWeek(startDay);
+						calendar.setTime(event.getDate());
+						currentTaskStart = calendar;
+						currentHandle = event.getStructureHandle();
+					}
+				} else if (event.getStructureHandle().equals(ContextManager.ACTIVITY_HANDLE_ATTENTION)) {
+					if (currentTask != null && !currentHandle.equals("")) {
+						long active = event.getEndDate().getTime() - event.getDate().getTime();
+
+						// add to running total
+						if (taskElapsedTimeMap.containsKey(currentTask)) {
+							long pastTime = taskElapsedTimeMap.get(currentTask);
+							taskElapsedTimeMap.put(currentTask, pastTime + active);
+							timeTicks++;
+							if (taskActivityHistoryInitialized && timeTicks > 3) {
+								// Save incase of system failure.
+								// TODO: request asynchronous save
+								ContextCorePlugin.getContextManager().saveActivityHistoryContext();
+								timeTicks = 0;
+							}
+
+						} else {
+							taskElapsedTimeMap.put(currentTask, active);
+						}
 					}
 				}
+			} else if (event.getDelta().equals(ContextManager.ACTIVITY_DELTA_DEACTIVATED)) {
+				if (!event.getStructureHandle().equals(ContextManager.ACTIVITY_HANDLE_ATTENTION)
+						&& currentHandle.equals(event.getStructureHandle())) {
+					GregorianCalendar calendarEnd = new GregorianCalendar();
+					calendarEnd.setFirstDayOfWeek(startDay);
+					calendarEnd.setTime(event.getDate());
+					calendarEnd.getTime();
+					taskDeactivated(calendarEnd);
+				} else if (event.getStructureHandle().equals(ContextManager.ACTIVITY_HANDLE_ATTENTION)) {
+					// Deactivated attention events not currently used (ignored)
+				}
 			}
-		} else if (event.getDelta().equals(MylarContextManager.ACTIVITY_DELTA_DEACTIVATED)) {
-			if (!event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)
-					&& currentHandle.equals(event.getStructureHandle())) {
-				GregorianCalendar calendarEnd = new GregorianCalendar();
-				calendarEnd.setFirstDayOfWeek(startDay);
-				calendarEnd.setTime(event.getDate());
-				calendarEnd.getTime();
-				taskDeactivated(calendarEnd);
-			} else if (event.getStructureHandle().equals(MylarContextManager.ACTIVITY_HANDLE_ATTENTION)) {
-				// Deactivated attention events not currently used (ignored)
-			}
+		} catch (Throwable t) {
+			MylarStatusHandler.fail(t, "Error parsing interaction event", false);
 		}
 	}
 
@@ -704,6 +704,7 @@ public class TaskListManager implements IPropertyChangeListener {
 		for (ITask task : new ArrayList<ITask>(activeTasks)) {
 			deactivateTask(task);
 		}
+		refactorOfflineHandles(oldUrl, newUrl);
 		taskList.refactorRepositoryUrl(oldUrl, newUrl);
 
 		File dataDir = new File(TasksUiPlugin.getDefault().getDataDirectory(),
@@ -715,7 +716,7 @@ public class TaskListManager implements IPropertyChangeListener {
 					String storedHandle;
 					try {
 						storedHandle = URLDecoder.decode(file.getName().substring(0, dotIndex),
-								MylarContextManager.CONTEXT_FILENAME_ENCODING);
+								ContextManager.CONTEXT_FILENAME_ENCODING);
 						int delimIndex = storedHandle.lastIndexOf(RepositoryTaskHandleUtil.HANDLE_DELIM);
 						if (delimIndex != -1) {
 							String storedUrl = storedHandle.substring(0, delimIndex);
@@ -732,7 +733,40 @@ public class TaskListManager implements IPropertyChangeListener {
 				}
 			}
 		}
+
 		saveTaskList();
+	}
+
+	private void refactorOfflineHandles(String oldRepositoryUrl, String newRepositoryUrl) {
+		TaskDataManager taskDataManager = TasksUiPlugin.getDefault().getTaskDataManager();
+		for (ITask task : taskList.getAllTasks()) {
+			if (task instanceof AbstractRepositoryTask) {
+				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
+				if (repositoryTask.getRepositoryUrl().equals(oldRepositoryUrl)) {
+					RepositoryTaskData newTaskData = taskDataManager.getNewTaskData(repositoryTask
+							.getHandleIdentifier());
+					RepositoryTaskData oldTaskData = taskDataManager.getOldTaskData(repositoryTask
+							.getHandleIdentifier());
+					Set<RepositoryTaskAttribute> edits = taskDataManager.getEdits(repositoryTask.getHandleIdentifier());
+					taskDataManager.remove(repositoryTask.getHandleIdentifier());
+
+					String newHandle = RepositoryTaskHandleUtil.getHandle(newRepositoryUrl, repositoryTask.getTaskId());
+
+					if (newTaskData != null) {
+						newTaskData.setRepositoryURL(newRepositoryUrl);
+						taskDataManager.setNewTaskData(newHandle, newTaskData);
+					}
+					if (oldTaskData != null) {
+						oldTaskData.setRepositoryURL(newRepositoryUrl);
+						taskDataManager.setOldTaskData(newHandle, oldTaskData);
+					}
+					if (!edits.isEmpty()) {
+						taskDataManager.saveEdits(newHandle, edits);
+					}
+				}
+			}
+		}
+		TasksUiPlugin.getDefault().getTaskDataManager().saveNow();
 	}
 
 	public boolean readExistingOrCreateNewList() {
@@ -758,8 +792,8 @@ public class TaskListManager implements IPropertyChangeListener {
 			for (ITaskActivityListener listener : new ArrayList<ITaskActivityListener>(activityListeners)) {
 				listener.taskListRead();
 			}
-		} catch (Exception e) {
-			MylarStatusHandler.log(e, "Could not read task list");
+		} catch (Throwable t) {
+			MylarStatusHandler.fail(t, "Could not read task list, consider restoring via view menu", true);
 			return false;
 		}
 		return true;
@@ -881,33 +915,58 @@ public class TaskListManager implements IPropertyChangeListener {
 	 */
 	public boolean isCompletedToday(ITask task) {
 		if (task != null) {
+			boolean isOwnedByUser = isOwnedByUser(task);
+			if (!isOwnedByUser) {
+				return false;
+			} else {
+				Date completionDate = task.getCompletionDate();
+				if (completionDate != null) {
+					Calendar tomorrow = Calendar.getInstance();
+					snapToNextDay(tomorrow);
+					Calendar yesterday = Calendar.getInstance();
+					yesterday.set(Calendar.HOUR_OF_DAY, 0);
+					yesterday.set(Calendar.MINUTE, 0);
+					yesterday.set(Calendar.SECOND, 0);
+					yesterday.set(Calendar.MILLISECOND, 0);
 
-			if (task instanceof AbstractRepositoryTask && !(task instanceof WebTask)) {
-				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
-				TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
-						repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
-
-				if (repository != null && repositoryTask.getOwner() != null
-						&& !repositoryTask.getOwner().equals(repository.getUserName())) {
-					return false;
+					return completionDate.compareTo(yesterday.getTime()) == 1
+							&& completionDate.compareTo(tomorrow.getTime()) == -1;
 				}
-			}
-
-			Date completionDate = task.getCompletionDate();
-			if (completionDate != null) {
-				Calendar tomorrow = Calendar.getInstance();
-				snapToNextDay(tomorrow);
-				Calendar yesterday = Calendar.getInstance();
-				yesterday.set(Calendar.HOUR_OF_DAY, 0);
-				yesterday.set(Calendar.MINUTE, 0);
-				yesterday.set(Calendar.SECOND, 0);
-				yesterday.set(Calendar.MILLISECOND, 0);
-
-				return completionDate.compareTo(yesterday.getTime()) == 1
-						&& completionDate.compareTo(tomorrow.getTime()) == -1;
 			}
 		}
 		return false;
+	}
+
+	public boolean isOwnedByUser(ITask task) {
+		if (task instanceof WebTask || (task instanceof Task && ((Task) task).isLocal())) {
+			return true;
+		}
+
+		if (task instanceof AbstractRepositoryTask) {
+			AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) task;
+			TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
+					repositoryTask.getRepositoryKind(), repositoryTask.getRepositoryUrl());
+			if (repository != null && repositoryTask.getOwner() != null) {
+				return repositoryTask.getOwner().equals(repository.getUserName());
+			}
+		}
+
+		return false;
+
+		// if (task instanceof AbstractRepositoryTask && !(task instanceof
+		// WebTask)) {
+		// AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask)
+		// task;
+		// TaskRepository repository =
+		// TasksUiPlugin.getRepositoryManager().getRepository(
+		// repositoryTask.getRepositoryKind(),
+		// repositoryTask.getRepositoryUrl());
+		// if (repository != null && repositoryTask.getOwner() != null
+		// && !repositoryTask.getOwner().equals(repository.getUserName())) {
+		// return false;
+		// }
+		// }
+		// return true;
 	}
 
 	public boolean isScheduledAfterThisWeek(ITask task) {
@@ -994,7 +1053,8 @@ public class TaskListManager implements IPropertyChangeListener {
 	 * @return true if task due date != null and has past
 	 */
 	public boolean isOverdue(ITask task) {
-		return (!task.isCompleted() && task.getDueDate() != null && new Date().after(task.getDueDate()));
+		return (!task.isCompleted() && task.getDueDate() != null && new Date().after(task.getDueDate()))
+				&& isOwnedByUser(task);
 	}
 
 	public void propertyChange(PropertyChangeEvent event) {

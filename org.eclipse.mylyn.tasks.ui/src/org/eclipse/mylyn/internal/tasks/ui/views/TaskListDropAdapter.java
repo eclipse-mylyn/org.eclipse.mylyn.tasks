@@ -16,7 +16,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.FileTransfer;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.TransferData;
+
 import org.eclipse.core.runtime.CoreException;
+
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -24,9 +31,9 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
+
 import org.eclipse.mylar.context.core.ContextCorePlugin;
 import org.eclipse.mylar.core.MylarStatusHandler;
-import org.eclipse.mylar.internal.tasks.core.RepositoryTaskHandleUtil;
 import org.eclipse.mylar.internal.tasks.ui.ITasksUiConstants;
 import org.eclipse.mylar.internal.tasks.ui.RetrieveTitleFromUrlJob;
 import org.eclipse.mylar.internal.tasks.ui.actions.NewLocalTaskAction;
@@ -34,7 +41,6 @@ import org.eclipse.mylar.internal.tasks.ui.actions.TaskActivateAction;
 import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
-import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.DateRangeContainer;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskListElement;
@@ -44,9 +50,6 @@ import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TaskTransfer;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
-import org.eclipse.swt.dnd.FileTransfer;
-import org.eclipse.swt.dnd.TextTransfer;
-import org.eclipse.swt.dnd.TransferData;
 
 /**
  * @author Mik Kersten
@@ -61,6 +64,15 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 	public TaskListDropAdapter(Viewer viewer) {
 		super(viewer);
 		setFeedbackEnabled(true);
+	}
+
+	@Override
+	public void dragOver(DropTargetEvent event) {
+		// support dragging from sources only supporting DROP_LINK
+		if (event.detail == DND.DROP_NONE && (event.operations & DND.DROP_LINK) == DND.DROP_LINK) {
+			event.detail = DND.DROP_LINK;
+		}
+		super.dragOver(event);
 	}
 
 	@Override
@@ -185,15 +197,15 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 					connector.getRepositoryType())) {
 				if (repository.getUrl().equals(repositoryUrl)) {
 					try {
-						newTask = connector.createTaskFromExistingKey(repository, id);
+						newTask = connector.createTaskFromExistingId(repository, id);
 
-						if (newTask instanceof AbstractRepositoryTask) {
-							// TODO: encapsulate in abstract connector
-							AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) newTask;
-							TasksUiPlugin.getDefault().getTaskDataManager().push(
-									RepositoryTaskHandleUtil.getHandle(repository.getUrl(), id),
-									repositoryTask.getTaskData());
-						}
+//						if (newTask instanceof AbstractRepositoryTask) {
+//							// TODO: encapsulate in abstract connector
+//							AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) newTask;
+//							TasksUiPlugin.getDefault().getTaskDataManager().push(
+//									RepositoryTaskHandleUtil.getHandle(repository.getUrl(), id),
+//									repositoryTask.getTaskData());
+//						}
 						TasksUiUtil.refreshAndOpenTaskListElement(newTask);
 						return true;
 					} catch (CoreException e) {
@@ -282,7 +294,7 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 			RetrieveTitleFromUrlJob job = new RetrieveTitleFromUrlJob(url) {
 				@Override
 				protected void setTitle(final String pageTitle) {
-					newTask.setDescription(pageTitle);
+					newTask.setSummary(pageTitle);
 					TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(newTask);
 				}
 			};

@@ -348,7 +348,7 @@ public class TaskEditor extends FormEditor {
 			webBrowser.setUrl(url);
 			revealBrowser();
 		} else {
-			TasksUiUtil.openBrowser(url);
+			TasksUiUtil.openUrl(url, false);
 		}
 	}
 

@@ -43,6 +43,7 @@ import org.eclipse.jface.fieldassist.ContentProposalAdapter;
 import org.eclipse.jface.fieldassist.IContentProposalProvider;
 import org.eclipse.jface.fieldassist.TextContentAdapter;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.util.SafeRunnable;
@@ -90,6 +91,7 @@ import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskComment;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask.RepositoryTaskSyncState;
+import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
@@ -562,15 +564,33 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		toolkit = managedForm.getToolkit();
 		registerDropListener(form);
 
-		// ImageDescriptor overlay =
-		// TasksUiPlugin.getDefault().getOverlayIcon(repository.getKind());
-		// ImageDescriptor imageDescriptor =
-		// TaskListImages.createWithOverlay(TaskListImages.REPOSITORY, overlay,
-		// false,
-		// false);
-		// form.setImage(TaskListImages.getImage(imageDescriptor));
+		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repository.getKind());
+		ImageDescriptor imageDescriptor = TasksUiImages.createWithOverlay(TasksUiImages.REPOSITORY, overlay, false,
+				false);
+		form.setImage(TasksUiImages.getImage(imageDescriptor));
 
-		// toolkit.decorateFormHeading(form.getForm());
+		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getRepositoryUi(repository.getKind());
+		String kindLabel = "";
+		if (connectorUi != null) {
+			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+		}
+		String idLabel = "";
+
+		if (repositoryTask != null) {
+			idLabel = repositoryTask.getTaskKey();
+		} else {
+			idLabel = taskData.getId();
+		}
+
+		if (taskData != null && taskData.isNew()) {
+			form.setText("New " + kindLabel);
+		} else if(idLabel != null){
+			form.setText(kindLabel + " " + idLabel);
+		} else {
+			form.setText(kindLabel);
+		}
+
+//		toolkit.decorateFormHeading(form.getForm());
 
 		editorComposite = form.getBody();
 		GridLayout editorLayout = new GridLayout();
@@ -578,11 +598,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		editorComposite.setLayoutData(new GridData(GridData.FILL_BOTH));
 
 		if (taskData == null) {
-
-			parentEditor.setMessage(
-					"Task data not available. Press synchronize button (right) to retrieve latest data.",
-					IMessageProvider.WARNING);
-
+			// NOTE: leave this in for 3.2
+			GridLayout warningLayout = new GridLayout(2, false);
+			Composite warningComposite = toolkit.createComposite(editorComposite);
+			warningComposite.setLayout(warningLayout);
+			Label warning = toolkit.createLabel(warningComposite, "");
+			warning.setImage(TasksUiImages.getImage(TasksUiImages.WARNING));
+			toolkit.createLabel(warningComposite,
+					"Task data not available. If connected, synchronize the task and reopen.");
 		} else {
 
 			createSections();

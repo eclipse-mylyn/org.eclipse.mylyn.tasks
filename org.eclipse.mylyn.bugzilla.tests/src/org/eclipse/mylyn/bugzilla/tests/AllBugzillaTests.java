@@ -14,6 +14,7 @@ import junit.framework.Test;
 import junit.framework.TestSuite;
 
 import org.eclipse.mylar.bugzilla.tests.headless.BugzillaQueryTest;
+import org.eclipse.mylar.bugzilla.tests.headless.BugzillaTaskHistoryTest;
 
 /**
  * @author Mik Kersten
@@ -52,7 +53,7 @@ public class AllBugzillaTests {
 		// suite.addTest(new TestSuite(BugzillaParserTest.class));
 		suite.addTestSuite(BugzillaSearchDialogTest.class);
 		suite.addTestSuite(DuplicateDetetionTest.class);
-//		suite.addTestSuite(BugzillaTaskHistoryTest.class);
+		suite.addTestSuite(BugzillaTaskHistoryTest.class);
 		// $JUnit-END$
 		return suite;
 	}

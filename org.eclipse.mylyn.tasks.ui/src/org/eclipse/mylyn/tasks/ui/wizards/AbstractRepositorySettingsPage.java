@@ -27,6 +27,7 @@ import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
+import org.eclipse.mylar.tasks.core.IRepositoryConstants;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.core.TaskRepositoryManager;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
@@ -49,11 +50,8 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
 import org.eclipse.ui.forms.events.ExpansionEvent;
-import org.eclipse.ui.forms.events.HyperlinkEvent;
-import org.eclipse.ui.forms.events.IHyperlinkListener;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
-import org.eclipse.ui.forms.widgets.Hyperlink;
 import org.eclipse.ui.forms.widgets.Section;
 
 /**
@@ -63,6 +61,8 @@ import org.eclipse.ui.forms.widgets.Section;
  */
 public abstract class AbstractRepositorySettingsPage extends WizardPage {
 
+	protected static final String PREFS_PAGE_ID_NET_PROXY = "org.eclipse.ui.net.NetPreferences";
+	
 	protected static final String LABEL_REPOSITORY_LABEL = "Label: ";
 
 	protected static final String LABEL_SERVER = "Server: ";
@@ -290,7 +290,7 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 				oldProxyPassword = "";
 
 			try {
-				String repositoryLabel = repository.getRepositoryLabel();
+				String repositoryLabel = repository.getProperty(IRepositoryConstants.PROPERTY_LABEL);
 				if (repositoryLabel != null && repositoryLabel.length() > 0) {
 					// repositoryLabelCombo.add(repositoryLabel);
 					// repositoryLabelCombo.select(0);
@@ -534,26 +534,25 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		systemProxyButton = new Button(settingsComposite, SWT.CHECK);
 		GridDataFactory.fillDefaults().align(SWT.LEFT, SWT.TOP).span(2, SWT.DEFAULT).applyTo(settingsComposite);
 
-		systemProxyButton.setText("Use Install/Update preferences");
-		Hyperlink changeProxySettingsLink = toolkit.createHyperlink(settingsComposite, "Change Settings", SWT.NULL);
-		changeProxySettingsLink.setBackground(container.getBackground());
-		changeProxySettingsLink.addHyperlinkListener(new IHyperlinkListener() {
-
-			public void linkActivated(HyperlinkEvent e) {
+		systemProxyButton.setText("Use global Network Connections preferences");
+//		Hyperlink changeProxySettingsLink = toolkit.createHyperlink(settingsComposite, "Change Settings", SWT.NULL);
+//		changeProxySettingsLink.setBackground(container.getBackground());
+//		changeProxySettingsLink.addHyperlinkListener(new IHyperlinkListener() {
+//
+//			public void linkActivated(HyperlinkEvent e) {
 //				ProxyPreferencePage page = new ProxyPreferencePage();
 //				page.init(PlatformUI.getWorkbench());
-//				TasksUiUtil.showPreferencePage(TasksUiUtil.PREFS_PAGE_ID_NET_PROXY, page);
-			}
-
-			public void linkEntered(HyperlinkEvent e) {
-				// ignore
-			}
-
-			public void linkExited(HyperlinkEvent e) {
-				// ignore
-			}
-		});		
-		changeProxySettingsLink.setEnabled(false);
+//				TasksUiUtil.showPreferencePage(PREFS_PAGE_ID_NET_PROXY, page);
+//			}
+//
+//			public void linkEntered(HyperlinkEvent e) {
+//				// ignore
+//			}
+//
+//			public void linkExited(HyperlinkEvent e) {
+//				// ignore
+//			}
+//		});		
 		
 		systemProxyButton.addSelectionListener(new SelectionListener() {
 			public void widgetSelected(SelectionEvent e) {

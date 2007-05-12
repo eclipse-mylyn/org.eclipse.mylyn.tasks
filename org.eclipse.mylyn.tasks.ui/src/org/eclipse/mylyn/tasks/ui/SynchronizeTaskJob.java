@@ -11,6 +11,7 @@
 
 package org.eclipse.mylar.tasks.ui;
 
+import java.util.Date;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
@@ -26,6 +27,7 @@ import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.ITaskDataHandler;
 import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskRepository;
+import org.eclipse.mylar.tasks.core.AbstractRepositoryTask.RepositoryTaskSyncState;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressConstants;
 
@@ -44,7 +46,7 @@ class SynchronizeTaskJob extends Job {
 
 	private Set<AbstractRepositoryTask> repositoryTasks;
 
-	private boolean forceSync = false;
+	private boolean forced = false;
 
 	public SynchronizeTaskJob(AbstractRepositoryConnector connector, Set<AbstractRepositoryTask> repositoryTasks) {
 		super(LABEL_SYNCHRONIZE_TASK + " (" + repositoryTasks.size() + " tasks)");
@@ -52,8 +54,20 @@ class SynchronizeTaskJob extends Job {
 		this.repositoryTasks = repositoryTasks;
 	}
 
-	public void setForceSynch(boolean forceUpdate) {
-		this.forceSync = forceUpdate;
+	/**
+	 * Returns true, if synchronization was triggered manually and not by an
+	 * automatic background job.
+	 */
+	public boolean isForced() {
+		return forced;
+	}
+	
+	/**
+	 * Indicates a manual synchronization. If set to true, a dialog will be
+	 * displayed in case of errors.
+	 */
+	public void setForced(boolean forced) {
+		this.forced = forced;
 	}
 
 	@Override
@@ -73,16 +87,18 @@ class SynchronizeTaskJob extends Job {
 					syncTask(monitor, repositoryTask);
 				} catch (final CoreException e) {
 					repositoryTask.setStatus(e.getStatus());
-					if (forceSync) {
+					if (forced) {
 						PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 							public void run() {
-								MylarStatusHandler.displayStatus("Task synchronization failed", e.getStatus());
+								MylarStatusHandler.displayStatus("Task Synchronization Failed", e.getStatus());
 							}
 						});
 					}
 				}
 
+				// TODO: Set in connector.updateTask
 				repositoryTask.setCurrentlySynchronizing(false);
+				
 				TasksUiPlugin.getTaskListManager().getTaskList().notifyLocalInfoChanged(repositoryTask);
 				// TasksUiPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(repositoryTask);
 
@@ -100,8 +116,6 @@ class SynchronizeTaskJob extends Job {
 	}
 
 	private void syncTask(IProgressMonitor monitor, final AbstractRepositoryTask repositoryTask) throws CoreException {
-		// boolean hasLocalChanges = repositoryTask.isDirty();
-		// if (forceSync || !repositoryTask.isDownloaded()) {
 		monitor.setTaskName(LABEL_SYNCHRONIZING + repositoryTask.getSummary());
 
 		final TaskRepository repository = TasksUiPlugin.getRepositoryManager().getRepository(
@@ -120,18 +134,29 @@ class SynchronizeTaskJob extends Job {
 			RepositoryTaskData downloadedTaskData = taskDataHandler.getTaskData(repository, taskId);
 
 			if (downloadedTaskData != null) {
-				if (TasksUiPlugin.getSynchronizationManager().saveIncoming(repositoryTask, downloadedTaskData,
-						forceSync)) {
-
+				// HACK: part of hack below
+				Date oldDueDate = repositoryTask.getDueDate();
+				
+				TasksUiPlugin.getSynchronizationManager().saveIncoming(repositoryTask, downloadedTaskData, forced);
+				connector.updateTaskFromTaskData(repository, repositoryTask, downloadedTaskData, true);
+				
+				// HACK: Remove once connectors can get access to TaskDataManager and do this themselves
+				if((oldDueDate == null && repositoryTask.getDueDate() != null) || (oldDueDate != null && repositoryTask.getDueDate() == null)) {
+					TasksUiPlugin.getTaskListManager().setDueDate(repositoryTask, repositoryTask.getDueDate());
+				} else if(oldDueDate != null && repositoryTask.getDueDate() != null && oldDueDate.compareTo(repositoryTask.getDueDate()) != 0) {
+					TasksUiPlugin.getTaskListManager().setDueDate(repositoryTask, repositoryTask.getDueDate());
+				}
+				
+				
+				if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING
+						|| repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
 					TasksUiPlugin.getTaskListManager().getTaskList().notifyRepositoryInfoChanged(repositoryTask);
-
 				}
 			} else {
-				connector.updateTask(repository, repositoryTask);
+				connector.updateTaskFromRepository(repository, repositoryTask);
 			}
 		} else {
-			connector.updateTask(repository, repositoryTask);
+			connector.updateTaskFromRepository(repository, repositoryTask);
 		}
 	}
-	// }
 }

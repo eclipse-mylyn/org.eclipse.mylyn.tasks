@@ -13,6 +13,7 @@ package org.eclipse.mylar.internal.tasks.ui.views;
 
 import java.util.regex.Pattern;
 
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.IFontProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -23,10 +24,14 @@ import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
 import org.eclipse.mylar.tasks.core.AbstractTaskContainer;
+import org.eclipse.mylar.tasks.core.DateRangeContainer;
 import org.eclipse.mylar.tasks.core.ITask;
 import org.eclipse.mylar.tasks.core.ITaskListElement;
 import org.eclipse.mylar.tasks.core.TaskArchive;
 import org.eclipse.mylar.tasks.core.TaskCategory;
+import org.eclipse.mylar.tasks.core.UncategorizedCategory;
+import org.eclipse.mylar.tasks.core.AbstractRepositoryTask.RepositoryTaskSyncState;
+import org.eclipse.mylar.tasks.core.Task.PriorityLevel;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.swt.graphics.Color;
@@ -46,65 +51,176 @@ public class TaskElementLabelProvider extends LabelProvider implements IColorPro
 
 	private static final Pattern pattern = Pattern.compile("\\d*: .*");
 
+	private boolean compositeImages = false;
+
+	private class CompositeImageDescriptor {
+
+		ImageDescriptor icon;
+
+		ImageDescriptor overlayKind;
+
+		ImageDescriptor overlaySynch;
+	};
+
+	public TaskElementLabelProvider() {
+		super();
+	}
+
+	/**
+	 * @param treeViewer
+	 *            can be null
+	 */
+	public TaskElementLabelProvider(boolean compositeImages) {
+		super();
+		this.compositeImages = compositeImages;
+	}
+
 	@Override
 	public Image getImage(Object element) {
-		if (element instanceof TaskArchive) {
-			return TasksUiImages.getImage(TasksUiImages.CATEGORY_ARCHIVE);
-		} else if (element instanceof TaskCategory) {
-			return TasksUiImages.getImage(TasksUiImages.CATEGORY);
-		} else if (element instanceof AbstractRepositoryQuery) {
-			return TasksUiImages.getImage(TasksUiImages.QUERY);
-		} else if (element instanceof AbstractQueryHit) {
-			AbstractQueryHit hit = (AbstractQueryHit) element;
-			if (hit.getCorrespondingTask() != null) {
-				return getImage(hit.getCorrespondingTask());
+		CompositeImageDescriptor compositeDescriptor = getImageDescriptor(element, compositeImages);
+//		if (!compositeImages) {
+//			return TasksUiImages.getCompositeImage(compositeDescriptor.icon);
+//		} else {
+			if (element instanceof ITask || element instanceof AbstractQueryHit) {
+				return TasksUiImages.getCompositeTaskImage(compositeDescriptor.icon, compositeDescriptor.overlayKind,
+						compositeDescriptor.overlaySynch);
+			} else if (element instanceof AbstractTaskContainer) {
+				return TasksUiImages.getCompositeContainerImage(compositeDescriptor.icon,
+						compositeDescriptor.overlaySynch);
 			} else {
-				return TasksUiImages.getImage(TasksUiImages.TASK_REMOTE);
+				return TasksUiImages.getCompositeTaskImage(compositeDescriptor.icon, null, null);
 			}
-		} else if (element instanceof ITask) {
-			ITask task = (ITask) element;
-			// TODO: fix this mess that delaying decoration got us into
-			if (task.isCompleted()) {
-				if (task instanceof AbstractRepositoryTask) {
-					AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin
-							.getRepositoryUi(((AbstractRepositoryTask) task).getRepositoryKind());
-					if (connectorUi != null && !connectorUi.hasRichEditor()) {
-						return TasksUiImages.getImage(TasksUiImages.TASK_COMPLETED);
-					} else {
-						return TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY_COMPLETED);
-					}
-				} else {
-					return TasksUiImages.getImage(TasksUiImages.TASK_COMPLETED);
+//		}
+	}
+
+	private CompositeImageDescriptor getImageDescriptor(Object object, boolean showSynchState) {
+		CompositeImageDescriptor compositeDescriptor = new CompositeImageDescriptor();
+		if (object instanceof TaskArchive) {
+			compositeDescriptor.icon = TasksUiImages.CATEGORY_ARCHIVE;
+			return compositeDescriptor;
+		} else if (object instanceof TaskCategory || object instanceof UncategorizedCategory) {
+			compositeDescriptor.icon = TasksUiImages.CATEGORY;
+		}
+
+		if (object instanceof ITaskListElement) {
+			ITaskListElement element = (ITaskListElement) object;
+
+			AbstractRepositoryConnectorUi connectorUi = null;
+			if (element instanceof AbstractRepositoryTask) {
+				AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) element;
+				connectorUi = TasksUiPlugin.getRepositoryUi(((AbstractRepositoryTask) element).getRepositoryKind());
+				if (connectorUi != null) {
+					compositeDescriptor.overlayKind = connectorUi.getTaskKindOverlay(repositoryTask);
 				}
-			} else if (task.getNotes() != null && !task.getNotes().trim().equals("")) {
-				if (task instanceof AbstractRepositoryTask) {
-					AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin
-							.getRepositoryUi(((AbstractRepositoryTask) task).getRepositoryKind());
-					if (connectorUi != null && !connectorUi.hasRichEditor()) {
-						return TasksUiImages.getImage(TasksUiImages.TASK_NOTES);
-					} else {
-						return TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY_NOTES);
-					}
-				} else {
-					return TasksUiImages.getImage(TasksUiImages.TASK_NOTES);
+				if (showSynchState) {
+					compositeDescriptor.overlaySynch = getSynchronizationImageDescriptor(element);
 				}
+			} else if (element instanceof AbstractQueryHit) {
+				AbstractRepositoryTask repositoryTask = ((AbstractQueryHit) element).getCorrespondingTask();
+				if (repositoryTask != null) {
+					return getImageDescriptor(repositoryTask, showSynchState);
+				}
+			} else if (element instanceof AbstractRepositoryQuery) {
+				connectorUi = TasksUiPlugin.getRepositoryUi(((AbstractRepositoryQuery) element).getRepositoryKind());
+			}
+
+//			if (element instanceof AbstractTaskContainer) {
+//				if (treeViewer != null && !Arrays.asList(treeViewer.getExpandedElements()).contains(element)
+//						&& hasIncoming((AbstractTaskContainer) element)) {
+//					compositeDescriptor.overlaySynch = TasksUiImages.STATUS_NORMAL_INCOMING;
+//				}
+//			}
+
+			if (connectorUi != null) {
+				compositeDescriptor.icon = connectorUi.getTaskListElementIcon(element);
+				return compositeDescriptor;
 			} else {
-				if (task instanceof AbstractRepositoryTask) {
-					AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin
-							.getRepositoryUi(((AbstractRepositoryTask) task).getRepositoryKind());
-					if (connectorUi != null && !connectorUi.hasRichEditor()) {
-						return TasksUiImages.getImage(TasksUiImages.TASK);
-					} else {
-						return TasksUiImages.getImage(TasksUiImages.TASK_REPOSITORY);
+				if (element instanceof ITask) {
+					if (showSynchState) {
+						compositeDescriptor.overlaySynch = getSynchronizationImageDescriptor(element);
 					}
-				} else {
-					return TasksUiImages.getImage(TasksUiImages.TASK);
+				} else if (element instanceof AbstractQueryHit) {
+					if (showSynchState) {
+						compositeDescriptor.overlaySynch = getSynchronizationImageDescriptor(element);
+					}
 				}
+
+				if (element instanceof AbstractRepositoryQuery) {
+					compositeDescriptor.icon = TasksUiImages.QUERY;
+				} else if (element instanceof AbstractQueryHit) {
+					compositeDescriptor.icon = TasksUiImages.TASK;
+				} else if (element instanceof ITask) {
+					compositeDescriptor.icon = TasksUiImages.TASK;
+				} else if (element instanceof DateRangeContainer) {
+					compositeDescriptor.icon = TasksUiImages.CALENDAR;
+				}
+				return compositeDescriptor;
+			}
+		}
+		return compositeDescriptor;
+	}
+
+	public static ImageDescriptor getSynchronizationImageDescriptor(Object element) {
+		AbstractRepositoryTask repositoryTask = null;
+		ImageDescriptor imageDescriptor = null;
+		if (element instanceof AbstractQueryHit) {
+			repositoryTask = ((AbstractQueryHit) element).getCorrespondingTask();
+			if (repositoryTask == null) {
+				return TasksUiImages.STATUS_OVERLAY_INCOMMING_NEW;
+			}
+		} else if (element instanceof AbstractRepositoryTask) {
+			repositoryTask = (AbstractRepositoryTask) element;
+		}
+		if (repositoryTask != null) {
+			if (repositoryTask.getSyncState() == RepositoryTaskSyncState.OUTGOING) {
+				imageDescriptor = TasksUiImages.STATUS_NORMAL_OUTGOING;
+			} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.INCOMING) {
+				imageDescriptor = TasksUiImages.STATUS_NORMAL_INCOMING;
+			} else if (repositoryTask.getSyncState() == RepositoryTaskSyncState.CONFLICT) {
+				imageDescriptor = TasksUiImages.STATUS_NORMAL_CONFLICT;
+			}
+			if (imageDescriptor == null && repositoryTask.getStatus() != null) {
+				return TasksUiImages.STATUS_WARNING;
+			} else if (imageDescriptor != null) {
+				return imageDescriptor;
+			}
+		} else if (element instanceof AbstractQueryHit) {
+			return TasksUiImages.STATUS_NORMAL_INCOMING;
+		} else if (element instanceof AbstractTaskContainer) {
+			AbstractTaskContainer container = (AbstractTaskContainer) element;
+			if (container instanceof AbstractRepositoryQuery) {
+				AbstractRepositoryQuery query = (AbstractRepositoryQuery) container;
+				if (query.getStatus() != null) {
+					return TasksUiImages.STATUS_WARNING;
+				}
+			}
+		}
+		// HACK: need a proper blank image
+		return TasksUiImages.PRIORITY_3;
+	}
+
+	public static ImageDescriptor getPriorityImageDescriptor(Object element) {
+		AbstractRepositoryConnectorUi connectorUi;
+		if (element instanceof AbstractRepositoryTask) {
+			AbstractRepositoryTask repositoryTask = (AbstractRepositoryTask) element;
+			connectorUi = TasksUiPlugin.getRepositoryUi(((AbstractRepositoryTask) element).getRepositoryKind());
+			if (connectorUi != null) {
+				return connectorUi.getTaskPriorityOverlay(repositoryTask);
+			}
+		}
+		if (element instanceof ITask || element instanceof AbstractQueryHit) {
+			ITask task = TaskElementLabelProvider.getCorrespondingTask((ITaskListElement) element);
+			if (task != null) {
+				return TasksUiImages.getImageDescriptorForPriority(PriorityLevel.fromString(task
+						.getPriority()));
+			} else if (element instanceof AbstractQueryHit){
+				return TasksUiImages.getImageDescriptorForPriority(PriorityLevel.fromString(((AbstractQueryHit)element)
+						.getPriority()));
 			}
 		}
 		return null;
 	}
-
+	
 	@Override
 	public String getText(Object object) {
 		if (object instanceof AbstractQueryHit) {
@@ -135,9 +251,6 @@ public class TaskElementLabelProvider extends LabelProvider implements IColorPro
 				} else {
 					return task.getSummary();
 				}
-				// return
-				// AbstractRepositoryTask.getTaskId(task.getHandleIdentifier())
-				// + ": " + task.getDescription();
 			} else {
 				return task.getSummary();
 			}
@@ -159,6 +272,12 @@ public class TaskElementLabelProvider extends LabelProvider implements IColorPro
 							TaskListColorsAndFonts.THEME_COLOR_TASK_OVERDUE);
 				}
 			}
+		} else if (object instanceof AbstractQueryHit && ((AbstractQueryHit) object).getCorrespondingTask() == null) {
+			AbstractQueryHit hit = (AbstractQueryHit) object;
+			if ((hit.getCorrespondingTask() != null && hit.getCorrespondingTask().isCompleted()) || hit.isCompleted()) {
+				return themeManager.getCurrentTheme().getColorRegistry().get(
+						TaskListColorsAndFonts.THEME_COLOR_COMPLETED);
+			}
 		} else if (object instanceof AbstractRepositoryQuery) {
 			// FIXME AbstractRepositoryQuery is a subclass of
 			// AbstractTaskContainer so this is probably a dead branch!
@@ -167,12 +286,6 @@ public class TaskElementLabelProvider extends LabelProvider implements IColorPro
 				if (task != null && task.isActive()) {
 					return TaskListColorsAndFonts.COLOR_TASK_ACTIVE;
 				}
-			}
-		} else if (object instanceof AbstractQueryHit && ((AbstractQueryHit) object).getCorrespondingTask() == null) {
-			AbstractQueryHit hit = (AbstractQueryHit) object;
-			if ((hit.getCorrespondingTask() != null && hit.getCorrespondingTask().isCompleted()) || hit.isCompleted()) {
-				return themeManager.getCurrentTheme().getColorRegistry().get(
-						TaskListColorsAndFonts.THEME_COLOR_COMPLETED);
 			}
 		} else if (object instanceof ITaskListElement) {
 			ITask task = getCorrespondingTask((ITaskListElement) object);
@@ -263,7 +376,7 @@ public class TaskElementLabelProvider extends LabelProvider implements IColorPro
 				}
 			}
 		} else if (element instanceof AbstractQueryHit) {
-			if (((AbstractQueryHit)element).isCompleted()) {
+			if (((AbstractQueryHit) element).isCompleted()) {
 				return TaskListColorsAndFonts.STRIKETHROUGH;
 			}
 		}

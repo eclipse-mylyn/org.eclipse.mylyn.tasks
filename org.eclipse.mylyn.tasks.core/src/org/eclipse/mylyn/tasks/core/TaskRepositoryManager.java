@@ -166,7 +166,11 @@ public class TaskRepositoryManager {
 	public AbstractRepositoryConnector getConnectorForRepositoryTaskUrl(String url) {
 		for (AbstractRepositoryConnector connector : getRepositoryConnectors()) {
 			if (connector.getRepositoryUrlFromTaskUrl(url) != null) {
-				return connector;
+				for(TaskRepository repository : getRepositories(connector.getRepositoryType())) {
+					if(url.startsWith(repository.getUrl())) {
+						return connector;
+					}
+				}
 			}
 		}
 		return null;
@@ -232,7 +236,11 @@ public class TaskRepositoryManager {
 		loadRepositories(repositoriesFilePath);
 
 		for (ITaskRepositoryListener listener : listeners) {
-			listener.repositoriesRead();
+			try {
+				listener.repositoriesRead();
+			} catch (Throwable t) {
+				MylarStatusHandler.fail(t, "repository listener failed", false);
+			}
 		}
 		return repositoryMap;
 	}

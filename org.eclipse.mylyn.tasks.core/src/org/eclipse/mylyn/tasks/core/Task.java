@@ -261,6 +261,10 @@ public class Task extends PlatformObject implements ITask {
 	public void removeSubTask(ITask t) {
 		children.remove(t);
 	}
+	
+	public void dropSubTasks() {
+		children.clear();
+	}
 
 	public void setContainer(AbstractTaskContainer cat) {
 		this.parentCategory = cat;
@@ -308,7 +312,7 @@ public class Task extends PlatformObject implements ITask {
 		this.creationDate = date;
 	}
 
-	public void setDescription(String summary) {
+	public void setSummary(String summary) {
 		this.summary = summary;
 	}
 

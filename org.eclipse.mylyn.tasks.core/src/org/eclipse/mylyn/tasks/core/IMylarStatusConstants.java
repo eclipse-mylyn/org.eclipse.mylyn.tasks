@@ -11,9 +11,9 @@
 
 package org.eclipse.mylar.tasks.core;
 
-
 /**
  * @author Rob Elves
+ * @author Steffen Pingel
  */
 public interface IMylarStatusConstants {
 
@@ -21,12 +21,6 @@ public interface IMylarStatusConstants {
 	 * requires construction with repositoryUrl and error message
 	 */
 	public final static int REPOSITORY_ERROR = 1;
-
-	/**
-	 * Operation failed with html error from repository.
-	 * 
-	 */
-	public final static int REPOSITORY_ERROR_HTML = 2;
 
 	public final static int REPOSITORY_LOGIN_ERROR = 3;
 
@@ -45,5 +39,7 @@ public interface IMylarStatusConstants {
 	public final static int LOGGED_OUT_OF_REPOSITORY = 10;
 	
 	public final static int NETWORK_ERROR = 11;
+	
+	public final static int PERMISSION_DENIED_ERROR = 12;
 
 }

@@ -37,6 +37,7 @@ public class TaskDataManagerTest extends TestCase {
 		super.setUp();
 		offlineTaskDataManager = TasksUiPlugin.getDefault().getTaskDataManager();
 		offlineTaskDataManager.clear();
+		offlineTaskDataManager.saveNow();
 	}
 
 	@Override
@@ -44,7 +45,7 @@ public class TaskDataManagerTest extends TestCase {
 		super.tearDown();
 		if (offlineTaskDataManager != null) {
 			offlineTaskDataManager.clear();
-			offlineTaskDataManager.save(true);
+			offlineTaskDataManager.saveNow();
 		}
 	}
 
@@ -52,9 +53,9 @@ public class TaskDataManagerTest extends TestCase {
 		RepositoryTaskData taskData = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
 	}
 
@@ -68,7 +69,7 @@ public class TaskDataManagerTest extends TestCase {
 		attrib1.putMetaDataValue("key2", "value2");
 		taskData.addAttribute("key", attrib1);
 
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
 		taskData = new RepositoryTaskData(new MockAttributeFactory(), MockRepositoryConnector.REPOSITORY_KIND,
 				MockRepositoryConnector.REPOSITORY_URL, "2", Task.DEFAULT_TASK_KIND);
@@ -78,20 +79,20 @@ public class TaskDataManagerTest extends TestCase {
 		attrib2.putMetaDataValue("key4", "value4");
 		taskData.addAttribute("key", attrib2);
 
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
 				taskData);
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
-		offlineTaskDataManager.save(true);
+		offlineTaskDataManager.saveNow();
 		offlineTaskDataManager.clear();
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
 		offlineTaskDataManager.readOfflineData();
-		RepositoryTaskData loaded1 = offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		RepositoryTaskData loaded1 = offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1"));
 		assertNotNull(loaded1);
 
@@ -101,7 +102,7 @@ public class TaskDataManagerTest extends TestCase {
 		assertEquals("value1", atr.getMetaDataValue("key1"));
 		assertEquals("value2", atr.getMetaDataValue("key2"));
 
-		RepositoryTaskData loaded2 = offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		RepositoryTaskData loaded2 = offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2"));
 		assertNotNull(loaded2);
 		RepositoryTaskAttribute atr2 = loaded2.getAttribute("key");
@@ -114,7 +115,7 @@ public class TaskDataManagerTest extends TestCase {
 	public void testGetNextOfflineBugId() throws IOException, ClassNotFoundException {
 		assertEquals("1", offlineTaskDataManager.getNewRepositoryTaskId());
 		assertEquals("2", offlineTaskDataManager.getNewRepositoryTaskId());
-		offlineTaskDataManager.save(true);
+		offlineTaskDataManager.saveNow();
 		offlineTaskDataManager.clear();
 		offlineTaskDataManager.readOfflineData();
 		assertEquals("3", offlineTaskDataManager.getNewRepositoryTaskId());
@@ -125,21 +126,24 @@ public class TaskDataManagerTest extends TestCase {
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
 		taskData.setNewComment("version 1");
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		offlineTaskDataManager.setOldTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+				taskData);
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
 		taskData = new RepositoryTaskData(new MockAttributeFactory(), MockRepositoryConnector.REPOSITORY_KIND,
 				MockRepositoryConnector.REPOSITORY_URL, "1", Task.DEFAULT_TASK_KIND);
 		taskData.setNewComment("version 2");
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
-		offlineTaskDataManager.save(true);
+		
+		offlineTaskDataManager.saveNow();
 		offlineTaskDataManager.clear();
 		offlineTaskDataManager.readOfflineData();
-		assertEquals("version 2", offlineTaskDataManager.getRepositoryTaskData(
+		assertEquals("version 2", offlineTaskDataManager.getNewTaskData(
 				RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1")).getNewComment());
-		assertEquals("version 1", offlineTaskDataManager.getOldRepositoryTaskData(
+		assertEquals("version 1", offlineTaskDataManager.getOldTaskData(
 				RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1")).getNewComment());
 	}
 
@@ -147,48 +151,48 @@ public class TaskDataManagerTest extends TestCase {
 		RepositoryTaskData taskData = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
 		RepositoryTaskData taskData2 = offlineTaskDataManager.getEditableCopy(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1"));
 		assertNotNull(taskData2);
 		taskData2.setNewComment("test");
 		taskData = null;
-		taskData = offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		taskData = offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1"));
 		assertFalse(taskData.getNewComment().equals("test"));
-		taskData = null;
-		taskData = offlineTaskDataManager.getOldRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
-				MockRepositoryConnector.REPOSITORY_URL, "1"));
-		assertFalse(taskData.getNewComment().equals("test"));
+//		taskData = null;
+//		taskData = offlineTaskDataManager.getOldTaskData(RepositoryTaskHandleUtil.getHandle(
+//				MockRepositoryConnector.REPOSITORY_URL, "1"));
+//		assertFalse(taskData.getNewComment().equals("test"));
 	}
 
 	public void testRemoveRepositoryTaskData() throws CoreException, IOException, ClassNotFoundException {
 		RepositoryTaskData taskData = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
 		taskData = new RepositoryTaskData(new MockAttributeFactory(), MockRepositoryConnector.REPOSITORY_KIND,
 				MockRepositoryConnector.REPOSITORY_URL, "2", Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
 				taskData);
-		offlineTaskDataManager.save(true);
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		offlineTaskDataManager.saveNow();
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
 		offlineTaskDataManager.remove(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"));
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
-		offlineTaskDataManager.save(true);
+		offlineTaskDataManager.saveNow();
 		offlineTaskDataManager.clear();
 		offlineTaskDataManager.readOfflineData();
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
 	}
 
@@ -196,32 +200,32 @@ public class TaskDataManagerTest extends TestCase {
 		RepositoryTaskData taskData1 = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData1);
 		RepositoryTaskData taskData2 = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "2",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"),
 				taskData2);
-		offlineTaskDataManager.save(true);
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		offlineTaskDataManager.saveNow();
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
 		ArrayList<String> list = new ArrayList<String>();
 		list.add(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"));
 		list.add(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "2"));
 		offlineTaskDataManager.remove(list);
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
-		offlineTaskDataManager.save(true);
+		offlineTaskDataManager.saveNow();
 		offlineTaskDataManager.clear();
 		offlineTaskDataManager.readOfflineData();
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "2")));
 	}
 
@@ -229,13 +233,13 @@ public class TaskDataManagerTest extends TestCase {
 		RepositoryTaskData taskData = new RepositoryTaskData(new MockAttributeFactory(),
 				MockRepositoryConnector.REPOSITORY_KIND, MockRepositoryConnector.REPOSITORY_URL, "1",
 				Task.DEFAULT_TASK_KIND);
-		offlineTaskDataManager.push(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
+		offlineTaskDataManager.setNewTaskData(RepositoryTaskHandleUtil.getHandle(MockRepositoryConnector.REPOSITORY_URL, "1"),
 				taskData);
 
-		assertNotNull(offlineTaskDataManager.getRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
+		assertNotNull(offlineTaskDataManager.getNewTaskData(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1")));
-		assertNotNull(offlineTaskDataManager.getOldRepositoryTaskData(RepositoryTaskHandleUtil.getHandle(
-				MockRepositoryConnector.REPOSITORY_URL, "1")));
+//		assertNotNull(offlineTaskDataManager.getOldTaskData(RepositoryTaskHandleUtil.getHandle(
+//				MockRepositoryConnector.REPOSITORY_URL, "1")));
 
 		RepositoryTaskData editData = offlineTaskDataManager.getEditableCopy(RepositoryTaskHandleUtil.getHandle(
 				MockRepositoryConnector.REPOSITORY_URL, "1"));

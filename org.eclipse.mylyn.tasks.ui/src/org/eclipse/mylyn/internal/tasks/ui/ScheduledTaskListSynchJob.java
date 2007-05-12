@@ -101,7 +101,7 @@ public class ScheduledTaskListSynchJob extends Job {
 							try {
 								connector.updateAttributes(repository, new SubProgressMonitor(monitor, 1));
 							} catch (Throwable t) {
-								// ignore, since we might not be connector
+								// ignore, since we might not be connected
 //								MylarStatusHandler.log(t, "Unable to update attributes for " + repository.getUrl()
 //										+ "  " + t.getMessage());
 							}
@@ -124,7 +124,7 @@ public class ScheduledTaskListSynchJob extends Job {
 							}
 						};
 						TasksUiPlugin.getSynchronizationManager().synchronize(connector, queries, jobAdapter,
-								Job.DECORATE, 0, false);
+								Job.DECORATE, 0, false, false);
 					}
 				} else {
 					TasksUiPlugin.getSynchronizationManager().synchronizeChanged(connector, repository);

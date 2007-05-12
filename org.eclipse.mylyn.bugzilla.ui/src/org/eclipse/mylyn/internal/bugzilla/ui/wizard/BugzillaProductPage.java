@@ -148,7 +148,7 @@ public class BugzillaProductPage extends WizardPage {
 		java2buzillaOSMap.put("aix", "AIX");
 		java2buzillaOSMap.put("hpux", "HP-UX");
 		java2buzillaOSMap.put("linux", "Linux");
-		java2buzillaOSMap.put("macosx", "MacOS X");
+		java2buzillaOSMap.put("macosx", "Mac OS");
 		java2buzillaOSMap.put("qnx", "QNX-Photon");
 		java2buzillaOSMap.put("solaris", "Solaris");
 		java2buzillaOSMap.put("win32", "Windows XP");
@@ -316,9 +316,9 @@ public class BugzillaProductPage extends WizardPage {
 
 		Object element = selection.getFirstElement();
 		if (element instanceof BugzillaTask) {
-			BugzillaTask task = (BugzillaTask) element;
-			if (task.getTaskData() != null) {
-				products.add(task.getTaskData().getProduct());
+			BugzillaTask bugzillaTask = (BugzillaTask) element;			
+			if (bugzillaTask.getProduct() != null) {
+				products.add(bugzillaTask.getProduct());
 			}
 		} else {
 			BugzillaRepositoryQuery query = null;
@@ -357,7 +357,9 @@ public class BugzillaProductPage extends WizardPage {
 					ITask task = (ITask) adaptable.getAdapter(ITask.class);
 					if (task instanceof BugzillaTask) {
 						BugzillaTask bugzillaTask = (BugzillaTask) task;
-						products.add(bugzillaTask.getTaskData().getProduct());
+						if (bugzillaTask.getProduct() != null) {
+							products.add(bugzillaTask.getProduct());
+						}
 					}
 				}
 			}
@@ -466,7 +468,14 @@ public class BugzillaProductPage extends WizardPage {
 				// to null, and use "other"
 				bugzillaPlatform = null;
 			}
-
+			if (bugzillaPlatform!= null && bugzillaPlatform.compareTo("PC")== 0 &&
+				bugzillaOS!= null       && bugzillaOS.compareTo("Mac OS")== 0)
+				// Intel Mac's return PC as Platform because the OSArch == "x86"
+				// so we change the Plaform if the bugzilla OS tell us it is an Mac OS
+				//
+				// btw bugzilla 3.0rc1 set Platform to PC in enter_bug.cgi pickplatform
+				// move line 225 before 202 to fix this.
+				bugzillaPlatform = "Macintosh";
 			// Set the OS and the Platform in the taskData
 			if (bugzillaOS != null && opSysAttribute != null) {
 				opSysAttribute.setValue(bugzillaOS);

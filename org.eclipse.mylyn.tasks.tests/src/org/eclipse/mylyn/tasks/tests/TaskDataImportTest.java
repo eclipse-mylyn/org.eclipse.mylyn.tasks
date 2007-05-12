@@ -58,13 +58,13 @@ public class TaskDataImportTest extends AbstractContextTest {
 		assertNotNull(wizardPage);
 
 		manager.resetTaskList();
-		assertTrue(manager.getTaskList().getRootElements().size() == 1);
+		assertEquals(2, manager.getTaskList().getRootElements().size());
 
 		sourceZipFile = TaskTestUtil.getLocalFile(sourceZipPath);
 		assertTrue(sourceZipFile.exists());
 
 		// make sure no tasks and categories exist prior to import tests
-		assertEquals(1, manager.getTaskList().getTaskContainers().size());
+		assertEquals(2, manager.getTaskList().getTaskContainers().size());
 		ContextCorePlugin.getContextManager().getActivityHistoryMetaContext().reset();
 	}
 
@@ -87,7 +87,7 @@ public class TaskDataImportTest extends AbstractContextTest {
 		assertNotNull(historyContext);
 		assertTrue(taskList.getAllTasks().size() == 0);
 		assertTrue(historyContext.getInteractionHistory().size() == 0);
-		assertEquals(0, TasksUiPlugin.getRepositoryManager().getAllRepositories().size());
+		assertEquals(1, TasksUiPlugin.getRepositoryManager().getAllRepositories().size());
 
 		wizardPage.setParameters(true, true, true, true, true, "", sourceZipFile.getPath());
 		wizard.performFinish();

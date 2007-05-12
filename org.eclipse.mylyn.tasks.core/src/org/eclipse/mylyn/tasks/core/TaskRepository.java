@@ -101,6 +101,11 @@ public class TaskRepository {
 
 	private Map<String, String> properties = new LinkedHashMap<String, String>();
 
+	/*
+	 * TODO: should be externalized and added to extension point, see bug 183606 
+	 */
+	private boolean isBugRepository = false;
+
 	/**
 	 * for testing purposes
 	 */
@@ -156,6 +161,7 @@ public class TaskRepository {
 		// NOTE: if anonymous, user name is "" string so we won't go to keyring
 		if (!isCachedUserName) {
 			cachedUserName = getUserNameFromKeyRing();
+			isCachedUserName = true;
 		}
 		return cachedUserName;
 	}
@@ -368,8 +374,16 @@ public class TaskRepository {
 		this.properties.put(IRepositoryConstants.PROPERTY_LABEL, repositoryLabel);
 	}
 
+	/**
+	 * @return the URL if the label property is not set
+	 */
 	public String getRepositoryLabel() {
-		return this.properties.get(IRepositoryConstants.PROPERTY_LABEL);
+		String label = properties.get(IRepositoryConstants.PROPERTY_LABEL);
+		if (label != null && label.length() > 0) {
+			return label;
+		} else {
+			return getUrl();
+		}
 	}
 
 	public Map<String, String> getProperties() {
@@ -412,8 +426,11 @@ public class TaskRepository {
 		return proxy;
 	}
 
+	/**
+	 * Use platform proxy settings
+	 */
 	public boolean useDefaultProxy() {
-		return "true".equals(getProperty(PROXY_USEDEFAULT)) || (getProperty(PROXY_HOSTNAME) == null);
+		return "true".equals(getProperty(PROXY_USEDEFAULT));
 	}
 
 	/** 
@@ -437,7 +454,15 @@ public class TaskRepository {
 		properties.put(ANONYMOUS_LOGIN, String.valueOf(b));
 	}
 
-	public boolean isAnonymous() {				
+	public boolean isAnonymous() {
 		return getProperty(ANONYMOUS_LOGIN) == null || "true".equals(getProperty(ANONYMOUS_LOGIN));
+	}
+
+	public boolean isBugRepository() {
+		return isBugRepository;
+	}
+
+	public void setBugRepository(boolean isBugRepository) {
+		this.isBugRepository = isBugRepository;
 	}
 }

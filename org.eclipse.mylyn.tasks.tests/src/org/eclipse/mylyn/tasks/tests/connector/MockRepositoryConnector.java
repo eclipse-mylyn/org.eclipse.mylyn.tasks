@@ -50,12 +50,6 @@ public class MockRepositoryConnector extends AbstractRepositoryConnector {
 	}
 
 	@Override
-	public AbstractRepositoryTask createTaskFromExistingKey(TaskRepository repository, String id) throws CoreException {
-		// ignore
-		return null;
-	}
-
-	@Override
 	public IAttachmentHandler getAttachmentHandler() {
 		// ignore
 		return null;
@@ -71,11 +65,12 @@ public class MockRepositoryConnector extends AbstractRepositoryConnector {
 		// ignore
 		return new ITaskDataHandler() {
 
-			public AbstractAttributeFactory getAttributeFactory(String repositoryUrl, String repositoryKind, String taskKind) {
+			public AbstractAttributeFactory getAttributeFactory(String repositoryUrl, String repositoryKind,
+					String taskKind) {
 				// we don't care about the repository information right now
 				return new MockAttributeFactory();
 			}
-			
+
 			public RepositoryTaskData getTaskData(TaskRepository repository, String taskId) throws CoreException {
 				// ignore
 				return null;
@@ -90,7 +85,9 @@ public class MockRepositoryConnector extends AbstractRepositoryConnector {
 					IProgressMonitor monitor) throws CoreException {
 				// ignore
 				return false;
-			}};
+			}
+
+		};
 	}
 
 	@Override
@@ -121,7 +118,7 @@ public class MockRepositoryConnector extends AbstractRepositoryConnector {
 	}
 
 	@Override
-	public void updateTask(TaskRepository repository, AbstractRepositoryTask repositoryTask) {
+	public void updateTaskFromRepository(TaskRepository repository, AbstractRepositoryTask repositoryTask) {
 		// ignore
 	}
 
@@ -135,6 +132,19 @@ public class MockRepositoryConnector extends AbstractRepositoryConnector {
 	public Set<AbstractRepositoryTask> getChangedSinceLastSync(TaskRepository repository,
 			Set<AbstractRepositoryTask> tasks) throws CoreException {
 		return Collections.emptySet();
+	}
+
+	@Override
+	protected AbstractRepositoryTask makeTask(String repositoryUrl, String id, String summary) {
+		// ignore
+		return null;
+	}
+
+	@Override
+	public void updateTaskFromTaskData(TaskRepository repository, AbstractRepositoryTask repositoryTask,
+			RepositoryTaskData taskData, boolean retrieveSubTasks) {
+		// ignore
+
 	}
 
 }

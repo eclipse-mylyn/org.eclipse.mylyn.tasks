@@ -37,7 +37,7 @@ public abstract class TaskNavigateDropDownAction extends Action implements IMenu
 
 	protected Menu dropDownMenu = null;
 
-	protected TaskElementLabelProvider labelProvider = new TaskElementLabelProvider();
+	protected TaskElementLabelProvider labelProvider = new TaskElementLabelProvider(true);
 
 	/** Maximum number of items to appear in the drop-down menu */
 	protected final static int MAX_ITEMS_TO_DISPLAY = 12;
@@ -68,8 +68,10 @@ public abstract class TaskNavigateDropDownAction extends Action implements IMenu
 			setText(taskDescription);
 			setEnabled(true);
 			setToolTipText(task.getSummary());
-			Image image = labelProvider.getImage(task);
-			setImageDescriptor(ImageDescriptor.createFromImage(image));
+			if (task != null) {
+				Image image = labelProvider.getImage(task);
+				setImageDescriptor(ImageDescriptor.createFromImage(image));
+			}
 		}
 
 		@Override

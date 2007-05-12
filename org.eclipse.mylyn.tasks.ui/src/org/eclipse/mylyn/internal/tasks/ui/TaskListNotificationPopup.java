@@ -45,8 +45,6 @@ public class TaskListNotificationPopup extends PopupDialog {
 
 	private static final String MYLAR_NOTIFICATION_LABEL = "Mylar Notification";
 
-	private FormToolkit toolkit;
-
 	private Form form;
 
 	private Rectangle bounds;
@@ -55,8 +53,11 @@ public class TaskListNotificationPopup extends PopupDialog {
 
 	private Composite sectionClient;
 
+	private FormToolkit toolkit;
+
 	public TaskListNotificationPopup(Shell parent) {
 		super(parent, PopupDialog.INFOPOPUP_SHELLSTYLE | SWT.ON_TOP, false, false, false, false, null, null);
+		toolkit = new FormToolkit(parent.getDisplay());
 	}
 
 	public void setContents(List<ITaskListNotification> notifications) {
@@ -74,7 +75,6 @@ public class TaskListNotificationPopup extends PopupDialog {
 
 		getShell().setText(MYLAR_NOTIFICATION_LABEL);
 
-		toolkit = new FormToolkit(parent.getDisplay());
 		form = toolkit.createForm(parent);
 		form.getBody().setLayout(new GridLayout());
 
@@ -109,10 +109,7 @@ public class TaskListNotificationPopup extends PopupDialog {
 				});
 
 				String descriptionText = null;
-				if (notification.getDescription() != null && notification.getDescription().length() > 40) {
-					String truncated = notification.getDescription().substring(0, 35);
-					descriptionText = truncated + "...";
-				} else if (notification.getDescription() != null) {
+				if (notification.getDescription() != null) {
 					descriptionText = notification.getDescription();
 				}
 				if (descriptionText != null) {
@@ -173,7 +170,7 @@ public class TaskListNotificationPopup extends PopupDialog {
 	private Rectangle restoreBounds() {
 		bounds = form.getBounds();
 		Rectangle maxBounds = null;
-		
+
 		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window != null) {
 			maxBounds = window.getShell().getMonitor().getClientArea();
@@ -197,16 +194,25 @@ public class TaskListNotificationPopup extends PopupDialog {
 		}
 
 		if (bounds.x > -1 && bounds.y > -1 && maxBounds != null) {
-			//bounds.x = Math.max(bounds.x, maxBounds.x);
-			//bounds.y = Math.max(bounds.y, maxBounds.y);
+			// bounds.x = Math.max(bounds.x, maxBounds.x);
+			// bounds.y = Math.max(bounds.y, maxBounds.y);
 
 			if (bounds.width > -1 && bounds.height > -1) {
 				bounds.x = maxBounds.x + maxBounds.width - bounds.width;
 				bounds.y = maxBounds.y + maxBounds.height - bounds.height;
 			}
 		}
-		
+
 		return bounds;
 	}
 
+	@Override
+	public boolean close() {
+		if (toolkit != null) {
+			if (toolkit.getColors() != null) {
+				toolkit.dispose();
+			}
+		}
+		return super.close();
+	}
 }

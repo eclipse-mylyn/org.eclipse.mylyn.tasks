@@ -270,6 +270,14 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 		return reportID;
 	}
 
+	public String getTaskKey() {
+		RepositoryTaskAttribute attr = getAttribute(RepositoryTaskAttribute.TASK_KEY);
+		if (attr != null) {
+			return attr.getValue();
+		}
+		return getId();
+	}
+	
 	/**
 	 * @return the server for this report
 	 */
@@ -277,10 +285,12 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 		return repositoryURL;
 	}
 
+	@Deprecated
 	public boolean hasLocalChanges() {
 		return hasLocalChanges;
 	}
 
+	@Deprecated
 	public void setHasLocalChanges(boolean b) {
 		hasLocalChanges = b;
 	}
@@ -319,4 +329,12 @@ public final class RepositoryTaskData extends AttributeContainer implements Seri
 	public String getTaskKind() {
 		return taskKind;
 	}
+
+	public void setRepositoryURL(String repositoryURL) {
+		this.repositoryURL = repositoryURL;
+	}
+	
+//	public final String getHandleIdentifier() {
+//		return RepositoryTaskHandleUtil.getHandle(getRepositoryUrl(), getId());
+//	}
 }

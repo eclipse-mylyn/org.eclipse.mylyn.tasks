@@ -12,24 +12,32 @@
 package org.eclipse.mylar.internal.bugzilla.ui.tasklist;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaRepositoryQuery;
+import org.eclipse.mylar.internal.bugzilla.core.BugzillaTask;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
+import org.eclipse.mylar.internal.bugzilla.ui.BugzillaImages;
 import org.eclipse.mylar.internal.bugzilla.ui.search.BugzillaSearchPage;
 import org.eclipse.mylar.internal.bugzilla.ui.wizard.NewBugzillaTaskWizard;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryTask;
+import org.eclipse.mylar.tasks.core.ITaskListElement;
+import org.eclipse.mylar.tasks.core.RepositoryTaskData;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylar.tasks.ui.TaskHyperlink;
+import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylar.tasks.ui.search.AbstractRepositoryQueryPage;
 import org.eclipse.mylar.tasks.ui.wizards.AbstractRepositorySettingsPage;
 
@@ -38,7 +46,55 @@ import org.eclipse.mylar.tasks.ui.wizards.AbstractRepositorySettingsPage;
  * @author Eugene Kuleshov
  */
 public class BugzillaRepositoryUi extends AbstractRepositoryConnectorUi {
+	
+	@Override
+	public List<ITaskListElement> getLegendItems() {
+		List<ITaskListElement> legendItems = new ArrayList<ITaskListElement>();
+		
+		BugzillaTask blocker = new BugzillaTask("", "critical", "Critical or Blocker", false);
+		blocker.setSeverity("critical");		
+		legendItems.add(blocker);
+		
+		BugzillaTask major = new BugzillaTask("", "major", "Major", false);
+		major.setSeverity("major");		
+		legendItems.add(major);
+		
+		BugzillaTask enhancement = new BugzillaTask("", "enhancement", "Enhancement", false);
+		enhancement.setSeverity("enhancement");		
+		legendItems.add(enhancement);
+		
+		BugzillaTask trivial = new BugzillaTask("", "trivial", "Trivial or Minor", false);
+		trivial.setSeverity("trivial");		
+		legendItems.add(trivial);
+		
+		return legendItems;
+	}
+
 	private static final int TASK_NUM_GROUP = 3;
+
+	@Override
+	public ImageDescriptor getTaskKindOverlay(AbstractRepositoryTask task) {
+		if (task instanceof BugzillaTask) {
+			BugzillaTask bugzillaTask = (BugzillaTask)task;
+			String severity = bugzillaTask.getSeverity();
+	
+			if (severity != null) {
+				// XXX: refactor to use configuration
+				if ("blocker".equals(severity) || "critical".equals(severity)) {
+					return BugzillaImages.OVERLAY_CRITICAL;
+				} else if ("major".equals(severity)) {
+					return BugzillaImages.OVERLAY_MAJOR;
+				} else if ("enhancement".equals(severity)) {
+					return BugzillaImages.OVERLAY_ENHANCEMENT;
+				} else if ("trivial".equals(severity) || "minor".equals(severity)) {
+					return BugzillaImages.OVERLAY_MINOR;
+				} else {
+					return null;
+				}
+			}
+		}
+		return super.getTaskKindOverlay(task);
+	}
 
 	private static final String regexp = "(duplicate of|bug|task)(\\s#|#|#\\s|\\s|)(\\s\\d+|\\d+)";
 
@@ -92,8 +148,11 @@ public class BugzillaRepositoryUi extends AbstractRepositoryConnectorUi {
 		}
 	}
 	
-
 	public String getTaskKindLabel(AbstractRepositoryTask repositoryTask) {
+		return IBugzillaConstants.BUGZILLA_TASK_KIND;
+	}
+	
+	public String getTaskKindLabel(RepositoryTaskData taskData) {
 		return IBugzillaConstants.BUGZILLA_TASK_KIND;
 	}
 	
@@ -136,4 +195,17 @@ public class BugzillaRepositoryUi extends AbstractRepositoryConnectorUi {
 		return BugzillaCorePlugin.REPOSITORY_KIND;
 	}
 
+	@SuppressWarnings("restriction")
+	@Override
+	public boolean handlesDueDates(AbstractRepositoryTask task) {
+		if(task instanceof BugzillaTask){
+			// XXX This is only used in the planning editor, and if its input was set correctly as a RepositoryTaskEditorInput
+			// we wouldn't have to get the task data this way from here
+			RepositoryTaskData taskData = TasksUiPlugin.getDefault().getTaskDataManager().getNewTaskData(task.getHandleIdentifier());
+			if(taskData != null && taskData.getAttribute(BugzillaReportElement.ESTIMATED_TIME.getKeyString()) != null)
+				return true;
+		}
+		return super.handlesDueDates(task);
+	}
+	
 }

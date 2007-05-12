@@ -19,8 +19,8 @@ import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.tasks.core.AbstractQueryHit;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylar.tasks.core.AbstractRepositoryQuery;
-import org.eclipse.mylar.tasks.core.MylarStatus;
 import org.eclipse.mylar.tasks.core.QueryHitCollector;
+import org.eclipse.mylar.tasks.core.RepositoryStatus;
 import org.eclipse.mylar.tasks.core.TaskList;
 import org.eclipse.mylar.tasks.core.TaskRepository;
 import org.eclipse.mylar.tasks.ui.TasksUiPlugin;
@@ -28,6 +28,7 @@ import org.eclipse.search.ui.ISearchQuery;
 import org.eclipse.search.ui.ISearchResult;
 import org.eclipse.search.ui.NewSearchUI;
 import org.eclipse.search.ui.text.Match;
+import org.eclipse.ui.PlatformUI;
 
 /**
  * Used for returning results from Eclipse Search view. Collects results of a
@@ -56,7 +57,11 @@ public class SearchHitCollector extends QueryHitCollector implements ISearchQuer
 	public void aboutToStart(int startMatchCount) throws CoreException {
 		super.aboutToStart(startMatchCount);
 		searchResult.removeAll();
-		NewSearchUI.activateSearchResultView();
+		PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+			public void run() {
+				NewSearchUI.activateSearchResultView();
+			}
+		});
 	}
 
 	@Override
@@ -84,11 +89,8 @@ public class SearchHitCollector extends QueryHitCollector implements ISearchQuer
 
 	public ISearchResult getSearchResult() {
 		if (searchResult.getMatchCount() >= QueryHitCollector.MAX_HITS) {
-			MylarStatusHandler
-					.displayStatus(
-							"Maximum hits reached",
-							new MylarStatus(Status.WARNING, TasksUiPlugin.PLUGIN_ID, MylarStatus.INTERNAL_ERROR,
-									MAX_HITS_REACHED));
+			MylarStatusHandler.displayStatus("Maximum hits reached", RepositoryStatus.createStatus(repository.getUrl(),
+					IStatus.WARNING, TasksUiPlugin.PLUGIN_ID, MAX_HITS_REACHED));
 		}
 		return searchResult;
 	}
@@ -113,21 +115,15 @@ public class SearchHitCollector extends QueryHitCollector implements ISearchQuer
 			}
 
 			if (!status.isOK()) {
-				MylarStatusHandler.fail(status.getException(), "Search failed. Please see details below.", true);
-				status = Status.OK_STATUS;
+				throw new CoreException(status);
 			}
 
-		} catch (CoreException e) {
-			MylarStatusHandler.fail(e, "Search failed.", true);
-			status = new Status(IStatus.OK, TasksUiPlugin.PLUGIN_ID, IStatus.ERROR,
-					"Core Exception occurred while querying Bugzilla Server " + repository.getUrl() + ".\n"
-							+ "\nClick Details for more information.", e);
-
+		} catch (final CoreException exception) {
+			MylarStatusHandler.displayStatus("Search failed", exception.getStatus());
 		} finally {
-			// deals with monitor
 			done();
 		}
-		return status;
+		return Status.OK_STATUS;
 	}
 
 }

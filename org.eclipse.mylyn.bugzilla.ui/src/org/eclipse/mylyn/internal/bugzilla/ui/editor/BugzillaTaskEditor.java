@@ -22,11 +22,15 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.mylar.core.MylarStatusHandler;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaCorePlugin;
 import org.eclipse.mylar.internal.bugzilla.core.BugzillaReportElement;
 import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants;
+import org.eclipse.mylar.internal.bugzilla.core.IBugzillaConstants.BUGZILLA_OPERATION;
 import org.eclipse.mylar.internal.tasks.ui.TaskListColorsAndFonts;
+import org.eclipse.mylar.internal.tasks.ui.TasksUiImages;
 import org.eclipse.mylar.tasks.core.ITask;
+import org.eclipse.mylar.tasks.core.RepositoryOperation;
 import org.eclipse.mylar.tasks.core.RepositoryTaskAttribute;
 import org.eclipse.mylar.tasks.core.TaskComment;
 import org.eclipse.mylar.tasks.ui.DatePicker;
@@ -59,6 +63,7 @@ import org.eclipse.ui.forms.events.HyperlinkEvent;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Hyperlink;
+import org.eclipse.ui.forms.widgets.ImageHyperlink;
 import org.eclipse.ui.forms.widgets.Section;
 import org.eclipse.ui.themes.IThemeManager;
 
@@ -81,8 +86,6 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 	protected List keyWordsList;
 
 	protected Text keywordsText;
-
-	protected Text urlText;
 
 	protected Text estimateText;
 
@@ -118,7 +121,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 	protected void createCustomAttributeLayout(Composite composite) {
 
 		RepositoryTaskAttribute attribute = this.taskData.getAttribute(BugzillaReportElement.DEPENDSON.getKeyString());
-		if (attribute != null && !attribute.isReadOnly()) {			
+		if (attribute != null && !attribute.isReadOnly()) {
 			Label label = createLabel(composite, attribute);
 			GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 			Composite textFieldComposite = toolkit.createComposite(composite);
@@ -212,9 +215,9 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 			Text urlField = createTextField(composite, attribute, SWT.FLAT);
 			GridDataFactory.fillDefaults().hint(135, SWT.DEFAULT).applyTo(urlField);
 		}
-		
+
 		attribute = this.taskData.getAttribute(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString());
-		if(attribute == null){
+		if (attribute == null) {
 			this.taskData.setAttributeValue(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString(), "");
 			attribute = this.taskData.getAttribute(BugzillaReportElement.STATUS_WHITEBOARD.getKeyString());
 		}
@@ -247,8 +250,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 				BugzillaReportElement.CCLIST_ACCESSIBLE.getKeyString(),
 				BugzillaReportElement.ESTIMATED_TIME.getKeyString(),
 				BugzillaReportElement.REMAINING_TIME.getKeyString(), BugzillaReportElement.ACTUAL_TIME.getKeyString(),
-				BugzillaReportElement.DEADLINE.getKeyString(),
-				BugzillaReportElement.STATUS_WHITEBOARD.getKeyString()};
+				BugzillaReportElement.DEADLINE.getKeyString(), BugzillaReportElement.STATUS_WHITEBOARD.getKeyString() };
 		for (String key : customAttributeKeys) {
 			RepositoryTaskAttribute attribute = taskData.getAttribute(key);
 			if (hasChanged(attribute)) {
@@ -344,6 +346,28 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 		}
 	}
 
+	@Override
+	protected boolean hasContentAssist(RepositoryTaskAttribute attribute) {
+		return BugzillaReportElement.NEWCC.getKeyString().equals(attribute.getID());
+	}
+
+	@Override
+	protected boolean hasContentAssist(RepositoryOperation repositoryOperation) {
+		BUGZILLA_OPERATION operation;
+		try {
+			operation = BUGZILLA_OPERATION.valueOf(repositoryOperation.getKnobName());
+		} catch (RuntimeException e) {
+			MylarStatusHandler.log(e, "Unrecognized operatoin: " + repositoryOperation.getKnobName());
+			operation = null;
+		}
+
+		if (operation != null && operation == BUGZILLA_OPERATION.reassign) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	private Button addButtonField(Composite rolesComposite, RepositoryTaskAttribute attribute, int style) {
 		if (attribute == null) {
 			return null;
@@ -386,7 +410,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 		timeSection.setLayoutData(gd);
 
 		Composite timeComposite = toolkit.createComposite(timeSection);
-		gl = new GridLayout(4, true);
+		gl = new GridLayout(4, false);
 		timeComposite.setLayout(gl);
 		gd = new GridData();
 		gd.horizontalSpan = 5;
@@ -402,7 +426,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 
 		Label label = toolkit.createLabel(timeComposite, "Current Estimate:");
 		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
-		
+
 		Text currentEstimate = toolkit.createText(timeComposite,
 				""
 						+ (Float.parseFloat(taskData
@@ -450,7 +474,12 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 		if (attribute != null) {
 			createLabel(timeComposite, attribute);
 
-			deadlinePicker = new DatePicker(timeComposite, /* SWT.NONE */SWT.BORDER, taskData
+			Composite dateWithClear = toolkit.createComposite(timeComposite);
+			GridLayout layout = new GridLayout(2, false);
+			layout.marginWidth = 1;
+			dateWithClear.setLayout(layout);
+
+			deadlinePicker = new DatePicker(dateWithClear, /* SWT.NONE */SWT.BORDER, taskData
 					.getAttributeValue(BugzillaReportElement.DEADLINE.getKeyString()));
 			deadlinePicker.setFont(TEXT_FONT);
 			deadlinePicker.setDatePattern("yyyy-MM-dd");
@@ -474,9 +503,27 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 						attributeChanged(taskData.getAttribute(BugzillaReportElement.DEADLINE.getKeyString()));
 						// TODO goes dirty even if user presses cancel
 						// markDirty(true);
+					} else {
+						taskData.setAttributeValue(BugzillaReportElement.DEADLINE.getKeyString(), "");
+						attributeChanged(taskData.getAttribute(BugzillaReportElement.DEADLINE.getKeyString()));
+						deadlinePicker.setDate(null);
 					}
 				}
 			});
+
+			ImageHyperlink clearDeadlineDate = toolkit.createImageHyperlink(dateWithClear, SWT.NONE);
+			clearDeadlineDate.setImage(TasksUiImages.getImage(TasksUiImages.REMOVE));
+			clearDeadlineDate.setToolTipText("Clear");
+			clearDeadlineDate.addHyperlinkListener(new HyperlinkAdapter() {
+
+				@Override
+				public void linkActivated(HyperlinkEvent e) {
+					taskData.setAttributeValue(BugzillaReportElement.DEADLINE.getKeyString(), "");
+					attributeChanged(taskData.getAttribute(BugzillaReportElement.DEADLINE.getKeyString()));
+					deadlinePicker.setDate(null);
+				}
+			});
+
 		}
 
 		timeSection.setClient(timeComposite);
@@ -557,9 +604,9 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
 		votingComposite.setLayout(layout);
-		
+
 		RepositoryTaskAttribute votesAttribute = taskData.getAttribute(BugzillaReportElement.VOTES.getKeyString());
-		
+
 		votesText = createTextField(votingComposite, votesAttribute, SWT.FLAT | SWT.READ_ONLY);
 		votesText.setFont(TEXT_FONT);
 
@@ -661,8 +708,8 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 
 		public void handleEvent(Event event) {
 			fireSelectionChanged(new SelectionChangedEvent(selectionProvider, new StructuredSelection(
-					new RepositoryTaskSelection(taskData.getId(), taskData.getRepositoryUrl(), taskData.getRepositoryKind(),
-							taskComment.getCreated(), taskComment, taskData.getSummary()))));
+					new RepositoryTaskSelection(taskData.getId(), taskData.getRepositoryUrl(), taskData
+							.getRepositoryKind(), taskComment.getCreated(), taskComment, taskData.getSummary()))));
 		}
 	}
 
@@ -671,38 +718,11 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 
 	}
 
-	/**
-	 * Adds a text field to display and edit the bug's URL attribute.
-	 * 
-	 * @param url
-	 *            The URL attribute of the bug.
-	 * @param attributesComposite
-	 *            The composite to add the text field to.
-	 */
-	protected void addUrlText(String url, Composite attributesComposite) {
-		FormToolkit toolkit = new FormToolkit(attributesComposite.getDisplay());
-		toolkit.createLabel(attributesComposite, "URL:");
-		urlText = toolkit.createText(attributesComposite, url);
-		urlText.setFont(TEXT_FONT);
-		GridData urlTextData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
-		urlTextData.horizontalSpan = 3;
-		urlTextData.widthHint = 200;
-		urlText.setLayoutData(urlTextData);
-		// urlText.setText(url);
-		urlText.addListener(SWT.KeyUp, new Listener() {
-			public void handleEvent(Event event) {
-				String sel = urlText.getText();
-				RepositoryTaskAttribute a = taskData.getAttribute(BugzillaReportElement.BUG_FILE_LOC.getKeyString());
-				if (!(a.getValue().equals(sel))) {
-					a.setValue(sel);
-					markDirty(true);
-				}
-			}
-		});
-	}
-
 	protected String getActivityUrl() {
-		return repository.getUrl() + IBugzillaConstants.URL_BUG_ACTIVITY + taskData.getId();
+		if (repository != null && taskData != null) {
+			return repository.getUrl() + IBugzillaConstants.URL_BUG_ACTIVITY + taskData.getId();
+		} else {
+			return null;
+		}
 	}
-
 }

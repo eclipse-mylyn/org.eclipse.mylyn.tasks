@@ -42,11 +42,20 @@ class CustomTaskListDecorationDrawer implements Listener {
 
 	private Image taskInactiveContext = TasksUiImages.getImage(TasksUiImages.TASK_INACTIVE_CONTEXT);
 
+	// see bug 185004 
+	private int platformSpecificSquish = 0;
+	
 	CustomTaskListDecorationDrawer(TaskListView taskListView, int activationImageOffset) {
 		this.taskListView = taskListView;
 		this.activationImageOffset = activationImageOffset;
 		this.taskListView.synchronizationOverlaid = TasksUiPlugin.getDefault().getPluginPreferences().getBoolean(
 				TaskListPreferenceConstants.INCOMING_OVERLAID);
+		
+		if (SWT.getPlatform().equals("gtk")) {
+			platformSpecificSquish = 8;
+		} else if (SWT.getPlatform().equals("carbon")) {
+			platformSpecificSquish = 3;
+		}
 	}
 
 	/*
@@ -85,7 +94,6 @@ class CustomTaskListDecorationDrawer implements Listener {
 						drawSyncronizationImage((ITaskListElement) data, event);
 					}
 				}
-// currWidth = event.width;
 				break;
 			}
 			case SWT.PaintItem: {
@@ -105,27 +113,33 @@ class CustomTaskListDecorationDrawer implements Listener {
 		Image image = null;
 		int offsetX = 6;
 		int offsetY = (event.height / 2) - 5;
-		if (this.taskListView.synchronizationOverlaid) {
-			offsetX = event.x + 3;
+		if (taskListView.synchronizationOverlaid) {
+			offsetX = event.x + 19 - platformSpecificSquish;
+			offsetY += 2;
 		}
 		if (element instanceof AbstractTaskContainer) {
 			if (element instanceof AbstractTaskContainer) {
 				if (!Arrays.asList(this.taskListView.getViewer().getExpandedElements()).contains(element)
 						&& hasIncoming((AbstractTaskContainer) element)) {
-					image = TasksUiImages.getImage(TasksUiImages.STATUS_NORMAL_INCOMING);
-					offsetX = 24;
+					int additionalSquish = 0;
+					if (platformSpecificSquish > 0 && taskListView.synchronizationOverlaid) {
+						additionalSquish = platformSpecificSquish + 3;
+					}
+					if (taskListView.synchronizationOverlaid) {
+						image = TasksUiImages.getImage(TasksUiImages.OVERLAY_SYNCH_INCOMMING);
+						offsetX = 42 - additionalSquish;
+					} else {
+						image = TasksUiImages.getImage(TasksUiImages.STATUS_NORMAL_INCOMING);
+						offsetX = 24 - additionalSquish;						
+					}
 				}
 			}
 		} else {
-			image = TasksUiImages.getImage(TaskElementLabelProvider.getSynchronizationImageDescriptor(element));
-// image = TasksUiImages.getCompositeSynchImage(TaskElementLabelProvider
-// .getSynchronizationImageDescriptor(element), true);
+			image = TasksUiImages.getImage(TaskElementLabelProvider.getSynchronizationImageDescriptor(element, taskListView.synchronizationOverlaid));
 		}
 		if (image != null) {
 			event.gc.drawImage(image, offsetX, event.y + offsetY);
-// event.gc.drawImage(image, currWidth - 16, event.y + 1);
 		}
-// }
 	}
 
 	private boolean hasIncoming(AbstractTaskContainer container) {

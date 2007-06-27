@@ -220,7 +220,6 @@ litigation.
    <requires>
       <import plugin="org.eclipse.core.runtime"/>
       <import plugin="org.eclipse.mylyn.tasks.core"/>
-      <import plugin="org.eclipse.mylyn"/>
       <import plugin="org.eclipse.mylyn.web.core"/>
       <import plugin="org.eclipse.ui"/>
       <import plugin="org.eclipse.core.resources"/>
@@ -231,16 +230,13 @@ litigation.
       <import plugin="org.eclipse.ui.forms"/>
       <import plugin="org.eclipse.jface.text"/>
       <import plugin="org.eclipse.team.ui"/>
-      <import plugin="org.eclipse.team.cvs.ui"/>
       <import plugin="org.eclipse.ui.editors"/>
       <import plugin="org.eclipse.ui.workbench.texteditor"/>
       <import plugin="org.eclipse.update.ui"/>
-      <import plugin="org.eclipse.mylyn.bugzilla.core"/>
       <import plugin="org.eclipse.mylyn.context.core"/>
       <import plugin="org.eclipse.mylyn.tasks.ui"/>
-      <import plugin="org.eclipse.jface"/>
-      <import plugin="org.eclipse.mylyn.bugzilla.ui"/>
       <import feature="org.eclipse.mylyn_feature" version="2.0.0.v20070627-0100" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.monitor.core"/>
    </requires>
 
    <plugin
@@ -252,13 +248,6 @@ litigation.
 
    <plugin
          id="org.eclipse.mylyn.bugzilla.ui"
-         download-size="0"
-         install-size="0"
-         version="2.0.0.v20070627-0100"
-         unpack="false"/>
-
-   <plugin
-         id="org.eclipse.mylyn.bugzilla.ide"
          download-size="0"
          install-size="0"
          version="2.0.0.v20070627-0100"

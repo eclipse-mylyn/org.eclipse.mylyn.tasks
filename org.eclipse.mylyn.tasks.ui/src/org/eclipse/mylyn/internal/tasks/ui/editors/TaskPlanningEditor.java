@@ -59,7 +59,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.ExpansionEvent;
@@ -305,7 +305,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 	private void addHeaderControls() {
 
-		if (parentEditor.getTopForm() != null) {
+		if (form.getForm() != null) {
 
 			activateAction = new Action() {
 				@Override
@@ -324,9 +324,9 @@ public class TaskPlanningEditor extends TaskFormPage {
 			activateAction.setImageDescriptor(TasksUiImages.TASK_ACTIVE_CENTERED);
 			activateAction.setToolTipText("Toggle Activation");
 			activateAction.setChecked(task.isActive());
-			parentEditor.getTopForm().getToolBarManager().add(activateAction);
+			form.getForm().getToolBarManager().add(activateAction);
 
-			parentEditor.getTopForm().getToolBarManager().update(true);
+			form.getForm().getToolBarManager().update(true);
 		}
 
 		// if (form.getToolBarManager() != null) {
@@ -365,7 +365,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		layout.marginHeight = 3;
 		nameValueComp.setLayout(layout);
 		toolkit.createLabel(nameValueComp, label, SWT.NONE).setForeground(
-				toolkit.getColors().getColor(IFormColors.TITLE));
+				toolkit.getColors().getColor(FormColors.TITLE));
 		Text text;
 		if ((SWT.READ_ONLY & style) == SWT.READ_ONLY) {
 			text = new Text(nameValueComp, style);
@@ -415,7 +415,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		GridLayout nameValueLayout = new GridLayout(2, false);
 		nameValueLayout.marginHeight = 3;
 		nameValueComp.setLayout(nameValueLayout);
-		toolkit.createLabel(nameValueComp, "Priority:").setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		toolkit.createLabel(nameValueComp, "Priority:").setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		priorityCombo = new CCombo(nameValueComp, SWT.FLAT);
 		priorityCombo.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 		toolkit.paintBordersFor(nameValueComp);
@@ -446,7 +446,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		nameValueComp = toolkit.createComposite(statusComposite);
 		nameValueComp.setLayout(new GridLayout(2, false));
-		toolkit.createLabel(nameValueComp, "Status:").setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		toolkit.createLabel(nameValueComp, "Status:").setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		statusCombo = new CCombo(nameValueComp, SWT.FLAT);
 		statusCombo.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
 		toolkit.paintBordersFor(nameValueComp);
@@ -497,7 +497,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		GridDataFactory.fillDefaults().grab(true, false).applyTo(urlComposite);
 
 		Label label = toolkit.createLabel(urlComposite, "URL:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		issueReportURL = toolkit.createText(urlComposite, task.getUrl(), SWT.FLAT);
 		issueReportURL.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
@@ -632,7 +632,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		Composite nameValueComp = makeComposite(sectionClient, 3);
 		Label label = toolkit.createLabel(nameValueComp, LABEL_SCHEDULE);
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		datePicker = new DatePicker(nameValueComp, SWT.FLAT, DatePicker.LABEL_CHOOSE);
 
@@ -673,7 +673,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		nameValueComp = makeComposite(sectionClient, 3);
 		label = toolkit.createLabel(nameValueComp, LABEL_DUE);
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		dueDatePicker = new DatePicker(nameValueComp, SWT.FLAT, DatePicker.LABEL_CHOOSE);
 
@@ -719,7 +719,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		// Estimated time
 		nameValueComp = makeComposite(sectionClient, 2);
 		label = toolkit.createLabel(nameValueComp, "Estimated hours:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		estimated = new Spinner(nameValueComp, SWT.NONE);
 		toolkit.adapt(estimated, true, true);
@@ -745,7 +745,7 @@ public class TaskPlanningEditor extends TaskFormPage {
 		// GridDataFactory.fillDefaults().span(2, 1).align(SWT.LEFT,
 		// SWT.DEFAULT).applyTo(nameValueComp);
 		label = toolkit.createLabel(nameValueComp, "Active:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		label.setToolTipText(DESCRIPTION_ESTIMATED);
 
 		String elapsedTimeString = NO_TIME_ELAPSED;

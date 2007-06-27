@@ -34,7 +34,7 @@ public class ToggleWorkingSetAction extends Action {
 
 	public ToggleWorkingSetAction(IWorkingSet set) {
 		super(set.getLabel(), IAction.AS_CHECK_BOX);
-		setImageDescriptor(set.getImageDescriptor());
+//		setImageDescriptor(set.getImageDescriptor());
 		this.workingSet = set;
 		setChecked(TaskWorkingSetUpdater.isWorkingSetEnabled(set));
 	}

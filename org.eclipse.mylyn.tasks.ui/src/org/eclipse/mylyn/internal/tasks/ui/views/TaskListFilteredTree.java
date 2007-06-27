@@ -15,13 +15,11 @@ import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.mylyn.internal.tasks.core.ScheduledTaskContainer;
 import org.eclipse.mylyn.internal.tasks.ui.IDynamicSubMenuContributor;
 import org.eclipse.mylyn.internal.tasks.ui.TaskListColorsAndFonts;
@@ -42,10 +40,9 @@ import org.eclipse.mylyn.tasks.core.TaskContainerDelta;
 import org.eclipse.mylyn.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylyn.tasks.ui.TasksUiUtil;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.MenuDetectEvent;
-import org.eclipse.swt.events.MenuDetectListener;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -107,18 +104,18 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 		});
 	}
 
-	@Override
-	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
-		// Use a single Composite for the Tree to being able to use the
-		// TreeColumnLayout. See Bug 177891 for more details.
-		Composite container = new Composite(parent, SWT.None);
-		GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		gridData.verticalIndent = 0;
-		gridData.horizontalIndent = 0;
-		container.setLayoutData(gridData);
-		container.setLayout(new TreeColumnLayout());
-		return super.doCreateTreeViewer(container, style);
-	}
+	// @Override
+	// protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
+	// // Use a single Composite for the Tree to being able to use the
+	// // TreeColumnLayout. See Bug 177891 for more details.
+	// Composite container = new Composite(parent, SWT.None);
+	// GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
+	// gridData.verticalIndent = 0;
+	// gridData.horizontalIndent = 0;
+	// container.setLayoutData(gridData);
+	// container.setLayout(new TreeColumnLayout());
+	// return super.doCreateTreeViewer(container, style);
+	// }
 
 	@Override
 	protected Composite createProgressComposite(Composite container) {
@@ -295,15 +292,35 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 			}
 		});
 
-		activeTaskLink.addMenuDetectListener(new MenuDetectListener() {
-			public void menuDetected(MenuDetectEvent e) {
-				if (activeTaskMenu != null) {
-					activeTaskMenu.dispose();
-				}
-				activeTaskMenu = activeTaskMenuManager.createContextMenu(container);
-				activeTaskMenu.setVisible(true);
+		activeTaskLink.addMouseListener(new MouseListener() {
+
+			public void mouseDoubleClick(MouseEvent e) {
+				// ignore
+
 			}
+
+			public void mouseDown(MouseEvent e) {
+				if (e.button == 2) {
+					if (activeTaskMenu != null) {
+						activeTaskMenu.dispose();
+					}
+					activeTaskMenu = activeTaskMenuManager.createContextMenu(container);
+					activeTaskMenu.setVisible(true);
+				}
+			}
+
+			public void mouseUp(MouseEvent e) {
+				// ignore
+
+			}
+
 		});
+
+//		activeTaskLink.addMenuDetectListener(new MenuDetectListener() {
+//			public void menuDetected(MenuDetectEvent e) {
+//
+//			}
+//		});
 
 		activeTaskLink.addMouseListener(new MouseAdapter() {
 

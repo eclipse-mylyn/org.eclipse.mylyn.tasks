@@ -17,7 +17,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
-import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.mylyn.internal.tasks.core.LocalTask;
@@ -37,11 +37,9 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.forms.IManagedForm;
+import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.editor.FormPage;
 import org.eclipse.ui.forms.editor.IFormPage;
-import org.eclipse.ui.forms.editor.SharedHeaderFormEditor;
-import org.eclipse.ui.forms.widgets.Form;
 import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 
 /**
@@ -49,7 +47,7 @@ import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
  * @author Eric Booth (initial prototype)
  * @author Rob Elves
  */
-public final class TaskEditor extends SharedHeaderFormEditor implements IBusyEditor {
+public final class TaskEditor extends FormEditor implements IBusyEditor {
 
 	public static final String ID_EDITOR = "org.eclipse.mylyn.tasks.ui.editors.task";
 
@@ -348,7 +346,7 @@ public final class TaskEditor extends SharedHeaderFormEditor implements IBusyEdi
 		// setContentDescription(name);
 		setPartName(name);
 		setTitleToolTip(name);
-		updateFormTitle();
+//		updateFormTitle();
 	}
 
 	@Override
@@ -379,57 +377,55 @@ public final class TaskEditor extends SharedHeaderFormEditor implements IBusyEdi
 		}
 	}
 
-	@Override
-	protected void createHeaderContents(IManagedForm headerForm) {
-		getToolkit().decorateFormHeading(headerForm.getForm().getForm());
-		headerForm.getForm().setImage(TasksUiImages.getImage(TasksUiImages.TASK));
-		updateFormTitle();
-	}
+//	@Override
+//	protected void createHeaderContents(IManagedForm headerForm) {
+//		getToolkit().decorateFormHeading(headerForm.getForm().getForm());
+//		headerForm.getForm().setImage(TasksUiImages.getImage(TasksUiImages.TASK));
+//		updateFormTitle();
+//	}
 
-	protected void updateFormTitle() {
-		IEditorInput input = getEditorInput();
-		if (input instanceof TaskEditorInput) {
-			AbstractTask task = ((TaskEditorInput) input).getTask();
-			if (task instanceof LocalTask) {
-				getHeaderForm().getForm().setText("Task: " + task.getSummary());
-			} else {
-				setFormHeaderImage(task.getConnectorKind());
-				setFormHeaderLabel(task);
-				return;
-			}
-		} else if (input instanceof RepositoryTaskEditorInput) {
-			AbstractTask task = ((RepositoryTaskEditorInput) input).getRepositoryTask();
-			if (task != null) {
-				setFormHeaderImage(task.getConnectorKind());
-				setFormHeaderLabel(task);
-				return;
-			} else {
-				RepositoryTaskData data = ((RepositoryTaskEditorInput) input).getTaskData();
-				if (data != null) {
-					setFormHeaderImage(data.getRepositoryKind());
-					setFormHeaderLabel(data);
-				}
-			}
-		}
-	}
+//	protected void updateFormTitle() {
+//		IEditorInput input = getEditorInput();
+//		if (input instanceof TaskEditorInput) {
+//			AbstractTask task = ((TaskEditorInput) input).getTask();
+//			if (task instanceof LocalTask) {
+//				getHeaderForm().getForm().setText("Task: " + task.getSummary());
+//			} else {
+//				setFormHeaderImage(task.getConnectorKind());
+//				setFormHeaderLabel(task);
+//				return;
+//			}
+//		} else if (input instanceof RepositoryTaskEditorInput) {
+//			AbstractTask task = ((RepositoryTaskEditorInput) input).getRepositoryTask();
+//			if (task != null) {
+//				setFormHeaderImage(task.getConnectorKind());
+//				setFormHeaderLabel(task);
+//				return;
+//			} else {
+//				RepositoryTaskData data = ((RepositoryTaskEditorInput) input).getTaskData();
+//				if (data != null) {
+//					setFormHeaderImage(data.getRepositoryKind());
+//					setFormHeaderLabel(data);
+//				}
+//			}
+//		}
+//	}
 
-	private void setFormHeaderImage(String repositoryKind) {
-		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repositoryKind);
-		Image image = TasksUiImages.getImageWithOverlay(TasksUiImages.REPOSITORY, overlay, false, false);
-		if (getHeaderForm() != null) {
-			getHeaderForm().getForm().setImage(image);
-		}
-	}
-
-	public Form getTopForm() {
-		return this.getHeaderForm().getForm().getForm();
-	}
+//	private void setFormHeaderImage(String repositoryKind) {
+//		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repositoryKind);
+//		Image image = TasksUiImages.getImageWithOverlay(TasksUiImages.REPOSITORY, overlay, false, false);
+//		if (getHeaderForm() != null) {
+//			getHeaderForm().getForm().setImage(image);
+//		}
+//	}
+//
+//	public Form getTopForm() {
+//		return this.getHeaderForm().getForm().getForm();
+//	}
 
 	public void setMessage(String message, int type) {
-		if (this.getHeaderForm() != null && this.getHeaderForm().getForm() != null) {
-			if (!this.getHeaderForm().getForm().isDisposed()) {
-				this.getHeaderForm().getForm().setMessage(message, type);
-			}
+		if (message != null) {
+			MessageDialog.openInformation(getSite().getShell(), "Task Editor", message);
 		}
 	}
 
@@ -440,54 +436,54 @@ public final class TaskEditor extends SharedHeaderFormEditor implements IBusyEdi
 		return null;
 	}
 
-	private void setFormHeaderLabel(RepositoryTaskData taskData) {
+//	private void setFormHeaderLabel(RepositoryTaskData taskData) {
+//
+//		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(taskData.getRepositoryKind());
+//
+//		String kindLabel = taskData.getTaskKind();
+//
+//		if (connectorUi != null) {
+//			kindLabel = connectorUi.getTaskKindLabel(taskData);
+//		}
+//
+//		String idLabel = taskData.getTaskKey();
+//
+//		if (taskData.isNew()) {
+//			if (connectorUi != null) {
+//				kindLabel = "New " + connectorUi.getTaskKindLabel(taskData);
+//			} else {
+//				kindLabel = "New " + taskData.getTaskKind();
+//			}
+//			idLabel = "";
+//		}
+//
+//		if (idLabel != null) {
+//			if (getHeaderForm().getForm() != null) {
+//				getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
+//			}
+//		} else if (getHeaderForm().getForm() != null) {
+//			getHeaderForm().getForm().setText(kindLabel);
+//		}
+//	}
 
-		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(taskData.getRepositoryKind());
-
-		String kindLabel = taskData.getTaskKind();
-
-		if (connectorUi != null) {
-			kindLabel = connectorUi.getTaskKindLabel(taskData);
-		}
-
-		String idLabel = taskData.getTaskKey();
-
-		if (taskData.isNew()) {
-			if (connectorUi != null) {
-				kindLabel = "New " + connectorUi.getTaskKindLabel(taskData);
-			} else {
-				kindLabel = "New " + taskData.getTaskKind();
-			}
-			idLabel = "";
-		}
-
-		if (idLabel != null) {
-			if (getHeaderForm().getForm() != null) {
-				getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
-			}
-		} else if (getHeaderForm().getForm() != null) {
-			getHeaderForm().getForm().setText(kindLabel);
-		}
-	}
-
-	private void setFormHeaderLabel(AbstractTask repositoryTask) {
-
-		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(repositoryTask.getConnectorKind());
-		String kindLabel = "";
-		if (connectorUi != null) {
-			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
-		}
-
-		String idLabel = repositoryTask.getTaskKey();
-
-		if (idLabel != null) {
-			if (getHeaderForm().getForm() != null) {
-				getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
-			}
-		} else if (getHeaderForm().getForm() != null) {
-			getHeaderForm().getForm().setText(kindLabel);
-		}
-	}
+//	private void setFormHeaderLabel(AbstractTask repositoryTask) {
+//
+//		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(repositoryTask.getConnectorKind());
+//		String kindLabel = "";
+//		if (connectorUi != null) {
+//			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+//		}
+//
+//		String idLabel = repositoryTask.getTaskKey();
+//
+//		if (idLabel != null) {
+//			if (getHeaderForm().getForm() != null) {
+//				getHeaderForm().getForm().setText(kindLabel + " " + idLabel);
+//			}
+//		} else if (getHeaderForm().getForm() != null) {
+//			getHeaderForm().getForm().setText(kindLabel);
+//		}
+//	}
 
 	@Override
 	public void setTitleImage(Image titleImage) {

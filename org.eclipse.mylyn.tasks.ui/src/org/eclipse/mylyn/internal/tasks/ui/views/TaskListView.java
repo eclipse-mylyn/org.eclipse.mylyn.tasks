@@ -26,13 +26,10 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.InputDialog;
-import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.CellEditor;
-import org.eclipse.jface.viewers.ColumnPixelData;
-import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IOpenListener;
@@ -921,18 +918,18 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 	}
 
 	private void configureColumns(final String[] columnNames, final int[] columnWidths) {
-		TreeColumnLayout layout = (TreeColumnLayout) getViewer().getTree().getParent().getLayout();
+//		TreeColumnLayout layout = (TreeColumnLayout) getViewer().getTree().getParent().getLayout();
 		getViewer().setColumnProperties(columnNames);
 		columns = new TreeColumn[columnNames.length];
 		for (int i = 0; i < columnNames.length; i++) {
 			columns[i] = new TreeColumn(getViewer().getTree(), 0);
 			columns[i].setText(columnNames[i]);
 
-			if (i == 0) {
-				layout.setColumnData(columns[i], new ColumnWeightData(100));
-			} else {
-				layout.setColumnData(columns[i], new ColumnPixelData(columnWidths[i]));
-			}
+//			if (i == 0) {
+//				layout.setColumnData(columns[i], new ColumnWeightData(100));
+//			} else {
+//				layout.setColumnData(columns[i], new ColumnPixelData(columnWidths[i]));
+//			}
 
 // final int index = i;
 			columns[i].addSelectionListener(new SelectionAdapter() {

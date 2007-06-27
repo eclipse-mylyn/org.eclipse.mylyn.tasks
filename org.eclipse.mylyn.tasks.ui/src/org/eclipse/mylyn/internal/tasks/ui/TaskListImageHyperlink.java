@@ -24,7 +24,7 @@ public class TaskListImageHyperlink extends ImageHyperlink {
 	}
 
 	// From PerspectiveBarContributionItem
-	@Override
+//	@Override
 	protected String shortenText(GC gc, String t, int width) {
 		if (t == null) {
 			return null;

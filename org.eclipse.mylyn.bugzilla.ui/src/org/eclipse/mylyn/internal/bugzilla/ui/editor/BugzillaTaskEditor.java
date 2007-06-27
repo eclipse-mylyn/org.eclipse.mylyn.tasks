@@ -50,7 +50,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Text;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.HyperlinkAdapter;
 import org.eclipse.ui.forms.events.HyperlinkEvent;
@@ -418,7 +418,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 		}
 
 		Label label = toolkit.createLabel(timeComposite, "Current Estimate:");
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 		Text currentEstimate = toolkit.createText(
 				timeComposite,
@@ -587,7 +587,7 @@ public class BugzillaTaskEditor extends AbstractRepositoryTaskEditor {
 
 	protected void addVoting(Composite attributesComposite) {
 		Label label = getManagedForm().getToolkit().createLabel(attributesComposite, "Votes:");
-		label.setForeground(getManagedForm().getToolkit().getColors().getColor(IFormColors.TITLE));
+		label.setForeground(getManagedForm().getToolkit().getColors().getColor(FormColors.TITLE));
 		GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 		Composite votingComposite = getManagedForm().getToolkit().createComposite(attributesComposite);
 		GridLayout layout = new GridLayout(3, false);

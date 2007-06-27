@@ -38,9 +38,6 @@ import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.fieldassist.ContentProposalAdapter;
-import org.eclipse.jface.fieldassist.ControlDecoration;
-import org.eclipse.jface.fieldassist.FieldDecoration;
-import org.eclipse.jface.fieldassist.FieldDecorationRegistry;
 import org.eclipse.jface.fieldassist.IContentProposalProvider;
 import org.eclipse.jface.fieldassist.TextContentAdapter;
 import org.eclipse.jface.layout.GridDataFactory;
@@ -99,7 +96,6 @@ import org.eclipse.mylyn.tasks.ui.AbstractDuplicateDetector;
 import org.eclipse.mylyn.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylyn.tasks.ui.TasksUiUtil;
 import org.eclipse.mylyn.tasks.ui.search.SearchHitCollector;
-import org.eclipse.osgi.util.NLS;
 import org.eclipse.search.ui.NewSearchUI;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -142,7 +138,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
-import org.eclipse.ui.forms.IFormColors;
+import org.eclipse.ui.forms.FormColors;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
@@ -156,7 +152,6 @@ import org.eclipse.ui.forms.widgets.ImageHyperlink;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 import org.eclipse.ui.internal.ObjectActionContributorManager;
-import org.eclipse.ui.keys.IBindingService;
 import org.eclipse.ui.themes.IThemeManager;
 import org.eclipse.ui.views.contentoutline.ContentOutline;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
@@ -575,7 +570,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				Hyperlink link = new Hyperlink(composite, SWT.NONE);
 				link.setText(label);
 				link.setFont(TITLE_FONT);
-				link.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+				link.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 				link.addHyperlinkListener(new HyperlinkAdapter() {
 
 					@Override
@@ -588,12 +583,12 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			}
 		};
 
-		if (parentEditor.getTopForm() != null) {
-			parentEditor.getTopForm().getToolBarManager().add(repositoryLabelControl);
+		if (form.getForm() != null) {
+			form.getForm().getToolBarManager().add(repositoryLabelControl);
 			if (repositoryTask != null) {
 				synchronizeEditorAction = new SynchronizeEditorAction();
 				synchronizeEditorAction.selectionChanged(new StructuredSelection(this));
-				parentEditor.getTopForm().getToolBarManager().add(synchronizeEditorAction);
+				form.getForm().getToolBarManager().add(synchronizeEditorAction);
 			}
 
 			if (getHistoryUrl() != null) {
@@ -606,7 +601,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 				historyAction.setImageDescriptor(TasksUiImages.TASK_REPOSITORY_HISTORY);
 				historyAction.setToolTipText(LABEL_HISTORY);
-				parentEditor.getTopForm().getToolBarManager().add(historyAction);
+				form.getForm().getToolBarManager().add(historyAction);
 			}
 
 			if (repositoryTask != null) {
@@ -619,7 +614,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 				openBrowserAction.setImageDescriptor(TasksUiImages.BROWSER_OPEN_TASK);
 				openBrowserAction.setToolTipText("Open with Web Browser");
-				parentEditor.getTopForm().getToolBarManager().add(openBrowserAction);
+				form.getForm().getToolBarManager().add(openBrowserAction);
 			}
 
 			activateAction = new Action() {
@@ -641,14 +636,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				activateAction.setImageDescriptor(TasksUiImages.TASK_ACTIVE_CENTERED);
 				activateAction.setToolTipText("Toggle Activation");
 				activateAction.setChecked(repositoryTask.isActive());
-				parentEditor.getTopForm().getToolBarManager().add(activateAction);
+				form.getForm().getToolBarManager().add(activateAction);
 			}
 
 			// Header drop down menu additions:
 			// form.getForm().getMenuManager().add(new
 			// SynchronizeSelectedAction());
 
-			parentEditor.getTopForm().getToolBarManager().update(true);
+			form.getForm().getToolBarManager().update(true);
 		}
 
 		// if (form.getToolBarManager() != null) {
@@ -756,7 +751,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			Composite nameValue = toolkit.createComposite(headerInfoComposite);
 			nameValue.setLayout(new GridLayout(2, false));
 			Label label = toolkit.createLabel(nameValue, "ID:");// .setFont(TITLE_FONT);
-			label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+			label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 			// toolkit.createText(nameValue, idLabel, SWT.FLAT | SWT.READ_ONLY);
 			Text text = new Text(nameValue, SWT.FLAT | SWT.READ_ONLY);
 			toolkit.adapt(text, true, true);
@@ -860,7 +855,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		} else {
 			label = toolkit.createLabel(composite, attribute.getName());
 		}
-		label.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+		label.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 		GridDataFactory.fillDefaults().align(SWT.RIGHT, SWT.CENTER).applyTo(label);
 		return label;
 	}
@@ -1067,23 +1062,23 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 	 * @return the ContentAssistCommandAdapter for the field.
 	 */
 	protected ContentAssistCommandAdapter applyContentAssist(Text text, IContentProposalProvider proposalProvider) {
-		ControlDecoration controlDecoration = new ControlDecoration(text, (SWT.TOP | SWT.LEFT));
-		controlDecoration.setMarginWidth(0);
-		controlDecoration.setShowHover(true);
-		controlDecoration.setShowOnlyOnFocus(true);
-
-		FieldDecoration contentProposalImage = FieldDecorationRegistry.getDefault().getFieldDecoration(
-				FieldDecorationRegistry.DEC_CONTENT_PROPOSAL);
-		controlDecoration.setImage(contentProposalImage.getImage());
+//		ControlDecoration controlDecoration = new ControlDecoration(text, (SWT.TOP | SWT.LEFT));
+//		controlDecoration.setMarginWidth(0);
+//		controlDecoration.setShowHover(true);
+//		controlDecoration.setShowOnlyOnFocus(true);
+//
+//		FieldDecoration contentProposalImage = FieldDecorationRegistry.getDefault().getFieldDecoration(
+//				FieldDecorationRegistry.DEC_CONTENT_PROPOSAL);
+//		controlDecoration.setImage(contentProposalImage.getImage());
 
 		TextContentAdapter textContentAdapter = new TextContentAdapter();
 
 		ContentAssistCommandAdapter adapter = new ContentAssistCommandAdapter(text, textContentAdapter,
 				proposalProvider, "org.eclipse.ui.edit.text.contentAssist.proposals", new char[0]);
 
-		IBindingService bindingService = (IBindingService) PlatformUI.getWorkbench().getService(IBindingService.class);
-		controlDecoration.setDescriptionText(NLS.bind("Content Assist Available ({0})",
-				bindingService.getBestActiveBindingFormattedFor(adapter.getCommandId())));
+//		IBindingService bindingService = (IBindingService) PlatformUI.getWorkbench().getService(IBindingService.class);
+//		controlDecoration.setDescriptionText(NLS.bind("Content Assist Available ({0})",
+//				bindingService.getBestActiveBindingFormattedFor(adapter.getCommandId())));
 
 		return adapter;
 	}
@@ -1771,7 +1766,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 				foundNew = true;
 			}
 
-			expandableComposite.setTitleBarForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+			expandableComposite.setTitleBarForeground(toolkit.getColors().getColor(FormColors.TITLE));
 
 //			expandableComposite.setText(taskComment.getNumber() + ": " + taskComment.getAuthorName() + ", "
 //					+ formatDate(taskComment.getCreated()));
@@ -1792,7 +1787,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			ImageHyperlink formHyperlink = toolkit.createImageHyperlink(toolbarComp, SWT.NONE);
 			formHyperlink.setBackground(null);
 			formHyperlink.setFont(expandableComposite.getFont());
-			formHyperlink.setForeground(toolkit.getColors().getColor(IFormColors.TITLE));
+			formHyperlink.setForeground(toolkit.getColors().getColor(FormColors.TITLE));
 			if (taskComment.getAuthor().equalsIgnoreCase(repository.getUserName())) {
 				formHyperlink.setImage(TasksUiImages.getImage(TasksUiImages.PERSON_ME_NARROW));
 			} else {

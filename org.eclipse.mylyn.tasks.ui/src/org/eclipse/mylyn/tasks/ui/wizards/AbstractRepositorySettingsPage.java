@@ -48,17 +48,14 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.forms.events.ExpansionAdapter;
 import org.eclipse.ui.forms.events.ExpansionEvent;
 import org.eclipse.ui.forms.events.HyperlinkAdapter;
 import org.eclipse.ui.forms.events.HyperlinkEvent;
-import org.eclipse.ui.forms.events.IHyperlinkListener;
 import org.eclipse.ui.forms.widgets.ExpandableComposite;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Hyperlink;
 import org.eclipse.ui.forms.widgets.Section;
-import org.eclipse.ui.internal.net.ProxyPreferencePage;
 
 /**
  * Extend to provide custom repository settings. This page is typically invoked by the user requesting properties via
@@ -674,25 +671,25 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		systemProxyButton = new Button(settingsComposite, SWT.CHECK);
 		GridDataFactory.fillDefaults().align(SWT.LEFT, SWT.TOP).span(2, SWT.DEFAULT).applyTo(settingsComposite);
 
-		systemProxyButton.setText("Use global Network Connections preferences");
-		Hyperlink changeProxySettingsLink = toolkit.createHyperlink(settingsComposite, "Change Settings", SWT.NULL);
-		changeProxySettingsLink.setBackground(compositeContainer.getBackground());
-		changeProxySettingsLink.addHyperlinkListener(new IHyperlinkListener() {
-
-			public void linkActivated(HyperlinkEvent e) {
-				ProxyPreferencePage page = new ProxyPreferencePage();
-				page.init(PlatformUI.getWorkbench());
-				TasksUiUtil.showPreferencePage(PREFS_PAGE_ID_NET_PROXY, page);
-			}
-
-			public void linkEntered(HyperlinkEvent e) {
-				// ignore
-			}
-
-			public void linkExited(HyperlinkEvent e) {
-				// ignore
-			}
-		});
+//		systemProxyButton.setText("Use global Network Connections preferences");
+//		Hyperlink changeProxySettingsLink = toolkit.createHyperlink(settingsComposite, "Change Settings", SWT.NULL);
+//		changeProxySettingsLink.setBackground(compositeContainer.getBackground());
+//		changeProxySettingsLink.addHyperlinkListener(new IHyperlinkListener() {
+//
+//			public void linkActivated(HyperlinkEvent e) {
+//				ProxyPreferencePage page = new ProxyPreferencePage();
+//				page.init(PlatformUI.getWorkbench());
+//				TasksUiUtil.showPreferencePage(PREFS_PAGE_ID_NET_PROXY, page);
+//			}
+//
+//			public void linkEntered(HyperlinkEvent e) {
+//				// ignore
+//			}
+//
+//			public void linkExited(HyperlinkEvent e) {
+//				// ignore
+//			}
+//		});
 
 		systemProxyButton.addSelectionListener(new SelectionListener() {
 			public void widgetSelected(SelectionEvent e) {

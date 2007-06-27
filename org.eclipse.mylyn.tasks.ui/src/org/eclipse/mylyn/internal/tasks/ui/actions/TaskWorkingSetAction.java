@@ -330,7 +330,7 @@ public class TaskWorkingSetAction extends Action implements IMenuCreator {
 		@Override
 		protected void availableWorkingSetsChanged() {
 			viewer.setInput(window.getWorkbench().getWorkingSetManager().getWorkingSets());
-			super.availableWorkingSetsChanged();
+//			super.availableWorkingSetsChanged();
 		}
 
 		/**

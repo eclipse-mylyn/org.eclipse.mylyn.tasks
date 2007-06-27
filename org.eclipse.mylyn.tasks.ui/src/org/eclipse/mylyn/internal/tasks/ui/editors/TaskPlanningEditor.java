@@ -279,8 +279,13 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 		form = managedForm.getForm();
 		toolkit = managedForm.getToolkit();
+		
 
+		form.setImage(TasksUiImages.getImage(TasksUiImages.TASK));
+		
+		
 		if (task != null) {
+			form.setText("Task: " + task.getSummary());
 			addHeaderControls();
 		}
 
@@ -305,6 +310,8 @@ public class TaskPlanningEditor extends TaskFormPage {
 
 	private void addHeaderControls() {
 
+		System.err.println("!!!!!!!!");
+		
 		if (form.getForm() != null) {
 
 			activateAction = new Action() {

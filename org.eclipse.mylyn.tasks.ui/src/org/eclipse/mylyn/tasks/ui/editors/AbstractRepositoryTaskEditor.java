@@ -93,6 +93,7 @@ import org.eclipse.mylyn.tasks.core.TaskContainerDelta;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
 import org.eclipse.mylyn.tasks.core.AbstractTask.RepositoryTaskSyncState;
 import org.eclipse.mylyn.tasks.ui.AbstractDuplicateDetector;
+import org.eclipse.mylyn.tasks.ui.AbstractRepositoryConnectorUi;
 import org.eclipse.mylyn.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylyn.tasks.ui.TasksUiUtil;
 import org.eclipse.mylyn.tasks.ui.search.SearchHitCollector;
@@ -495,16 +496,37 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		toolkit = managedForm.getToolkit();
 		registerDropListener(form);
 
-		// ImageDescriptor overlay =
-		// TasksUiPlugin.getDefault().getOverlayIcon(repository.getKind());
-		// ImageDescriptor imageDescriptor =
-		// TaskListImages.createWithOverlay(TaskListImages.REPOSITORY, overlay,
-		// false,
-		// false);
-		// form.setImage(TaskListImages.getImage(imageDescriptor));
-
+//		ImageDescriptor overlay = TasksUiPlugin.getDefault().getOverlayIcon(repository.getConnectorKind());
+//		ImageDescriptor imageDescriptor = TasksUiImages.createWithOverlay(TasksUiImages.REPOSITORY, overlay, false,
+//				false);
+		form.setImage(TasksUiImages.getImage(TasksUiImages.REPOSITORY));
 		// toolkit.decorateFormHeading(form.getForm());
 
+		
+		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(repository.getConnectorKind());
+		String kindLabel = "";
+		if (connectorUi != null) {
+			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+		}
+		String idLabel = "";
+
+		if (repositoryTask != null) {
+			idLabel = repositoryTask.getTaskKey();
+		} else {
+			idLabel = taskData.getId();
+		}
+
+		if (taskData != null && taskData.isNew()) {
+			form.setText("New " + kindLabel);
+		} else if(idLabel != null){
+			form.setText(kindLabel + " " + idLabel);
+		} else {
+			form.setText(kindLabel);
+		}
+		
+		
+		
+		
 		editorComposite = form.getBody();
 		GridLayout editorLayout = new GridLayout();
 		editorComposite.setLayout(editorLayout);
@@ -522,7 +544,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 
 		}
 
-		// setFormHeaderLabel();
+//		setFormHeaderLabel();
 		addHeaderControls();
 
 		if (summaryText != null) {

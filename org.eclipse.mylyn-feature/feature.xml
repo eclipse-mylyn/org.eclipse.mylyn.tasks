@@ -239,9 +239,7 @@ litigation.
       <import plugin="org.eclipse.core.resources"/>
       <import plugin="org.eclipse.ui.ide"/>
       <import plugin="org.eclipse.search"/>
-      <import plugin="org.eclipse.ui.net"/>
       <import plugin="org.eclipse.mylyn.web.core"/>
-      <import plugin="org.eclipse.core.net"/>
       <import plugin="org.eclipse.mylar" version="2.0.0.v20070614-1800"/>
    </requires>
 

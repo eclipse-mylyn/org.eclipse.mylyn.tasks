@@ -266,7 +266,7 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 
 	protected String[] columnNames = new String[] { "Summary" };
 
-	protected int[] columnWidths = new int[] { 200 };
+	protected int[] columnWidths = new int[] { 900 };
 
 	private TreeColumn[] columns;
 
@@ -918,27 +918,23 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 	}
 
 	private void configureColumns(final String[] columnNames, final int[] columnWidths) {
-//		TreeColumnLayout layout = (TreeColumnLayout) getViewer().getTree().getParent().getLayout();
 		getViewer().setColumnProperties(columnNames);
+		// for (TreeColumn col: columns) {
+		// col.dispose();
+		// }
 		columns = new TreeColumn[columnNames.length];
 		for (int i = 0; i < columnNames.length; i++) {
 			columns[i] = new TreeColumn(getViewer().getTree(), 0);
 			columns[i].setText(columnNames[i]);
-
-//			if (i == 0) {
-//				layout.setColumnData(columns[i], new ColumnWeightData(100));
-//			} else {
-//				layout.setColumnData(columns[i], new ColumnPixelData(columnWidths[i]));
-//			}
-
-// final int index = i;
+			columns[i].setWidth(columnWidths[i]);
+//			final int index = i;
 			columns[i].addSelectionListener(new SelectionAdapter() {
 
 				@Override
 				public void widgetSelected(SelectionEvent e) {
-// sortByIndex = index;
+//					sortIndex = index;
 					sortDirection *= DEFAULT_SORT_DIRECTION;
-// tableSorter.setColumn(columnNames[sortByIndex]);
+//					tableSorter.setColumn(columnNames[sortIndex]);
 					getViewer().refresh(false);
 				}
 			});
@@ -957,6 +953,7 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 			});
 		}
 	}
+
 
 	/**
 	 * Tracks editor activation and jump to corresponding task, if applicable

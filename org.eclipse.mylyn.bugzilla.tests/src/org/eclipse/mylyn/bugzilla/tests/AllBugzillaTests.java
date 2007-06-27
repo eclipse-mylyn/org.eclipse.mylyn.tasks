@@ -32,7 +32,7 @@ public class AllBugzillaTests {
 		suite.addTestSuite(RepositoryEditorWizardTest.class);
 		suite.addTestSuite(RepositoryReportFactoryTest.class);
 		suite.addTestSuite(BugzillaConfigurationTest.class);
-		suite.addTestSuite(BugzillaTaskHyperlinkDetectorTest.class);
+//		suite.addTestSuite(BugzillaTaskHyperlinkDetectorTest.class);
 		suite.addTestSuite(BugzillaSearchEngineTest.class);
 		// suite.addTestSuite(Bugzilla220ParserTest.class);
 		suite.addTestSuite(BugzillaRepositoryConnectorTest.class);

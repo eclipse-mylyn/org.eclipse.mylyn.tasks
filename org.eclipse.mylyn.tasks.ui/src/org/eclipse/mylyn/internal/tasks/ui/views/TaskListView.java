@@ -875,10 +875,8 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 		hookOpenAction();
 		contributeToActionBars();
 
-		if (!SWT.getPlatform().equals("carbon")) {
-			TaskListToolTipHandler taskListToolTipHandler = new TaskListToolTipHandler();
-			taskListToolTipHandler.activateHoverHelp(getViewer().getControl());
-		}
+		TaskListToolTipHandler taskListToolTipHandler = new TaskListToolTipHandler();
+		taskListToolTipHandler.activateHoverHelp(getViewer().getControl());
 
 		// Set to empty string to disable native tooltips (windows only?)
 		// bug#160897
@@ -1714,7 +1712,7 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 					.getWorkingSets()));
 			Set<IWorkingSet> tasksSets = new HashSet<IWorkingSet>(allSets);
 			for (IWorkingSet workingSet : allSets) {
-				if (!workingSet.getId().equalsIgnoreCase(TaskWorkingSetUpdater.ID_TASK_WORKING_SET)) {
+				if (workingSet.getId() == null || !workingSet.getId().equalsIgnoreCase(TaskWorkingSetUpdater.ID_TASK_WORKING_SET)) {
 					tasksSets.remove(workingSet);
 				}
 			}

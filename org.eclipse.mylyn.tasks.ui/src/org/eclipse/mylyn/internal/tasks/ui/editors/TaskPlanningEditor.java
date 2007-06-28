@@ -309,9 +309,6 @@ public class TaskPlanningEditor extends TaskFormPage {
 	}
 
 	private void addHeaderControls() {
-
-		System.err.println("!!!!!!!!");
-		
 		if (form.getForm() != null) {
 
 			activateAction = new Action() {

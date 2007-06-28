@@ -9,7 +9,6 @@
 package org.eclipse.mylyn.internal.tasks.ui.views;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -85,7 +84,6 @@ import org.eclipse.mylyn.internal.tasks.ui.actions.TaskDeactivateAction;
 import org.eclipse.mylyn.internal.tasks.ui.actions.TaskListElementPropertiesAction;
 import org.eclipse.mylyn.internal.tasks.ui.views.TaskListTableSorter.SortByIndex;
 import org.eclipse.mylyn.internal.tasks.ui.wizards.NewLocalTaskWizard;
-import org.eclipse.mylyn.internal.tasks.ui.workingsets.TaskWorkingSetUpdater;
 import org.eclipse.mylyn.monitor.core.StatusHandler;
 import org.eclipse.mylyn.tasks.core.AbstractRepositoryQuery;
 import org.eclipse.mylyn.tasks.core.AbstractTask;
@@ -1705,21 +1703,21 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 	}
 
 	public static Set<IWorkingSet> getActiveWorkingSets() {
-		if (PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage() != null) {
-			Set<IWorkingSet> allSets = new HashSet<IWorkingSet>(Arrays.asList(PlatformUI.getWorkbench()
-					.getActiveWorkbenchWindow()
-					.getActivePage()
-					.getWorkingSets()));
-			Set<IWorkingSet> tasksSets = new HashSet<IWorkingSet>(allSets);
-			for (IWorkingSet workingSet : allSets) {
-				if (workingSet.getId() == null || !workingSet.getId().equalsIgnoreCase(TaskWorkingSetUpdater.ID_TASK_WORKING_SET)) {
-					tasksSets.remove(workingSet);
-				}
-			}
-			return tasksSets;
-		} else {
+//		if (PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage() != null) {
+//			Set<IWorkingSet> allSets = new HashSet<IWorkingSet>(Arrays.asList(PlatformUI.getWorkbench()
+//					.getActiveWorkbenchWindow()
+//					.getActivePage()
+//					.getWorkingSets()));
+//			Set<IWorkingSet> tasksSets = new HashSet<IWorkingSet>(allSets);
+//			for (IWorkingSet workingSet : allSets) {
+//				if (workingSet.getId() == null || !workingSet.getId().equalsIgnoreCase(TaskWorkingSetUpdater.ID_TASK_WORKING_SET)) {
+//					tasksSets.remove(workingSet);
+//				}
+//			}
+//			return tasksSets;
+//		} else {
 			return Collections.emptySet();
-		}
+//		}
 	}
 
 }

@@ -671,7 +671,10 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		systemProxyButton = new Button(settingsComposite, SWT.CHECK);
 		GridDataFactory.fillDefaults().align(SWT.LEFT, SWT.TOP).span(2, SWT.DEFAULT).applyTo(settingsComposite);
 
-//		systemProxyButton.setText("Use global Network Connections preferences");
+		systemProxyButton.setText("Use global Network Connections preferences");
+		systemProxyButton.setSelection(false);
+		systemProxyButton.setEnabled(false);
+		
 //		Hyperlink changeProxySettingsLink = toolkit.createHyperlink(settingsComposite, "Change Settings", SWT.NULL);
 //		changeProxySettingsLink.setBackground(compositeContainer.getBackground());
 //		changeProxySettingsLink.addHyperlinkListener(new IHyperlinkListener() {
@@ -771,8 +774,9 @@ public abstract class AbstractRepositorySettingsPage extends WizardPage {
 		setProxyAuth(oldProxyUsername != null && oldProxyPassword != null && !oldProxyUsername.equals("")
 				&& !oldProxyPassword.equals(""));
 
-		setUseDefaultProxy(repository != null ? repository.isDefaultProxyEnabled() : true);
-		proxyExpComposite.setExpanded(!systemProxyButton.getSelection());
+		setUseDefaultProxy(false);
+//		setUseDefaultProxy(repository != null ? repository.isDefaultProxyEnabled() : true);
+//		proxyExpComposite.setExpanded(!systemProxyButton.getSelection());
 	}
 
 	protected void setEncoding(String encoding) {

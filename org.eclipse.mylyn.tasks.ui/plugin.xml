@@ -252,6 +252,17 @@
 		<viewContribution 
 			id="org.eclipse.mylyn.tasks.ui.actions.view" 
 	   		targetID="org.eclipse.mylyn.tasks.ui.views.tasks">
+  		
+  		<action
+          class="org.eclipse.mylyn.internal.tasks.ui.actions.SynchronizeAllAction"
+          enablesFor="*"
+          icon="icons/etool16/repository-synchronize.gif"
+          id="org.eclipse.mylyn.tasks.ui.synchronize.changed"
+          label="Synchronize Changed"
+          menubarPath="tasks"
+          toolbarPath="new"
+          tooltip="Synchronize Changed">
+         </action>
     <action
           class="org.eclipse.mylyn.internal.tasks.ui.actions.RestoreTaskListAction"
           icon="icons/etool16/import.gif"
@@ -269,17 +280,6 @@
           label="Show Task Repositories View"
           menubarPath="tasks"
           tooltip="Show Task Repositories View">
-         </action>
-  		
-  		<action
-          class="org.eclipse.mylyn.internal.tasks.ui.actions.SynchronizeAllAction"
-          enablesFor="*"
-          icon="icons/etool16/repository-synchronize.gif"
-          id="org.eclipse.mylyn.tasks.ui.synchronize.changed"
-          label="Synchronize Changed"
-          menubarPath="tasks"
-          toolbarPath="new"
-          tooltip="Synchronize Changed">
          </action>
     <action
           class="org.eclipse.mylyn.internal.tasks.ui.actions.OpenTaskSearchAction"
@@ -769,12 +769,22 @@
       </factory>
    </extension>
 
+   <extension
+         point="org.eclipse.mylyn.tasks.ui.editors">
+      <hyperlinkDetector
+            class="org.eclipse.mylyn.internal.tasks.ui.editors.TaskEditorUrlHyperlinkDetector"
+            id="org.eclipse.mylyn.tasklist.hyperlinkdetector.url"/>
+   </extension>
+   
+
    <extension point="org.eclipse.core.runtime.adapters">
+   <!--
     <factory
           adaptableType="org.eclipse.mylyn.tasks.core.AbstractTaskContainer"
           class="org.eclipse.mylyn.internal.tasks.ui.workingsets.TaskWorkingSetAdapterFactory">
        <adapter type="org.eclipse.ui.IPersistableElement"/>
     </factory>
+    -->
     <factory
           adaptableType="org.eclipse.mylyn.tasks.core.TaskRepository"
           class="org.eclipse.mylyn.internal.tasks.ui.TaskRepositoryAdapterFactory">
@@ -782,6 +792,7 @@
     </factory>
  </extension>
 
+<!--
  <extension
        point="org.eclipse.ui.elementFactories">
     <factory
@@ -789,6 +800,7 @@
           id="org.eclipse.mylyn.tasks.ui.workingSets.elementFactory">
     </factory>
 </extension>
+    -->
     <extension
          id="org.eclipse.mylyn.tasks.local.repository" 
          name="Local Task Repository"

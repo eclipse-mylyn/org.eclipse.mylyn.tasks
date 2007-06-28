@@ -153,7 +153,7 @@ public class TaskListNotificationPopup extends PopupDialog {
 
 		section.setTextClient(hyperlink);
 
-		form.pack();
+		parent.pack();
 		return form;
 	}
 

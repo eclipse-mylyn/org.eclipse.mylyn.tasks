@@ -31,7 +31,6 @@ import org.eclipse.mylyn.internal.tasks.ui.actions.CopyTaskDetailsAction;
 import org.eclipse.mylyn.internal.tasks.ui.actions.OpenTaskListElementAction;
 import org.eclipse.mylyn.internal.tasks.ui.actions.TaskActivateAction;
 import org.eclipse.mylyn.internal.tasks.ui.actions.TaskDeactivateAction;
-import org.eclipse.mylyn.internal.tasks.ui.actions.TaskWorkingSetAction;
 import org.eclipse.mylyn.tasks.core.AbstractTask;
 import org.eclipse.mylyn.tasks.core.AbstractTaskContainer;
 import org.eclipse.mylyn.tasks.core.ITaskActivityListener;
@@ -48,7 +47,6 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
-import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PatternFilter;
 import org.eclipse.ui.forms.events.IHyperlinkListener;
@@ -67,8 +65,6 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 
 	private static final String LABEL_SETS_MULTIPLE = "<multiple>";
 
-	private TaskListHyperlink workingSetLink;
-
 	private TaskListHyperlink activeTaskLink;
 
 	private WorkweekProgressBar taskProgressBar;
@@ -81,7 +77,7 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 
 	private int incompleteTime;
 
-	private IWorkingSet currentWorkingSet;
+//	private IWorkingSet currentWorkingSet;
 
 	private MenuManager activeTaskMenuManager = null;
 
@@ -202,62 +198,62 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 		});
 	}
 
-	@Override
-	protected Composite createActiveWorkingSetComposite(Composite container) {
-		final ImageHyperlink workingSetButton = new ImageHyperlink(container, SWT.FLAT);
-		workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_RIGHT));
-		workingSetButton.setToolTipText("Select Working Set");
-
-		workingSetLink = new TaskListHyperlink(container, SWT.LEFT);
-		workingSetLink.setText(TaskWorkingSetAction.LABEL_SETS_NONE);
-		workingSetLink.setUnderlined(false);
-		workingSetLink.setForeground(TaskListColorsAndFonts.COLOR_HYPERLINK_WIDGET);
-
-		final TaskWorkingSetAction workingSetAction = new TaskWorkingSetAction();
-		workingSetButton.addHyperlinkListener(new IHyperlinkListener() {
-
-			public void linkActivated(org.eclipse.ui.forms.events.HyperlinkEvent e) {
-				workingSetAction.getMenu(workingSetButton).setVisible(true);
-			}
-
-			public void linkEntered(org.eclipse.ui.forms.events.HyperlinkEvent e) {
-				workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_DOWN));
-			}
-
-			public void linkExited(org.eclipse.ui.forms.events.HyperlinkEvent e) {
-				workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_RIGHT));
-			}
-		});
-
-		workingSetLink.addMouseTrackListener(new MouseTrackListener() {
-
-			public void mouseEnter(MouseEvent e) {
-				workingSetLink.setUnderlined(true);
-			}
-
-			public void mouseExit(MouseEvent e) {
-				workingSetLink.setUnderlined(false);
-			}
-
-			public void mouseHover(MouseEvent e) {
-			}
-		});
-
-		indicateActiveTaskWorkingSet();
-
-		workingSetLink.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseDown(MouseEvent e) {
-				if (currentWorkingSet != null) {
-					workingSetAction.run(currentWorkingSet);
-				} else {
-					workingSetAction.run();
-				}
-			}
-		});
-
-		return workingSetLink;
-	}
+//	@Override
+//	protected Composite createActiveWorkingSetComposite(Composite container) {
+//		final ImageHyperlink workingSetButton = new ImageHyperlink(container, SWT.FLAT);
+//		workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_RIGHT));
+//		workingSetButton.setToolTipText("Select Working Set");
+//
+//		workingSetLink = new TaskListHyperlink(container, SWT.LEFT);
+//		workingSetLink.setText(TaskWorkingSetAction.LABEL_SETS_NONE);
+//		workingSetLink.setUnderlined(false);
+//		workingSetLink.setForeground(TaskListColorsAndFonts.COLOR_HYPERLINK_WIDGET);
+//
+//		final TaskWorkingSetAction workingSetAction = new TaskWorkingSetAction();
+//		workingSetButton.addHyperlinkListener(new IHyperlinkListener() {
+//
+//			public void linkActivated(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+//				workingSetAction.getMenu(workingSetButton).setVisible(true);
+//			}
+//
+//			public void linkEntered(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+//				workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_DOWN));
+//			}
+//
+//			public void linkExited(org.eclipse.ui.forms.events.HyperlinkEvent e) {
+//				workingSetButton.setImage(TasksUiImages.getImage(TasksUiImages.TOOLBAR_ARROW_RIGHT));
+//			}
+//		});
+//
+//		workingSetLink.addMouseTrackListener(new MouseTrackListener() {
+//
+//			public void mouseEnter(MouseEvent e) {
+//				workingSetLink.setUnderlined(true);
+//			}
+//
+//			public void mouseExit(MouseEvent e) {
+//				workingSetLink.setUnderlined(false);
+//			}
+//
+//			public void mouseHover(MouseEvent e) {
+//			}
+//		});
+//
+//		indicateActiveTaskWorkingSet();
+//
+//		workingSetLink.addMouseListener(new MouseAdapter() {
+//			@Override
+//			public void mouseDown(MouseEvent e) {
+//				if (currentWorkingSet != null) {
+//					workingSetAction.run(currentWorkingSet);
+//				} else {
+//					workingSetAction.run();
+//				}
+//			}
+//		});
+//
+//		return workingSetLink;
+//	}
 
 	@Override
 	protected Composite createActiveTaskComposite(final Composite container) {
@@ -350,27 +346,27 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 	}
 
 	public void indicateActiveTaskWorkingSet() {
-		Set<IWorkingSet> activeSets = TaskListView.getActiveWorkingSets();
-		if (filterComposite.isDisposed() || activeSets == null) {
-			return;
-		}
-
-		if (activeSets.size() == 0) {
-			workingSetLink.setText(TaskWorkingSetAction.LABEL_SETS_NONE);
-			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
-			currentWorkingSet = null;
-		} else if (activeSets.size() > 1) {
-			workingSetLink.setText(LABEL_SETS_MULTIPLE);
-			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
-			currentWorkingSet = null;
-		} else {
-			Object[] array = activeSets.toArray();
-			IWorkingSet workingSet = (IWorkingSet) array[0];
-			workingSetLink.setText(workingSet.getLabel());
-			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
-			currentWorkingSet = workingSet;
-		}
-		filterComposite.layout();
+//		Set<IWorkingSet> activeSets = TaskListView.getActiveWorkingSets();
+//		if (filterComposite.isDisposed() || activeSets == null) {
+//			return;
+//		}
+//
+//		if (activeSets.size() == 0) {
+//			workingSetLink.setText(TaskWorkingSetAction.LABEL_SETS_NONE);
+//			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
+//			currentWorkingSet = null;
+//		} else if (activeSets.size() > 1) {
+//			workingSetLink.setText(LABEL_SETS_MULTIPLE);
+//			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
+//			currentWorkingSet = null;
+//		} else {
+//			Object[] array = activeSets.toArray();
+//			IWorkingSet workingSet = (IWorkingSet) array[0];
+//			workingSetLink.setText(workingSet.getLabel());
+//			workingSetLink.setToolTipText(LABEL_SETS_EDIT);
+//			currentWorkingSet = workingSet;
+//		}
+//		filterComposite.layout();
 	}
 
 	public void indicateActiveTask(AbstractTask task) {

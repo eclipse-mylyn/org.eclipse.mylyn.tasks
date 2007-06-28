@@ -425,7 +425,8 @@ public final class TaskEditor extends FormEditor implements IBusyEditor {
 
 	public void setMessage(String message, int type) {
 		if (message != null) {
-			MessageDialog.openInformation(getSite().getShell(), "Task Editor", message);
+			String currentTitle = getPartName();
+			setPartName("[STALE] " + currentTitle);
 		}
 	}
 

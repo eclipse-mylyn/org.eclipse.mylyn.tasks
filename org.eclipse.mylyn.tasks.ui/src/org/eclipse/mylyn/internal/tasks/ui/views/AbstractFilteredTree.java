@@ -128,8 +128,8 @@ public abstract class AbstractFilteredTree extends FilteredTree {
 		superComposite.setLayout(superLayout);
 		superComposite.setLayoutData(superLayoutData);
 
-		Composite workingSetComposite = createActiveWorkingSetComposite(superComposite);
-		workingSetComposite.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+//		Composite workingSetComposite = createActiveWorkingSetComposite(superComposite);
+//		workingSetComposite.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
 
 		Composite activeTaskComposite = createActiveTaskComposite(superComposite);
 		activeTaskComposite.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false));
@@ -165,7 +165,7 @@ public abstract class AbstractFilteredTree extends FilteredTree {
 
 	protected abstract Composite createProgressComposite(Composite container);
 
-	protected abstract Composite createActiveWorkingSetComposite(Composite container);
+//	protected abstract Composite createActiveWorkingSetComposite(Composite container);
 
 	protected abstract Composite createActiveTaskComposite(Composite container);
 

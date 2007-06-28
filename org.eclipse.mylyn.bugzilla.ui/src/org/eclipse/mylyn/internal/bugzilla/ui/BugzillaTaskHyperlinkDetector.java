@@ -23,6 +23,7 @@ import org.eclipse.mylyn.tasks.core.TaskRepository;
 /**
  * @author Rob Elves
  */
+@SuppressWarnings("restriction")
 public class BugzillaTaskHyperlinkDetector implements IHyperlinkDetector {
 
 	private TaskRepository repository;

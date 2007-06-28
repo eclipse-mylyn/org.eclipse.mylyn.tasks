@@ -61,9 +61,9 @@ public class TaskListFilteredTree extends AbstractFilteredTree {
 
 	private static final String LABEL_ACTIVE_NONE = "Activate...  ";
 
-	private static final String LABEL_SETS_EDIT = "Edit Task Working Sets...";
+//	private static final String LABEL_SETS_EDIT = "Edit Task Working Sets...";
 
-	private static final String LABEL_SETS_MULTIPLE = "<multiple>";
+//	private static final String LABEL_SETS_MULTIPLE = "<multiple>";
 
 	private TaskListHyperlink activeTaskLink;
 

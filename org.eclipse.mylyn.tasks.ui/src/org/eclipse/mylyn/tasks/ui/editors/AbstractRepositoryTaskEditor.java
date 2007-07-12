@@ -506,7 +506,14 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 		AbstractRepositoryConnectorUi connectorUi = TasksUiPlugin.getConnectorUi(repository.getConnectorKind());
 		String kindLabel = "";
 		if (connectorUi != null) {
-			kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+		
+			if (repositoryTask != null && taskData != null && !taskData.isNew()) {
+				kindLabel = connectorUi.getTaskKindLabel(repositoryTask);
+			} else {
+				if (taskData != null) {
+					kindLabel = connectorUi.getTaskKindLabel(taskData);
+				}
+			}
 		}
 		String idLabel = "";
 

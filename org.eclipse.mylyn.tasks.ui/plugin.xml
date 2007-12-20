@@ -784,7 +784,7 @@
       <actionSet
             id="org.eclipse.mylyn.tasks.ui.tasklist.navigation"
             label="Mylyn Task List Navigation"
-            visible="true">
+            visible="false">
          <action
                class="org.eclipse.mylyn.internal.tasks.ui.actions.GoToUnreadTaskAction"
                definitionId="org.eclipse.mylyn.tasks.ui.command.goToNextUnread"

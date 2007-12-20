@@ -1175,8 +1175,9 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 		manager.add(new Separator());
 
 		addAction(copyDetailsAction, manager, element);
-		if (task != null) {
+		if (task != null && task.isLocal()) {
 			// TODO: if selection parent is an Orphan container don't add this action
+//			addAction(cloneThisBugAction, manager, element);
 			addAction(removeFromCategoryAction, manager, element);
 		}
 		// This should also test for null, or else nothing to delete!
@@ -1444,12 +1445,11 @@ public class TaskListView extends ViewPart implements IPropertyChangeListener {
 		}
 	}
 
-	/**
-	 * @API-3.0 eliminate parameter from this method
-	 */
 	public void clearFilters(boolean preserveArchiveFilter) {
 		filters.clear();
-		filters.add(filterArchive);
+//		if (preserveArchiveFilter) {
+//			filters.add(filterArchive);
+//		}
 		filters.add(filterWorkingSet);
 	}
 

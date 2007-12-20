@@ -89,12 +89,12 @@ public class TaskList {
 		//		}
 
 		if (orphans != null) {
-			//if (!orphans.contains(task.getHandleIdentifier())) {
-			orphans.internalAddChild(task);
-			if (delta != null) {
-				delta.add(new TaskContainerDelta(orphans, TaskContainerDelta.Kind.CHANGED));
+			if (!orphans.contains(task.getHandleIdentifier())) {
+				orphans.internalAddChild(task);
+				if (delta != null) {
+					delta.add(new TaskContainerDelta(orphans, TaskContainerDelta.Kind.CHANGED));
+				}
 			}
-			//}
 			task.addParentContainer(orphans);
 		} else {
 			//StatusHandler.log("Orphan container not found for: " + task.getRepositoryUrl(), this);
@@ -410,7 +410,6 @@ public class TaskList {
 		category.internalRemoveChild(task);
 		task.removeParentContainer(category);
 		addOrphan(task, delta);
-		delta.add(new TaskContainerDelta(category, TaskContainerDelta.Kind.ADDED));
 		for (ITaskListChangeListener listener : changeListeners) {
 			listener.containersChanged(delta);
 		}

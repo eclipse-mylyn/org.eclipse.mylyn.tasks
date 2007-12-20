@@ -8,6 +8,7 @@
 package org.eclipse.mylyn.internal.tasks.ui;
 
 import org.eclipse.mylyn.internal.tasks.core.OrphanedTasksContainer;
+import org.eclipse.mylyn.internal.tasks.core.UnfiledCategory;
 
 /**
  * @author Mik Kersten
@@ -21,11 +22,11 @@ public class TaskArchiveFilter extends AbstractTaskListFilter {
 				return false;
 			}
 		}
-//		if (element instanceof UnfiledCategory) {
-//			if (((UnfiledCategory) element).isEmpty()) {
-//				return false;
-//			}
-//		}
+		if (element instanceof UnfiledCategory) {
+			if (((UnfiledCategory) element).isEmpty()) {
+				return false;
+			}
+		}
 //		if (element instanceof TaskArchive) {
 //			return false;
 //		}

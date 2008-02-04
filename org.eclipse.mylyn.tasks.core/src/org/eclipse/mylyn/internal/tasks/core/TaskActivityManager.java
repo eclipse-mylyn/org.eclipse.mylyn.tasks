@@ -22,6 +22,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.mylyn.context.core.ContextCorePlugin;
 import org.eclipse.mylyn.context.core.IInteractionContext;
 import org.eclipse.mylyn.context.core.IInteractionContextListener;
@@ -209,7 +211,7 @@ public class TaskActivityManager {
 				return;
 			}
 		} catch (Throwable t) {
-			StatusHandler.fail(t, "Error parsing interaction event", false);
+			StatusHandler.log(new Status(IStatus.ERROR, ITasksCoreConstants.ID_PLUGIN, "Error parsing interaction event", t));
 		}
 	}
 
@@ -253,7 +255,7 @@ public class TaskActivityManager {
 			try {
 				listener.elapsedTimeUpdated(activatedTask, totalElapsed);
 			} catch (Throwable t) {
-				StatusHandler.fail(t, "task activity listener failed: " + listener, false);
+				StatusHandler.log(new Status(IStatus.ERROR, ITasksCoreConstants.ID_PLUGIN, "Task activity listener failed: \"" + listener + "\"", t));
 			}
 		}
 	}
@@ -522,18 +524,28 @@ public class TaskActivityManager {
 	}
 
 	
-	public boolean isOverScheduled(Date scheduledDate, boolean floating) {
-		if (scheduledDate == null) {
+	public boolean isPastReminder(AbstractTask task) {
+		if (task == null || task.isCompleted() || task.getScheduledForDate() == null) {
+			return false;
+		} else {
+			return isPastReminder(task.getScheduledForDate(), task.isCompleted());
+		}
+	}
+	
+	public boolean isPastReminder(Date date, boolean isComplete) {
+		if (date == null || isComplete) {
 			return false;
 		} else {
 			Date now = new Date();
-			if (!floating && scheduledDate.compareTo(now) < 0) {
+			if (/*!internalIsFloatingScheduledDate() && */date.compareTo(now) < 0) {
 				return true;
 			} else {
 				return false;
 			}
 		}
 	}
+
+	
 	
 	public boolean isOverdue(AbstractTask task) {
 		return (!task.isCompleted() && task.getDueDate() != null && new Date().after(task.getDueDate()))
@@ -577,7 +589,7 @@ public class TaskActivityManager {
 
 	public boolean isScheduledAfterThisWeek(AbstractTask task) {
 		if (task.getScheduledForDate() != null) {
-			return isScheduledForThisWeek(task.getScheduledForDate());
+			return isScheduledAfterThisWeek(task.getScheduledForDate());
 		}
 
 		return false;
@@ -863,6 +875,15 @@ public class TaskActivityManager {
 	
 	public void removeTimingListener(ITaskTimingListener listener) {
 		timingListeners.remove(listener);
+	}
+
+	public boolean isFloatingThisWeek(AbstractTask singleTaskSelection) {
+		if(singleTaskSelection != null && singleTaskSelection.getScheduledForDate() != null) {
+			if(singleTaskSelection.internalIsFloatingScheduledDate() && isScheduledForThisWeek(singleTaskSelection.getScheduledForDate())) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 }

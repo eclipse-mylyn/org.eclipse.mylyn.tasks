@@ -92,9 +92,10 @@ public class ScheduleTaskMenuContributor implements IDynamicSubMenuContributor {
 		subMenuManager.add(action);
 
 		if (singleTaskSelection != null
-				&& (TasksUiPlugin.getTaskActivityManager().isScheduledForToday(getScheduledForDate(singleTaskSelection), isFloating(singleTaskSelection)) || (TasksUiPlugin.getTaskActivityManager().isOverScheduled(getScheduledForDate(singleTaskSelection), isFloating(singleTaskSelection))))) {
+				&& (TasksUiPlugin.getTaskActivityManager().isScheduledForToday(getScheduledForDate(singleTaskSelection), isFloating(singleTaskSelection)) || (isPastReminder(singleTaskSelection) && !isFloating(singleTaskSelection)))) {
 			action.setChecked(true);
 		}
+		
 
 //		subMenuManager.add(new Separator());
 
@@ -155,7 +156,7 @@ public class ScheduleTaskMenuContributor implements IDynamicSubMenuContributor {
 		subMenuManager.add(action);
 
 		if (singleTaskSelection != null && isFloating(singleTaskSelection)
-				&& TasksUiPlugin.getTaskActivityManager().isScheduledForThisWeek(getScheduledForDate(singleTaskSelection))) {
+				&& (TasksUiPlugin.getTaskActivityManager().isScheduledForThisWeek(getScheduledForDate(singleTaskSelection)) || isPastReminder(singleTaskSelection))) {
 			action.setChecked(true);
 		}
 
@@ -357,5 +358,11 @@ public class ScheduleTaskMenuContributor implements IDynamicSubMenuContributor {
 	
 	protected boolean isFloating(AbstractTask task) {
 		return task.internalIsFloatingScheduledDate();
+	}
+	
+	
+	private boolean isPastReminder(AbstractTask task) {
+		Date date = getScheduledForDate(task);
+		return TasksUiPlugin.getTaskActivityManager().isPastReminder(date, task.isCompleted());
 	}
 }

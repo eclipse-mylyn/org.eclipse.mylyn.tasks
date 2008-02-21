@@ -219,9 +219,6 @@ litigation.
 
    <requires>
       <import plugin="org.eclipse.core.runtime"/>
-      <import plugin="org.eclipse.mylyn.tasks.core"/>
-      <import plugin="org.eclipse.mylyn.web.core"/>
-      <import plugin="org.eclipse.mylyn.monitor.core"/>
       <import plugin="org.eclipse.ui"/>
       <import plugin="org.eclipse.core.resources"/>
       <import plugin="org.eclipse.compare"/>
@@ -233,9 +230,12 @@ litigation.
       <import plugin="org.eclipse.ui.editors"/>
       <import plugin="org.eclipse.ui.workbench.texteditor"/>
       <import plugin="org.eclipse.update.ui"/>
-      <import plugin="org.eclipse.mylyn.bugzilla.core"/>
-      <import plugin="org.eclipse.mylyn.tasks.ui"/>
       <import feature="org.eclipse.mylyn_feature" version="2.3.0.qualifier" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.mylyn.tasks.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.web.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.monitor.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.bugzilla.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.tasks.ui" version="2.3.0" match="compatible"/>
    </requires>
 
    <plugin

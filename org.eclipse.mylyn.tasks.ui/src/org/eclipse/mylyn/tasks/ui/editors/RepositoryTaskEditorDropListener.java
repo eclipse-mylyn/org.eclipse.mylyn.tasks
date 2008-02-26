@@ -10,7 +10,6 @@ package org.eclipse.mylyn.tasks.ui.editors;
 
 import java.io.File;
 
-import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.mylyn.internal.tasks.ui.wizards.NewAttachmentWizard;
 import org.eclipse.mylyn.internal.tasks.ui.wizards.NewAttachmentWizardDialog;
@@ -27,7 +26,6 @@ import org.eclipse.swt.widgets.Control;
  * Not API.
  * 
  * @author Mik Kersten
- * @author Maarten Meijer
  */
 class RepositoryTaskEditorDropListener implements DropTargetListener {
 
@@ -112,7 +110,7 @@ class RepositoryTaskEditorDropListener implements DropTargetListener {
 
 			AbstractTaskEditor.setGlobalBusy(true);
 			NewAttachmentWizard naw = new NewAttachmentWizard(this.AbstractTaskEditor.repository, task, text);
-			openDialog(naw, null);
+			openDialog(naw);
 		}
 		if (fileTransfer.isSupportedType(event.currentDataType)) {
 			String[] files = (String[]) event.data;
@@ -126,29 +124,17 @@ class RepositoryTaskEditorDropListener implements DropTargetListener {
 
 				NewAttachmentWizard naw = new NewAttachmentWizard(this.AbstractTaskEditor.repository, task, new File(
 						files[0]));
-				String error = null;
-				if (files.length > 1) {
-					error = "Note that only the first file dragged will be attached.";
-				}
-				openDialog(naw, error);
+				openDialog(naw);
+
 			}
 		}
 	}
 
-	/**
-	 * @param naw
-	 *            wizard to attach dialog to.
-	 * @param message
-	 *            error to display or none if <code>null</code>
-	 */
-	private void openDialog(NewAttachmentWizard naw, String message) {
+	private void openDialog(NewAttachmentWizard naw) {
 		AbstractTaskEditor.setGlobalBusy(true);
 		NewAttachmentWizardDialog dialog = new NewAttachmentWizardDialog(control.getShell(), naw, true);
 		naw.setDialog(dialog);
 		dialog.create();
-		if (null != message) {
-			dialog.setMessage(message, IMessageProvider.WARNING);
-		}
 		int result = dialog.open();
 		if (result != MessageDialog.OK) {
 			AbstractTaskEditor.setGlobalBusy(false);

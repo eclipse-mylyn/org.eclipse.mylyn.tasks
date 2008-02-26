@@ -83,10 +83,6 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 
 	@Override
 	public boolean performDrop(Object data) {
-		if (data == null) {
-			return false;
-		}
-		
 		Object currentTarget = getCurrentTarget();
 		List<AbstractTask> tasksToMove = new ArrayList<AbstractTask>();
 		if (isUrl(data) && createTaskFromUrl(data)) {
@@ -200,9 +196,10 @@ public class TaskListDropAdapter extends ViewerDropAdapter {
 				TaskActivityUtil.snapEndOfWorkDay(newSchedule);
 				TasksUiPlugin.getTaskActivityManager().setScheduledFor(task, newSchedule.getTime(), container.isCaptureFloating());
 			} else if (currentTarget == null) {
-				TasksUiPlugin.getTaskListManager().getTaskList().moveTask(
-						newTask,
-						TasksUiPlugin.getTaskListManager().getTaskList().getDefaultCategory());
+//				TasksUiPlugin.getTaskListManager().getTaskList().moveTask(
+//						newTask,
+//						TasksUiPlugin.getTaskListManager().getTaskList().getOrphanContainer(
+//								LocalRepositoryConnector.REPOSITORY_URL));
 			}
 		}
 

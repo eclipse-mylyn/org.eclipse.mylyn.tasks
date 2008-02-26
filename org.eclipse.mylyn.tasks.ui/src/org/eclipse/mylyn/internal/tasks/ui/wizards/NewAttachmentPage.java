@@ -89,7 +89,7 @@ public class NewAttachmentPage extends WizardPage {
 	protected NewAttachmentPage(LocalAttachment att) {
 		super("AttachmentDetails");
 		setTitle("Attachment Details");
-		setMessage("Enter a description and verify the content type of the attachment");
+		setMessage("Provide a summary and verify the content type of the attachment.");
 		attachment = att;
 	}
 
@@ -233,8 +233,6 @@ public class NewAttachmentPage extends WizardPage {
 				}
 			}
 		});
-		
-		thisPage.setErrorMessage(null);
 	}
 
 	@Override

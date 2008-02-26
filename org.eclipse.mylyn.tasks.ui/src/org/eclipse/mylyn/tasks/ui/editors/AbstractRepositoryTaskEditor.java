@@ -3463,11 +3463,7 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 			if (newSubTaskAction != null) {
 				newSubTaskAction.setEnabled(!busy);
 			}
-
-			if (clearOutgoingAction != null) {
-				clearOutgoingAction.setEnabled(!busy);
-			}
-
+			
 			if (submitButton != null && !submitButton.isDisposed()) {
 				submitButton.setEnabled(!busy);
 			}

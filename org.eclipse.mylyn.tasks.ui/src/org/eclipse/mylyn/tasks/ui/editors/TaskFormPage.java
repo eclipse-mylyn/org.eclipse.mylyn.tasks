@@ -100,6 +100,8 @@ public class TaskFormPage extends FormPage {
 
 	private IHandlerActivation handlerActivation;
 
+	private IHandlerActivation handlerCompletion;
+	
 	private void addTextViewer(TextViewer viewer) {
 		textViewers.add(viewer);
 	}
@@ -382,12 +384,22 @@ public class TaskFormPage extends FormPage {
 							createQuickFixActionHandler(commentViewer), new ActiveShellExpression(
 									commentViewer.getTextWidget().getShell()));
 				}
+				if (handlerCompletion == null) {
+					handlerCompletion = handlerService.activateHandler(
+							ITextEditorActionDefinitionIds.CONTENT_ASSIST_PROPOSALS, //
+							createContentAssistActionHandler(commentViewer), //
+									new ActiveShellExpression(commentViewer.getTextWidget().getShell()));
+				}
 			}
 
 			private void deactivate() {
 				if (handlerActivation != null) {
 					handlerService.deactivateHandler(handlerActivation);
 					handlerActivation = null;
+				}
+				if (handlerCompletion != null) {
+					handlerService.deactivateHandler(handlerCompletion);
+					handlerCompletion = null;
 				}
 			}
 		});
@@ -443,6 +455,19 @@ public class TaskFormPage extends FormPage {
 			}
 		};
 		quickFixAction.setActionDefinitionId(ITextEditorActionDefinitionIds.QUICK_ASSIST);
+		return new ActionHandler(quickFixAction);
+	}
+
+
+	private IHandler createContentAssistActionHandler(final SourceViewer viewer) {
+		Action quickFixAction = new Action() {
+			public void run() {
+				if (viewer.canDoOperation(ISourceViewer.CONTENTASSIST_PROPOSALS)) {
+					viewer.doOperation(ISourceViewer.CONTENTASSIST_PROPOSALS);
+				}
+			}
+		};
+		quickFixAction.setActionDefinitionId(ITextEditorActionDefinitionIds.CONTENT_ASSIST_PROPOSALS);
 		return new ActionHandler(quickFixAction);
 	}
 

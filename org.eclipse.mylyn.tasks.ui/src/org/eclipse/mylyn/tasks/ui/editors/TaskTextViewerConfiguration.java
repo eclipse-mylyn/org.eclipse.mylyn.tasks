@@ -8,8 +8,11 @@
 
 package org.eclipse.mylyn.tasks.ui.editors;
 
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.runtime.IAdaptable;
@@ -17,8 +20,17 @@ import org.eclipse.jface.preference.JFacePreferences;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.TextAttribute;
 import org.eclipse.jface.text.TextPresentation;
+import org.eclipse.jface.text.contentassist.CompletionProposal;
+import org.eclipse.jface.text.contentassist.ContentAssistant;
+import org.eclipse.jface.text.contentassist.ContextInformation;
+import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.contentassist.IContentAssistProcessor;
+import org.eclipse.jface.text.contentassist.IContentAssistant;
+import org.eclipse.jface.text.contentassist.IContextInformation;
+import org.eclipse.jface.text.contentassist.IContextInformationValidator;
 import org.eclipse.jface.text.hyperlink.DefaultHyperlinkPresenter;
 import org.eclipse.jface.text.hyperlink.IHyperlink;
 import org.eclipse.jface.text.hyperlink.IHyperlinkPresenter;
@@ -33,8 +45,10 @@ import org.eclipse.jface.text.rules.RuleBasedScanner;
 import org.eclipse.jface.text.rules.SingleLineRule;
 import org.eclipse.jface.text.rules.Token;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.mylyn.internal.tasks.core.LocalTask;
 import org.eclipse.mylyn.internal.tasks.ui.TaskListColorsAndFonts;
 import org.eclipse.mylyn.internal.tasks.ui.editors.RepositoryTextViewer;
+import org.eclipse.mylyn.internal.tasks.ui.views.TaskActivationHistory;
 import org.eclipse.mylyn.tasks.core.AbstractTask;
 import org.eclipse.mylyn.tasks.core.TaskList;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
@@ -46,7 +60,6 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration;
-
 /**
  * @author Rob Elves
  * @since 2.1
@@ -235,4 +248,57 @@ public class TaskTextViewerConfiguration extends TextSourceViewerConfiguration {
 
 	}
 
+	public class TaskCompletionProcessor implements  IContentAssistProcessor {
+		public ICompletionProposal[] computeCompletionProposals(ITextViewer viewer, int offset) {
+			TaskActivationHistory taskHistory = TasksUiPlugin.getTaskListManager().getTaskActivationHistory();
+			List<AbstractTask> tasks = new ArrayList<AbstractTask>(taskHistory.getPreviousTasks());
+			ICompletionProposal[] result= new ICompletionProposal[tasks.size()];
+			int i = 0;
+			for (Iterator<AbstractTask> iterator = tasks.iterator(); iterator.hasNext();) {
+				AbstractTask abstractTask = iterator.next();
+				IContextInformation info= new ContextInformation(abstractTask.getSummary(), MessageFormat.format("<{0}>", new Object[] { abstractTask.getSummary() })); //$NON-NLS-1$
+				String aa;
+				if (abstractTask instanceof LocalTask) {
+					aa = "local: " + abstractTask.getSummary();
+				} else {
+					aa = "bug #"+ abstractTask.getTaskKey();
+				}
+				result[i++]= new CompletionProposal(aa, offset, 0, abstractTask.getSummary().length(), null, abstractTask.getSummary(), info, MessageFormat.format("<<{0}<<", new Object[] {abstractTask.getSummary()})); //$NON-NLS-1$			
+			}
+			return result;
+		}
+
+		public IContextInformation[] computeContextInformation(ITextViewer viewer, int offset) {
+			return null;
+		}
+
+		public char[] getCompletionProposalAutoActivationCharacters() {
+			// ignore
+			return null;
+		}
+
+		public char[] getContextInformationAutoActivationCharacters() {
+			return null;
+		}
+
+		public IContextInformationValidator getContextInformationValidator() {
+			// ignore
+			return null;
+		}
+
+		public String getErrorMessage() {
+			// ignore
+			return null;
+		}
+		
+	}
+	
+	@Override
+	public IContentAssistant getContentAssistant(ISourceViewer sourceViewer) {
+		ContentAssistant assistant= new ContentAssistant();
+		assistant.setContentAssistProcessor(new TaskCompletionProcessor(), IDocument.DEFAULT_CONTENT_TYPE);
+		return assistant;
+	}
+
+	
 }

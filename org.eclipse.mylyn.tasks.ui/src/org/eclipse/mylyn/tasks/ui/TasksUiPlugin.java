@@ -1078,6 +1078,9 @@ public class TasksUiPlugin extends AbstractUIPlugin {
 	}
 
 	private static String cleanValue(String value) {
+		if (value == null) {
+			return "";
+		}
 		String commentText = value.replaceAll("\\s", " ").trim();
 		if (commentText.length() > 60) {
 			commentText = commentText.substring(0, 55) + "...";

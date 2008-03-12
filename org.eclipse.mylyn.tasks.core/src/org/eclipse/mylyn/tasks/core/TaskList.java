@@ -329,7 +329,7 @@ public class TaskList {
 		}
 		
 		// ensure that we don't have loops
-		if(task.contains(container.getHandleIdentifier())){
+		if(container != null && task.contains(container.getHandleIdentifier())){
 			return;
 		}
 		

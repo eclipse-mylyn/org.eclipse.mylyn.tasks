@@ -2703,11 +2703,12 @@ public abstract class AbstractRepositoryTaskEditor extends TaskFormPage {
 	 * @Since 2.3
 	 */
 	private Section createSection(Composite composite, String title, boolean expandedState) {
-		Section section = toolkit.createSection(composite, ExpandableComposite.TITLE_BAR | Section.TWISTIE);
-		section.setText(title);
-		if (section.isExpanded() != expandedState) {
-			section.setExpanded(expandedState);
+		int flags = ExpandableComposite.TITLE_BAR | Section.TWISTIE;
+		if (expandedState) {
+			flags |= ExpandableComposite.EXPANDED;
 		}
+		Section section = toolkit.createSection(composite, flags);
+		section.setText(title);
 		section.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		return section;
 	}

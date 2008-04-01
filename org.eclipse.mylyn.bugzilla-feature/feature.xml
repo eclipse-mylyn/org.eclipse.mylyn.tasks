@@ -2,7 +2,7 @@
 <feature
       id="org.eclipse.mylyn.bugzilla_feature"
       label="Mylyn Connector: Bugzilla"
-      version="2.3.1.qualifier"
+      version="2.3.2.qualifier"
       provider-name="Eclipse.org"
       plugin="org.eclipse.mylyn">
 
@@ -135,14 +135,14 @@ Inc. in the United States, other countries, or both.
          id="org.eclipse.mylyn.bugzilla.core"
          download-size="0"
          install-size="0"
-         version="2.3.1.qualifier"
+         version="2.3.2.qualifier"
          unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.bugzilla.ui"
          download-size="0"
          install-size="0"
-         version="2.3.1.qualifier"
+         version="2.3.2.qualifier"
          unpack="false"/>
 
 </feature>

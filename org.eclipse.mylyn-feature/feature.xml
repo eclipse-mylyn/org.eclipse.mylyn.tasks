@@ -55,39 +55,39 @@ IT IS YOUR OBLIGATION TO READ AND ACCEPT ALL SUCH TERMS AND CONDITIONS PRIOR TO 
 Cryptography
 
 Content may contain encryption software. The country in which you are currently may have restrictions on the import, possession, and use, and/or re-export to another country, of encryption software. BEFORE using any encryption software, please check the country&apos;s laws, regulations and policies concerning the import, possession, or use, and re-export of encryption software, to see if this is permitted.
-
 Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in the United States, other countries, or both.
    </license>
 
    <url>
-      <update label="Mylyn for Eclipse 3.4" url="http://download.eclipse.org/tools/mylyn/update/e3.4"/>
+      <update label="Mylyn for Eclipse 3.3" url="http://download.eclipse.org/tools/mylyn/update/e3.3"/>
       <discovery label="Mylyn Extras" url="http://download.eclipse.org/tools/mylyn/update/extras"/>
-      <discovery label="Mylyn" url="http://download.eclipse.org/tools/mylyn/update/e3.4"/>
+      <discovery label="Mylyn" url="http://download.eclipse.org/tools/mylyn/update/e3.3"/>
    </url>
 
    <requires>
-      <import plugin="org.eclipse.ui" version="3.4.0.I20070918" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.ui" version="3.3.0.I20070503" match="greaterOrEqual"/>
       <import plugin="org.eclipse.ui.forms"/>
-      <import plugin="org.eclipse.mylyn.tasks.core"/>
-      <import plugin="org.eclipse.mylyn.tasks.ui"/>
       <import plugin="org.eclipse.core.runtime"/>
-      <import plugin="org.eclipse.mylyn"/>
-      <import plugin="org.eclipse.mylyn.monitor.core"/>
+      <import plugin="org.eclipse.core.expressions"/>
       <import plugin="org.eclipse.jface.text"/>
-      <import plugin="org.eclipse.mylyn.context.core"/>
       <import plugin="org.eclipse.update.core"/>
       <import plugin="org.eclipse.ui.browser"/>
       <import plugin="org.eclipse.ui.editors"/>
       <import plugin="org.eclipse.ui.views"/>
       <import plugin="org.eclipse.ui.workbench.texteditor"/>
-      <import plugin="org.eclipse.mylyn.monitor.ui"/>
       <import plugin="org.eclipse.core.resources"/>
       <import plugin="org.eclipse.ui.ide"/>
       <import plugin="org.eclipse.search"/>
+      <import plugin="org.eclipse.mylyn"/>
       <import plugin="org.eclipse.ui.net"/>
-      <import plugin="org.eclipse.mylyn.web.core"/>
       <import plugin="org.eclipse.core.net"/>
-      <import plugin="org.eclipse.core.expressions"/>
+      <import plugin="org.eclipse.mylyn.tasks.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.tasks.ui" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.monitor.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.context.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.monitor.ui" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.mylyn.web.core" version="2.3.0" match="compatible"/>
+      <import plugin="org.eclipse.compare"/>
    </requires>
 
    <plugin

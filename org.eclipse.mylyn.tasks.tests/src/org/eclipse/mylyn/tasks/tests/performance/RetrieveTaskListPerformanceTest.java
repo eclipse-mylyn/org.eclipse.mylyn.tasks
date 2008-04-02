@@ -18,10 +18,9 @@ import org.eclipse.mylyn.tasks.ui.TasksUiPlugin;
 import org.eclipse.test.performance.PerformanceTestCase;
 
 /**
- * @author Steffen Pingel
  * @author Jingwen Ou
  */
-public class TaskListPerformanceTest extends PerformanceTestCase {
+public class RetrieveTaskListPerformanceTest extends PerformanceTestCase {
 
 	private static final String TASK_LIST_4000 = "testdata/performance/tasklist-4000.xml.zip";
 
@@ -36,6 +35,10 @@ public class TaskListPerformanceTest extends PerformanceTestCase {
 		taskListManager = TasksUiPlugin.getTaskListManager();
 		taskList = taskListManager.getTaskList();
 		taskList.reset();
+
+		final File file = TaskTestUtil.getLocalFile(TASK_LIST_4000);
+		final TaskListWriter taskListWriter = taskListManager.getTaskListWriter();
+		taskListWriter.readTaskList(taskList, file, TasksUiPlugin.getTaskDataManager());
 	}
 
 	@Override
@@ -45,47 +48,32 @@ public class TaskListPerformanceTest extends PerformanceTestCase {
 		taskList.reset();
 	}
 
-	public void testReadTasksWith4000Tasks() {
-		final File file = TaskTestUtil.getLocalFile(TASK_LIST_4000);
-		final TaskListWriter taskListWriter = taskListManager.getTaskListWriter();
-
+	public void testRetrieveQueriesWith4000Tasks() {
 		for (int i = 0; i < 10; i++) {
 			startMeasuring();
-			taskListWriter.readTasks(file);
+			taskList.getQueries();
 			stopMeasuring();
-			taskList.reset();
 		}
 
 		commitMeasurements();
 		assertPerformance();
 	}
 
-	public void testReadTaskListWith4000Tasks() {
-		final File file = TaskTestUtil.getLocalFile(TASK_LIST_4000);
-		final TaskListWriter taskListWriter = taskListManager.getTaskListWriter();
-
+	public void testRetrieveActiveTasksWith4000Tasks() {
 		for (int i = 0; i < 10; i++) {
 			startMeasuring();
-			taskListWriter.readTaskList(taskList, file, TasksUiPlugin.getTaskDataManager());
+			taskList.getRepositoryTasks("https://bugs.eclipse.org/bugs");
 			stopMeasuring();
-			taskList.reset();
 		}
 
 		commitMeasurements();
 		assertPerformance();
 	}
 
-	public void testWriteTaskListWith4000Tasks() throws Exception {
-		final File file = TaskTestUtil.getLocalFile(TASK_LIST_4000);
-		final TaskListWriter taskListWriter = taskListManager.getTaskListWriter();
-		taskListWriter.readTaskList(taskList, file, TasksUiPlugin.getTaskDataManager());
-		
-		final File outputFile = File.createTempFile("mylyn", null);
-		outputFile.deleteOnExit();
-		
+	public void testRetrieveTasksWith4000Tasks() {
 		for (int i = 0; i < 10; i++) {
 			startMeasuring();
-			taskListWriter.writeTaskList(taskList, outputFile);
+			taskList.getAllTasks();
 			stopMeasuring();
 		}
 

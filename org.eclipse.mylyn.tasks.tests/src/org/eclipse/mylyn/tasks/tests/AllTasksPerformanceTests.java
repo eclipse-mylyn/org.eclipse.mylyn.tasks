@@ -8,16 +8,18 @@
 
 package org.eclipse.mylyn.tasks.tests;
 
-import org.eclipse.mylyn.tasks.tests.performance.TaskContainerTest;
-import org.eclipse.mylyn.tasks.tests.performance.TaskListPerformanceTest;
-
 import junit.framework.Test;
 import junit.framework.TestSuite;
+
+import org.eclipse.mylyn.tasks.tests.performance.ActivateTaskPerformanceTest;
+import org.eclipse.mylyn.tasks.tests.performance.TaskContainerTest;
+import org.eclipse.mylyn.tasks.tests.performance.TaskListPerformanceTest;
 
 public class AllTasksPerformanceTests {
 
 	public static Test suite() {
 		TestSuite suite = new TestSuite("Test for org.eclipse.mylyn.tests.performance");
+		suite.addTestSuite(ActivateTaskPerformanceTest.class);
 		suite.addTestSuite(TaskContainerTest.class);
 		suite.addTestSuite(TaskListPerformanceTest.class);
 		return suite;

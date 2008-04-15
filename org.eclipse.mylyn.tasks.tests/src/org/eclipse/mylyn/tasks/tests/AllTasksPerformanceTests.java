@@ -15,10 +15,13 @@ import org.eclipse.mylyn.tasks.tests.performance.ActivateTaskPerformanceTest;
 import org.eclipse.mylyn.tasks.tests.performance.TaskContainerTest;
 import org.eclipse.mylyn.tasks.tests.performance.TaskListPerformanceTest;
 
+/**
+ * @author Steffen Pingel
+ */
 public class AllTasksPerformanceTests {
 
 	public static Test suite() {
-		TestSuite suite = new TestSuite("Test for org.eclipse.mylyn.tests.performance");
+		TestSuite suite = new TestSuite("Performance tests for org.eclipse.mylyn.tests.performance");
 		suite.addTestSuite(ActivateTaskPerformanceTest.class);
 		suite.addTestSuite(TaskContainerTest.class);
 		suite.addTestSuite(TaskListPerformanceTest.class);

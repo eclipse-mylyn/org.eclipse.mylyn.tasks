@@ -8,7 +8,7 @@
         <objectContribution
               adaptable="false"
               id="org.eclipse.mylyn.tasks.bugs.objectContribution"
-              objectClass="org.eclipse.ui.internal.views.log.LogEntry">
+              objectClass="org.eclipse.pde.internal.runtime.logview.LogEntry">
 			<action
 		         class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromErrorAction"
 		         enablesFor="1"

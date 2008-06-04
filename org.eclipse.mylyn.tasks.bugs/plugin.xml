@@ -5,19 +5,16 @@
    <extension-point id="taskContributors" name="Task Contributors" schema="schema/taskContributors.exsd"/>
    
    <extension point="org.eclipse.ui.popupMenus">
-        <objectContribution
-              adaptable="false"
-              id="org.eclipse.mylyn.tasks.bugs.objectContribution"
-              objectClass="org.eclipse.pde.internal.runtime.logview.LogEntry">
-			<action
-		         class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromErrorAction"
-		         enablesFor="1"
-		         icon="icons/etool16/task-repository-new.gif"
-		         menubarPath="org.eclipse.pde.runtime.LogView"
-		         id="org.eclipse.mylyn.tasklist.actions.newTaskFromErrorLog"
-		         label="Report as Bug">
-             </action>
-        </objectContribution>
+        <viewerContribution
+		    id="org.eclipse.mylyn.bugzilla.ide.log.contribution"
+            targetID="org.eclipse.pde.runtime.LogView">
+      	<action
+      		class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromErrorAction"
+         	icon="icons/etool16/task-repository-new.gif"
+         	menubarPath="org.eclipse.pde.runtime.LogView"
+         	id="org.eclipse.mylyn.tasklist.actions.newTaskFromErrorLog"
+         	label="Report as Bug"/>
+      </viewerContribution>
    </extension>
    
    <extension

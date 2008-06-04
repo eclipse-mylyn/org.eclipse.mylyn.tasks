@@ -15,12 +15,16 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin;
 import org.eclipse.pde.internal.runtime.logview.LogEntry;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.IObjectActionDelegate;
-import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.IViewActionDelegate;
+import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.PlatformUI;
 
 /**
@@ -29,11 +33,11 @@ import org.eclipse.ui.PlatformUI;
  * @author Jeff Pound
  * @author Steffen Pingel
  */
-public class NewTaskFromErrorAction implements IObjectActionDelegate {
+public class NewTaskFromErrorAction implements IViewActionDelegate, ISelectionChangedListener {
 
 	public static final String ID = "org.eclipse.mylyn.tasklist.ui.repositories.actions.create";
 
-	private LogEntry entry;
+	private TreeViewer treeViewer;
 
 	/**
 	 * Fills a {@link StringBuilder} with {@link LogEntry} information, optionally including subentries too
@@ -87,6 +91,15 @@ public class NewTaskFromErrorAction implements IObjectActionDelegate {
 	}
 
 	public void run() {
+		TreeItem[] items = treeViewer.getTree().getSelection();
+		LogEntry entry = null;
+		if (items.length > 0) {
+			entry = (LogEntry) items[0].getData();
+		}
+		if (entry == null) {
+			return;
+		}
+
 		createTask(entry);
 	}
 
@@ -94,14 +107,19 @@ public class NewTaskFromErrorAction implements IObjectActionDelegate {
 		run();
 	}
 
-	public void selectionChanged(IAction action, ISelection selection) {
-		Object object = ((IStructuredSelection) selection).getFirstElement();
-		if (object instanceof LogEntry) {
-			entry = (LogEntry) object;
-		}
+	public void init(IViewPart view) {
+		ISelectionProvider sp = view.getViewSite().getSelectionProvider();
+		sp.addSelectionChangedListener(this);
+		sp.setSelection(sp.getSelection());
 	}
 
-	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
+	public void selectionChanged(IAction action, ISelection selection) {
+		// this selection is always empty? explicitly register a listener in
+		// init() instead
+	}
+
+	public void selectionChanged(SelectionChangedEvent event) {
+		treeViewer = (TreeViewer) event.getSource();
 	}
 
 }

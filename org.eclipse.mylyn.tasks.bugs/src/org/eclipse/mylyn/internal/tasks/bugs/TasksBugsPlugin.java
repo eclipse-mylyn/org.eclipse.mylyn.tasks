@@ -21,7 +21,7 @@ import org.osgi.framework.BundleContext;
  */
 public class TasksBugsPlugin extends AbstractUIPlugin {
 
-	public static class Reporter extends AbstractErrorReporter {
+	public static class BugReporter extends AbstractErrorReporter {
 
 		@Override
 		public int getPriority(IStatus status) {

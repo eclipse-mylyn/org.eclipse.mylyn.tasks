@@ -16,15 +16,6 @@
          	label="Report as Bug"/>
       </viewerContribution>
    </extension>
-   
-   <extension
-         point="org.eclipse.mylyn.commons.core.errorReporters">
-      <errorReporter
-            class="org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin$Reporter"
-            id="org.eclipse.mylyn.tasks.bugs.errorReporter"
-            label="Report Error as Bug">
-      </errorReporter>
-   </extension>    
 
    <extension point="org.eclipse.ui.actionSets">
 		<actionSet

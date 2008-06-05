@@ -11,14 +11,10 @@ package org.eclipse.mylyn.internal.tasks.bugs;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.mylyn.internal.tasks.core.deprecated.DefaultTaskSchema;
-import org.eclipse.mylyn.internal.tasks.core.deprecated.RepositoryTaskData;
-import org.eclipse.mylyn.internal.tasks.core.deprecated.TaskSelection;
 import org.eclipse.mylyn.internal.tasks.ui.util.TasksUiInternal;
 import org.eclipse.mylyn.tasks.core.ITaskMapping;
 import org.eclipse.mylyn.tasks.core.TaskMapping;
@@ -30,7 +26,6 @@ import org.eclipse.mylyn.tasks.ui.TasksUi;
 /**
  * @author Steffen Pingel
  */
-@SuppressWarnings("deprecation")
 public class AttributeTaskMapper {
 
 	private final Map<String, String> attributes;
@@ -56,24 +51,6 @@ public class AttributeTaskMapper {
 		return taskRepository;
 	}
 
-	public TaskSelection createTaskSelection() {
-		TaskSelection selection = new TaskSelection("", "");
-		applyTo(selection.getLegacyTaskData());
-		return selection;
-	}
-
-	public void applyTo(RepositoryTaskData taskData) {
-		DefaultTaskSchema schema = new DefaultTaskSchema(taskData);
-		for (Entry<String, String> entry : attributes.entrySet()) {
-			if (IRepositoryConstants.PRODUCT.equals(entry.getKey())) {
-				schema.setProduct(entry.getValue());
-			} else if (IRepositoryConstants.COMPONENT.equals(entry.getKey())) {
-				schema.setComponent(entry.getValue());
-			}
-		}
-	}
-
-	@SuppressWarnings("restriction")
 	public TaskData createTaskData(IProgressMonitor monitor) throws CoreException {
 		ITaskMapping taskMapping = getTaskMapping();
 		return TasksUiInternal.createTaskData(getTaskRepository(), taskMapping, taskMapping, monitor);
@@ -93,7 +70,7 @@ public class AttributeTaskMapper {
 		}
 
 		@Override
-		public void copyFrom(ITaskMapping source) {
+		public void merge(ITaskMapping source) {
 		}
 
 		@Override

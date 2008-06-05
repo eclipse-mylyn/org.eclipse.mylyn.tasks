@@ -34,10 +34,9 @@ public class ReportErrorWizard extends Wizard {
 		this.taskErrorReporter = taskErrorReporter;
 		this.status = status;
 		this.mapper = taskErrorReporter.preProcess(status);
-		setWindowTitle("Report Error");
+		setWindowTitle("Report as Bug");
 	}
 
-	@SuppressWarnings("restriction")
 	@Override
 	public void addPages() {
 		reportErrorPage = new ReportErrorPage(mapper, status);

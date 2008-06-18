@@ -21,11 +21,9 @@ import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.internal.tasks.bugs.wizards.ErrorLogStatus;
 import org.eclipse.pde.internal.runtime.logview.LogEntry;
 import org.eclipse.pde.internal.runtime.logview.LogSession;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IViewActionDelegate;
 import org.eclipse.ui.IViewPart;
-import org.eclipse.ui.PlatformUI;
 
 /**
  * Creates a new task from the selected error log entry.
@@ -75,17 +73,16 @@ public class NewTaskFromErrorAction implements IViewActionDelegate, ISelectionCh
 	}
 
 	private void createTask(LogEntry entry) {
-		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-		boolean includeChildren = false;
-
 		// FIXME reenable
+//		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+//		boolean includeChildren = false;
+//
 //		if (entry.hasChildren()
 //				&& MessageDialog.openQuestion(shell, "Report Bug", "Include children of this entry in the report?")) {
 //			includeChildren = true;
 //		}
-
-		StringBuilder sb = new StringBuilder();
-		buildDescriptionFromLogEntry(entry, sb, includeChildren);
+//		StringBuilder sb = new StringBuilder();
+//		buildDescriptionFromLogEntry(entry, sb, includeChildren);
 
 		ErrorLogStatus status = new ErrorLogStatus(entry.getSeverity(), entry.getPluginId(), entry.getCode(),
 				entry.getMessage());

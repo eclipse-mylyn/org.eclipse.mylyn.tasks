@@ -32,5 +32,13 @@
               tooltip="Report Bug or Enhancement"/> 
     	</actionSet>
    </extension>
-  
+
+   <extension
+         point="org.eclipse.mylyn.commons.core.errorReporters">
+      <errorReporter
+            class="org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin$BugReporter"
+            id="org.eclipse.mylyn.tasks.bugs.taskReporter"
+            label="Report Bug">
+      </errorReporter>
+   </extension>  
 </plugin>

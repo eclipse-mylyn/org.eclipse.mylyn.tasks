@@ -11,16 +11,16 @@
 
 package org.eclipse.mylyn.internal.tasks.bugs.actions;
 
-import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.IAction;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin;
+import org.eclipse.mylyn.commons.core.StatusHandler;
+import org.eclipse.mylyn.internal.tasks.bugs.wizards.ErrorLogStatus;
 import org.eclipse.pde.internal.runtime.logview.LogEntry;
+import org.eclipse.pde.internal.runtime.logview.LogSession;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IViewActionDelegate;
@@ -78,16 +78,24 @@ public class NewTaskFromErrorAction implements IViewActionDelegate, ISelectionCh
 		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 		boolean includeChildren = false;
 
-		if (entry.hasChildren()
-				&& MessageDialog.openQuestion(shell, "Report Bug", "Include children of this entry in the report?")) {
-			includeChildren = true;
-		}
+		// FIXME reenable
+//		if (entry.hasChildren()
+//				&& MessageDialog.openQuestion(shell, "Report Bug", "Include children of this entry in the report?")) {
+//			includeChildren = true;
+//		}
 
 		StringBuilder sb = new StringBuilder();
 		buildDescriptionFromLogEntry(entry, sb, includeChildren);
 
-		Status status = new Status(entry.getSeverity(), entry.getPluginId(), entry.getMessage());
-		TasksBugsPlugin.getTaskErrorReporter().handle(status);
+		ErrorLogStatus status = new ErrorLogStatus(entry.getSeverity(), entry.getPluginId(), entry.getCode(),
+				entry.getMessage());
+		status.setDate(entry.getDate());
+		status.setStack(entry.getStack());
+		LogSession session = entry.getSession();
+		if (session != null) {
+			status.setLogSessionData(session.getSessionData());
+		}
+		StatusHandler.fail(status);
 	}
 
 	public void run() {

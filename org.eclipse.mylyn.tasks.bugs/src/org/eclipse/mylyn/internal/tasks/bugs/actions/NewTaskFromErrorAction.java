@@ -17,7 +17,7 @@ import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.mylyn.commons.core.StatusHandler;
+import org.eclipse.mylyn.internal.commons.core.ErrorReporterManager;
 import org.eclipse.mylyn.internal.tasks.bugs.wizards.ErrorLogStatus;
 import org.eclipse.pde.internal.runtime.logview.LogEntry;
 import org.eclipse.pde.internal.runtime.logview.LogSession;
@@ -92,7 +92,7 @@ public class NewTaskFromErrorAction implements IViewActionDelegate, ISelectionCh
 		if (session != null) {
 			status.setLogSessionData(session.getSessionData());
 		}
-		StatusHandler.fail(status);
+		new ErrorReporterManager().fail(status);
 	}
 
 	public void run() {

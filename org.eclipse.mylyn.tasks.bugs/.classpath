@@ -3,7 +3,7 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins">
 		<accessrules>
-			<accessrule kind="accessible" pattern="org/eclipse/ui/internal/views/log/*"/>
+			<accessrule kind="accessible" pattern="org/eclipse/pde/internal/runtime/logview/*"/>
 			<accessrule kind="accessible" pattern="org/eclipse/mylyn/internal/tasks/ui/**"/>
 		</accessrules>
 	</classpathentry>

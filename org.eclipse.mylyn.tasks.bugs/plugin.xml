@@ -13,32 +13,33 @@
          	icon="icons/etool16/task-repository-new.gif"
          	menubarPath="org.eclipse.pde.runtime.LogView"
          	id="org.eclipse.mylyn.tasklist.actions.newTaskFromErrorLog"
-         	label="Report as Bug"/>
+         	label="%NewTaskFromErrorAction.label"/>
       </viewerContribution>
    </extension>
 
    <extension point="org.eclipse.ui.actionSets">
 		<actionSet
             id="org.eclipse.mylyn.doc.actionSet"
-            label="Tasks Help"
+            label="%actionSet.label"
             visible="true"> 
         <action
               class="org.eclipse.mylyn.internal.tasks.bugs.actions.ReportBugAction"
               icon="icons/etool16/report-bug.gif"
               id="org.eclipse.mylyn.tasks.ui.bug.report"
-              label="Report Bug or Enhancement..."
+              label="%ReportBugAction.label"
               menubarPath="help/helpStart"
               style="push"
-              tooltip="Report Bug or Enhancement"/> 
+              tooltip="%ReportBugAction.tooltip"/> 
     	</actionSet>
    </extension>
-
+  
    <extension
          point="org.eclipse.mylyn.commons.core.errorReporters">
       <errorReporter
             class="org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin$BugReporter"
             id="org.eclipse.mylyn.tasks.bugs.taskReporter"
-            label="Report Bug">
+            label="%BugReporter.label">
       </errorReporter>
-   </extension>  
+   </extension>
+  
 </plugin>

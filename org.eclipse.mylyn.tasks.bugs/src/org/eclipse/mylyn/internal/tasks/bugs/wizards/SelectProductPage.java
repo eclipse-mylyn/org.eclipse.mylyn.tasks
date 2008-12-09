@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2008 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,6 +19,7 @@ import java.util.Map;
 import org.eclipse.core.runtime.IBundleGroup;
 import org.eclipse.core.runtime.IBundleGroupProvider;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -52,7 +53,7 @@ public class SelectProductPage extends WizardPage {
 
 	private static final int TABLE_HEIGHT = 200;
 
-	private static final String DEFAULT_CATEGORY = "Other";
+	private static final String DEFAULT_CATEGORY = Messages.SelectProductPage_Other;
 
 	private ImageRegistry imageRegistry;
 
@@ -63,7 +64,7 @@ public class SelectProductPage extends WizardPage {
 	public SelectProductPage(String pageName, PluginRepositoryMappingManager manager) {
 		super(pageName);
 		this.manager = manager;
-		setTitle("Select a product");
+		setTitle(Messages.SelectProductPage_SELECT_PRODUCT);
 	}
 
 	@Override
@@ -115,11 +116,11 @@ public class SelectProductPage extends WizardPage {
 				if (element instanceof FeatureGroup) {
 					FeatureGroup product = (FeatureGroup) element;
 					if (product.getTitle() != null) {
-						return product.getName() + "\n  " + product.getTitle();
+						return product.getName() + "\n  " + product.getTitle(); //$NON-NLS-1$
 					}
 					return product.getName();
 				}
-				return "";
+				return ""; //$NON-NLS-1$
 			}
 
 		});
@@ -173,6 +174,7 @@ public class SelectProductPage extends WizardPage {
 		});
 
 		setControl(composite);
+		Dialog.applyDialogFont(composite);
 	}
 
 	@Override
@@ -186,7 +188,7 @@ public class SelectProductPage extends WizardPage {
 	@Override
 	public IWizardPage getNextPage() {
 		if (canFlipToNextPage()) {
-			SelectFeaturePage page = new SelectFeaturePage("selectBundle", getSelectedBundleGroups());
+			SelectFeaturePage page = new SelectFeaturePage("selectBundle", getSelectedBundleGroups()); //$NON-NLS-1$
 			page.setWizard(getWizard());
 			return page;
 		}

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2008 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,7 +11,10 @@
 
 package org.eclipse.mylyn.internal.tasks.bugs.wizards;
 
+import java.text.MessageFormat;
+
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.mylyn.internal.tasks.bugs.AttributeTaskMapper;
@@ -37,11 +40,12 @@ public class ReportErrorPage extends WizardPage {
 	protected TaskRepository taskRepository;
 
 	public ReportErrorPage(AttributeTaskMapper mapper, IStatus status) {
-		super("reportError");
+		super("reportError"); //$NON-NLS-1$
 		this.mapper = mapper;
 		this.status = status;
-		setTitle("Report as Bug");
-		setMessage("An unexpected error has occured in plug-in " + status.getPlugin() + "");
+		setTitle(Messages.ReportErrorPage_Report_as_Bug);
+		setMessage(MessageFormat.format(Messages.ReportErrorPage_AN_UNEXPETED_ERROR_HAS_OCCURED_IN_PLUGIN,
+				status.getPlugin()));
 	}
 
 	public void createControl(Composite parent) {
@@ -54,7 +58,7 @@ public class ReportErrorPage extends WizardPage {
 //		errorGroup.setLayout(new GridLayout(1, true));
 
 		Label label = new Label(composite, SWT.NONE);
-		label.setText("Details:");
+		label.setText(Messages.ReportErrorPage_Details);
 
 		Text text = new Text(composite, SWT.MULTI | SWT.READ_ONLY | SWT.V_SCROLL | SWT.WRAP | SWT.BORDER);
 		text.setText(status.getMessage());
@@ -65,11 +69,12 @@ public class ReportErrorPage extends WizardPage {
 
 		if (mapper.isMappingComplete()) {
 			final Button defaultRepositoryButton = new Button(composite, SWT.RADIO);
-			defaultRepositoryButton.setText("Report to: " + mapper.getTaskRepository().getRepositoryLabel());
+			defaultRepositoryButton.setText(Messages.ReportErrorPage_Report_to_
+					+ mapper.getTaskRepository().getRepositoryLabel());
 			defaultRepositoryButton.setSelection(true);
 
 			final Button selectRepositoryButton = new Button(composite, SWT.RADIO);
-			selectRepositoryButton.setText("Select repository");
+			selectRepositoryButton.setText(Messages.ReportErrorPage_Select_repository);
 
 			defaultRepositoryButton.addSelectionListener(new SelectionAdapter() {
 				@Override
@@ -98,6 +103,7 @@ public class ReportErrorPage extends WizardPage {
 			taskRepository = null;
 		}
 		setControl(composite);
+		Dialog.applyDialogFont(composite);
 	}
 
 	@Override

@@ -102,11 +102,13 @@ public interface IBugzillaConstants {
 
 	/** Supported bugzilla repository versions */
 	static public enum BugzillaServerVersion {
-		SERVER_218, SERVER_220, SERVER_222, SERVER_30;
+		SERVER_218, SERVER_220, SERVER_222, SERVER_30, SERVER_32;
 
 		@Override
 		public String toString() {
 			switch (this) {
+			case SERVER_32:
+				return "3.2";
 			case SERVER_30:
 				return "3.0";
 			case SERVER_222:
@@ -122,6 +124,9 @@ public interface IBugzillaConstants {
 
 		/** returns null if version string unknown* */
 		static public BugzillaServerVersion fromString(String version) {
+			if (version.equals(SERVER_32.toString())) {
+				return SERVER_32;
+			}
 			if (version.equals(SERVER_30.toString())) {
 				return SERVER_30;
 			}

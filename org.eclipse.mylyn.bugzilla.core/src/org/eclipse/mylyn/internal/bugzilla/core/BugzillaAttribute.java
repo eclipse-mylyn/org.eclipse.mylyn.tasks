@@ -151,6 +151,8 @@ public enum BugzillaAttribute {
 
 	NEW_COMMENT("new comment", "new_comment", TaskAttribute.TYPE_LONG_RICH_TEXT, true, false),
 
+	TOKEN("token", "token", null, true, true), //$NON-NLS-1$ //$NON-NLS-2$
+
 	// Used by search engine
 	LI("used by search engine", "li", null, true, false),
 

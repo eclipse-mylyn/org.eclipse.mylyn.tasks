@@ -166,7 +166,7 @@ public class BugzillaClient {
 
 	protected String characterEncoding;
 
-	private boolean authenticated;
+	private boolean loggedIn;
 
 	private final Map<String, String> configParameters;
 
@@ -254,7 +254,7 @@ public class BugzillaClient {
 
 		for (int attempt = 0; attempt < 2; attempt++) {
 			// force authentication
-			if (!authenticated && hasAuthenticationCredentials()) {
+			if (!loggedIn && hasAuthenticationCredentials()) {
 				authenticate(monitor);
 			}
 
@@ -292,10 +292,10 @@ public class BugzillaClient {
 				getMethod.getResponseBodyNoop();
 				// login or reauthenticate due to an expired session
 				getMethod.releaseConnection();
-				authenticated = false;
+				loggedIn = false;
 				authenticate(monitor);
 			} else if (code == HttpURLConnection.HTTP_PROXY_AUTH) {
-				authenticated = false;
+				loggedIn = false;
 				getMethod.getResponseBodyNoop();
 				getMethod.releaseConnection();
 				throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -316,12 +316,12 @@ public class BugzillaClient {
 
 	public void logout(IProgressMonitor monitor) throws IOException, CoreException {
 		monitor = Policy.monitorFor(monitor);
-		authenticated = true;
+		loggedIn = true;
 		String loginUrl = repositoryUrl + "/relogin.cgi";
 		GzipGetMethod method = null;
 		try {
 			method = getConnect(loginUrl, monitor);
-			authenticated = false;
+			loggedIn = false;
 			httpClient.getState().clearCookies();
 		} finally {
 			if (method != null) {
@@ -351,13 +351,14 @@ public class BugzillaClient {
 	}
 
 	public void authenticate(IProgressMonitor monitor) throws CoreException {
-		monitor = Policy.monitorFor(monitor);
 		if (!hasAuthenticationCredentials()) {
-			authenticated = false;
+			loggedIn = false;
 			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 					RepositoryStatus.ERROR_REPOSITORY_LOGIN, repositoryUrl.toString(),
 					"Authentication credentials missing."));
 		}
+
+		monitor = Policy.monitorFor(monitor);
 
 		GzipPostMethod postMethod = null;
 
@@ -389,7 +390,7 @@ public class BugzillaClient {
 
 			int code = WebUtil.execute(httpClient, hostConfiguration, postMethod, monitor);
 			if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
-				authenticated = false;
+				loggedIn = false;
 				postMethod.getResponseBodyNoop();
 				postMethod.releaseConnection();
 				throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -397,7 +398,7 @@ public class BugzillaClient {
 						"HTTP authentication failed."));
 
 			} else if (code == HttpURLConnection.HTTP_PROXY_AUTH) {
-				authenticated = false;
+				loggedIn = false;
 				postMethod.getResponseBodyNoop();
 				postMethod.releaseConnection();
 				throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -405,7 +406,7 @@ public class BugzillaClient {
 						"Proxy authentication required"));
 
 			} else if (code != HttpURLConnection.HTTP_OK) {
-				authenticated = false;
+				loggedIn = false;
 				postMethod.getResponseBodyNoop();
 				postMethod.releaseConnection();
 				throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -415,12 +416,12 @@ public class BugzillaClient {
 			if (hasAuthenticationCredentials()) {
 				for (Cookie cookie : httpClient.getState().getCookies()) {
 					if (cookie.getName().equals(COOKIE_BUGZILLA_LOGIN)) {
-						authenticated = true;
+						loggedIn = true;
 						break;
 					}
 				}
 
-				if (!authenticated) {
+				if (!loggedIn) {
 					InputStream input = getResponseStream(postMethod, monitor);
 					try {
 						parseHtmlError(input);
@@ -430,7 +431,7 @@ public class BugzillaClient {
 				}
 			} else {
 				// anonymous login
-				authenticated = true;
+				loggedIn = true;
 			}
 		} catch (IOException e) {
 			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -468,7 +469,9 @@ public class BugzillaClient {
 		GzipPostMethod postMethod = null;
 
 		try {
-
+			if (!loggedIn && hasAuthenticationCredentials()) {
+				authenticate(new SubProgressMonitor(monitor, 1));
+			}
 			String queryUrl = query.getUrl();
 			int start = queryUrl.indexOf('?');
 
@@ -599,7 +602,7 @@ public class BugzillaClient {
 									} else {
 										if (attempt == 0) {
 											// empty configuration, retry authenticate
-											authenticated = false;
+											loggedIn = false;
 											break;
 										} else {
 											throw new CoreException(
@@ -612,7 +615,7 @@ public class BugzillaClient {
 						}
 
 					}
-					if (authenticated) {
+					if (loggedIn) {
 						parseHtmlError(stream);
 						return null;
 					}
@@ -656,7 +659,7 @@ public class BugzillaClient {
 		Assert.isNotNull(contentType);
 
 		hostConfiguration = WebUtil.createHostConfiguration(httpClient, location, monitor);
-		if (!authenticated && hasAuthenticationCredentials()) {
+		if (!loggedIn && hasAuthenticationCredentials()) {
 			authenticate(monitor);
 		}
 		GzipPostMethod postMethod = null;
@@ -729,7 +732,7 @@ public class BugzillaClient {
 		GzipPostMethod postMethod = null;
 		monitor = Policy.monitorFor(monitor);
 		hostConfiguration = WebUtil.createHostConfiguration(httpClient, location, monitor);
-		if (!authenticated && hasAuthenticationCredentials()) {
+		if (!loggedIn && hasAuthenticationCredentials()) {
 			authenticate(monitor);
 		}
 
@@ -765,6 +768,11 @@ public class BugzillaClient {
 		String postfix = null;
 		String postfix2 = null;
 		monitor = Policy.monitorFor(monitor);
+
+		if (!loggedIn && hasAuthenticationCredentials()) {
+			authenticate(monitor);
+		}
+
 		if (taskData == null) {
 			return null;
 		} else if (taskData.isNew()) {
@@ -804,7 +812,6 @@ public class BugzillaClient {
 			String title = "";
 
 			for (Token token = tokenizer.nextToken(); token.getType() != Token.EOF; token = tokenizer.nextToken()) {
-
 				if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.TITLE
 						&& !((HtmlTag) (token.getValue())).isEndTag()) {
 					isTitle = true;
@@ -874,7 +881,7 @@ public class BugzillaClient {
 				return new RepositoryResponse(ResponseKind.TASK_UPDATED, taskData.getTaskId());
 			}
 		} catch (ParseException e) {
-			authenticated = false;
+			loggedIn = false;
 			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 					RepositoryStatus.ERROR_INTERNAL, "Unable to parse response from " + repositoryUrl.toString() + "."));
 		} finally {
@@ -968,11 +975,15 @@ public class BugzillaClient {
 		// go through all of the attributes and add them to the bug post
 		Collection<TaskAttribute> attributes = model.getRoot().getAttributes().values();
 		Iterator<TaskAttribute> itr = attributes.iterator();
+		boolean tokenFound = false;
+		boolean tokenRequired = false;
 		while (itr.hasNext()) {
 			TaskAttribute a = itr.next();
 
 			if (a == null) {
 				continue;
+			} else if (a.getId().equalsIgnoreCase(BugzillaAttribute.TOKEN.getKey())) {
+				tokenFound = true;
 			} else if (a.getId().equals(BugzillaAttribute.QA_CONTACT.getKey())
 					|| a.getId().equals(BugzillaAttribute.ASSIGNED_TO.getKey())) {
 				cleanIfShortLogin(a);
@@ -1075,6 +1086,8 @@ public class BugzillaClient {
 				}
 			}
 		} else {
+			// A token is required for bugzilla 3.2.1 and newer
+			tokenRequired = bugzillaVersion.compareTo("3.2") > 0;
 			String fieldName = BugzillaAttribute.BUG_STATUS.getKey();
 			TaskAttribute attributeStatus = model.getRoot().getMappedAttribute(TaskAttribute.STATUS);
 			TaskAttribute attributeOperation = model.getRoot().getMappedAttribute(TaskAttribute.OPERATION);
@@ -1169,21 +1182,36 @@ public class BugzillaClient {
 			}
 		}
 
-		if (groupSecurityEnabled) {
-			// get security info from html and include in post
-			Map<String, String> groupIds = getGroupSecurityInformation(model, monitor);
-			for (String key : groupIds.keySet()) {
-				fields.put(key, new NameValuePair(key, groupIds.get(key)));
-			}
+		// check for security token (required for successful submit on Bugzilla 3.2.1 and greater but not in xml until Bugzilla 3.2.3  bug#263318)
 
+		if (groupSecurityEnabled || (!tokenFound && tokenRequired)) {
+			// get security and token if exists from html and include in post
+			HtmlInformation htmlInfo = getHtmlOnlyInformation(model, monitor);
+
+			if (groupSecurityEnabled) {
+				for (String key : htmlInfo.getGroups().keySet()) {
+					fields.put(key, new NameValuePair(key, htmlInfo.getGroups().get(key)));
+				}
+			}
+			if (htmlInfo.getToken() != null && htmlInfo.getToken().length() > 0 && tokenRequired) {
+				NameValuePair tokenPair = fields.get(BugzillaAttribute.TOKEN.getKey());
+				if (tokenPair != null) {
+					tokenPair.setValue(htmlInfo.getToken());
+				} else {
+					fields.put(BugzillaAttribute.TOKEN.getKey(), new NameValuePair(BugzillaAttribute.TOKEN.getKey(),
+							htmlInfo.getToken()));
+				}
+			}
 		}
 		return fields.values().toArray(new NameValuePair[fields.size()]);
 
 	}
 
-	private Map<String, String> getGroupSecurityInformation(TaskData taskData, IProgressMonitor monitor)
-			throws CoreException {
-		Map<String, String> groupSecurityInformation = new HashMap<String, String>();
+	private HtmlInformation getHtmlOnlyInformation(TaskData taskData, IProgressMonitor monitor) throws CoreException {
+		HtmlInformation htmlInfo = new HtmlInformation();
+		if (!loggedIn && hasAuthenticationCredentials()) {
+			authenticate(new SubProgressMonitor(monitor, 1));
+		}
 		hostConfiguration = WebUtil.createHostConfiguration(httpClient, location, monitor);
 
 		String bugUrl = taskData.getRepositoryUrl() + IBugzillaConstants.URL_GET_SHOW_BUG + taskData.getTaskId();
@@ -1208,8 +1236,13 @@ public class BugzillaClient {
 						String id = tag.getAttribute("id");
 						String checkedValue = tag.getAttribute("checked");
 						String type = tag.getAttribute("type");
+						String name = tag.getAttribute("name");
+						String value = tag.getAttribute("value");
 						if (type != null && type.equalsIgnoreCase("checkbox") && id != null && id.startsWith("bit-")) {
-							groupSecurityInformation.put(id, checkedValue);
+							htmlInfo.getGroups().put(id, checkedValue);
+						} else if (name != null && name.equalsIgnoreCase(BugzillaAttribute.TOKEN.getKey())
+								&& value != null && value.length() > 0) {
+							htmlInfo.setToken(value);
 						}
 					}
 				}
@@ -1226,7 +1259,7 @@ public class BugzillaClient {
 				}
 			}
 		}
-		return groupSecurityInformation;
+		return htmlInfo;
 	}
 
 	public static String stripTimeZone(String longTime) {
@@ -1292,7 +1325,7 @@ public class BugzillaClient {
 							found = found || title.indexOf(value) != -1;
 						}
 						if (found) {
-							authenticated = false;
+							loggedIn = false;
 							throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 									RepositoryStatus.ERROR_REPOSITORY_LOGIN, repositoryUrl.toString(), title));
 						}
@@ -1326,7 +1359,7 @@ public class BugzillaClient {
 							found = found || title.indexOf(value) != -1;
 						}
 						if (found) {
-							authenticated = false;
+							loggedIn = false;
 							// throw new
 							// BugzillaException(IBugzillaConstants.LOGGED_OUT);
 							throw new CoreException(new BugzillaStatus(IStatus.INFO, BugzillaCorePlugin.ID_PLUGIN,
@@ -1353,7 +1386,7 @@ public class BugzillaClient {
 					"A repository error has occurred.", body));
 
 		} catch (ParseException e) {
-			authenticated = false;
+			loggedIn = false;
 			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 					RepositoryStatus.ERROR_INTERNAL, "Unable to parse response from " + repositoryUrl.toString() + "."));
 		} finally {
@@ -1363,7 +1396,7 @@ public class BugzillaClient {
 
 	public TaskHistory getHistory(String taskId, IProgressMonitor monitor) throws IOException, CoreException {
 		hostConfiguration = WebUtil.createHostConfiguration(httpClient, location, monitor);
-		if (!authenticated && hasAuthenticationCredentials()) {
+		if (!loggedIn && hasAuthenticationCredentials()) {
 			authenticate(monitor);
 		}
 		GzipGetMethod method = null;
@@ -1377,12 +1410,12 @@ public class BugzillaClient {
 					try {
 						return parser.retrieveHistory(bugzillaLanguageSettings);
 					} catch (LoginException e) {
-						authenticated = false;
+						loggedIn = false;
 						throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 								RepositoryStatus.ERROR_REPOSITORY_LOGIN, repositoryUrl.toString(),
 								IBugzillaConstants.INVALID_CREDENTIALS));
 					} catch (ParseException e) {
-						authenticated = false;
+						loggedIn = false;
 						throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 								RepositoryStatus.ERROR_INTERNAL, "Unable to parse response from "
 										+ repositoryUrl.toString() + "."));
@@ -1479,7 +1512,7 @@ public class BugzillaClient {
 				}
 			} catch (CoreException c) {
 				if (c.getStatus().getCode() == RepositoryStatus.ERROR_REPOSITORY_LOGIN && authenticationAttempt < 1) {
-					authenticated = false;
+					loggedIn = false;
 					authenticationAttempt++;
 					//StatusHandler.log(c.getStatus());
 				} else {
@@ -1528,7 +1561,7 @@ public class BugzillaClient {
 		hostConfiguration = WebUtil.createHostConfiguration(httpClient, location, monitor);
 		for (int attempt = 0; attempt < 2; attempt++) {
 			// force authentication
-			if (!authenticated && hasAuthenticationCredentials()) {
+			if (!loggedIn && hasAuthenticationCredentials()) {
 				authenticate(monitor);
 			}
 
@@ -1563,10 +1596,10 @@ public class BugzillaClient {
 				headMethod.getResponseBody();
 				// login or reauthenticate due to an expired session
 				headMethod.releaseConnection();
-				authenticated = false;
+				loggedIn = false;
 				authenticate(monitor);
 			} else if (code == HttpURLConnection.HTTP_PROXY_AUTH) {
-				authenticated = false;
+				loggedIn = false;
 				headMethod.getResponseBody();
 				headMethod.releaseConnection();
 				throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
@@ -1629,6 +1662,29 @@ public class BugzillaClient {
 			}
 			return newText;
 		}
+	}
+
+	private class HtmlInformation {
+		private final Map<String, String> groups;
+
+		private String token;
+
+		public HtmlInformation() {
+			groups = new HashMap<String, String>();
+		}
+
+		public Map<String, String> getGroups() {
+			return groups;
+		}
+
+		public void setToken(String token) {
+			this.token = token;
+		}
+
+		public String getToken() {
+			return token;
+		}
+
 	}
 
 }

@@ -2,7 +2,7 @@
 <feature
       id="org.eclipse.mylyn_feature"
       label="Mylyn Task List (Required)"
-      version="3.0.4.qualifier"
+      version="3.0.5.qualifier"
       provider-name="Eclipse.org"
       plugin="org.eclipse.mylyn">
 

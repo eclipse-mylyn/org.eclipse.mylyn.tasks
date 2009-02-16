@@ -54,7 +54,8 @@
             <languageAttribute command="bad_login" 					response="Ungültiger Benutzername oder ungültiges Passwort"/> 
             <languageAttribute command="bad_login" 					response="error"/> 
             <languageAttribute command="processed" 					response="processed"/> 
-            <languageAttribute command="changes_submitted" 			response="Changes submitted"/> 
+            <languageAttribute command="changes_submitted" 			response="Changes submitted"/>
+            <languageAttribute command="suspicious_action"			response="Suspicious action"/> 
       </language> 
    </extension>    
   

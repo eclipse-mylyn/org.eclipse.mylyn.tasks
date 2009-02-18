@@ -100,13 +100,17 @@ public interface IBugzillaConstants {
 
 	public static final String ENCODING_UTF_8 = "UTF-8";
 
+	public static final int REPOSITORY_STATUS_SUSPICIOUS_ACTION = 99;
+
 	/** Supported bugzilla repository versions */
 	static public enum BugzillaServerVersion {
-		SERVER_218, SERVER_220, SERVER_222, SERVER_30;
+		SERVER_218, SERVER_220, SERVER_222, SERVER_30, SERVER_32;
 
 		@Override
 		public String toString() {
 			switch (this) {
+			case SERVER_32:
+				return "3.2";
 			case SERVER_30:
 				return "3.0";
 			case SERVER_222:
@@ -122,6 +126,9 @@ public interface IBugzillaConstants {
 
 		/** returns null if version string unknown* */
 		static public BugzillaServerVersion fromString(String version) {
+			if (version.equals(SERVER_32.toString())) {
+				return SERVER_32;
+			}
 			if (version.equals(SERVER_30.toString())) {
 				return SERVER_30;
 			}
@@ -173,6 +180,10 @@ public interface IBugzillaConstants {
 	static final String TEST_BUGZILLA_303_URL = "http://mylyn.eclipse.org/bugs303";
 
 	static final String TEST_BUGZILLA_31_URL = "http://mylyn.eclipse.org/bugs31";
+
+	static final String TEST_BUGZILLA_322_URL = "http://mylyn.eclipse.org/bugs322"; //$NON-NLS-1$
+
+	static final String TEST_BUGZILLA_323_URL = "http://mylyn.eclipse.org/bugs323"; //$NON-NLS-1$
 
 	// Default values for keys
 

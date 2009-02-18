@@ -61,7 +61,7 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 
 	private static final String CHANGED_BUGS_CGI_QUERY = "/buglist.cgi?query_format=advanced&chfieldfrom=";
 
-	private static final String CLIENT_LABEL = "Bugzilla (supports uncustomized 2.18-3.0)";
+	private static final String CLIENT_LABEL = "Bugzilla (supports uncustomized 2.18-3.2)";
 
 	private static final String COMMENT_FORMAT = "yyyy-MM-dd HH:mm";
 
@@ -251,7 +251,6 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 				}
 			}
 
-			return;
 		} catch (UnsupportedEncodingException e) {
 			throw new CoreException(new Status(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
 					"Repository configured with unsupported encoding: " + repository.getCharacterEncoding()
@@ -394,6 +393,8 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 			enSetting.addLanguageAttribute("bad_login", "error");
 			enSetting.addLanguageAttribute("processed", "processed");
 			enSetting.addLanguageAttribute("changes_submitted", "Changes submitted");
+			enSetting.addLanguageAttribute("changes_submitted", "added to Bug");
+			enSetting.addLanguageAttribute("suspicious_action", "Suspicious action");
 			languages.add(enSetting);
 
 		}
@@ -490,6 +491,14 @@ public class BugzillaRepositoryConnector extends AbstractRepositoryConnector {
 		if (taskData.isPartial()) {
 			return false;
 		}
+
+		// Security token
+		// Updated on the task upon each open (synch) to keep the most current token available for submission - bug#263318
+		TaskAttribute attrSecurityToken = taskData.getRoot().getMappedAttribute(BugzillaAttribute.TOKEN.getKey());
+		if (attrSecurityToken != null && !attrSecurityToken.getValue().equals("")) { //$NON-NLS-1$
+			task.setAttribute(BugzillaAttribute.TOKEN.getKey(), attrSecurityToken.getValue());
+		}
+
 		String lastKnownMod = task.getAttribute(BugzillaAttribute.DELTA_TS.getKey());
 		if (lastKnownMod != null) {
 			TaskAttribute attrModification = taskData.getRoot().getMappedAttribute(TaskAttribute.DATE_MODIFICATION);

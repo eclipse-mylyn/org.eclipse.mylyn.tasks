@@ -35,6 +35,8 @@ public class BugzillaLanguageSettings {
 
 	public static final String COMMAND_ERROR_LOGGED_OUT = "error_logged_out";
 
+	public static final String COMMAND_SUSPICIOUS_ACTION = "suspicious_action";
+
 	public static final String COMMAND_BAD_LOGIN = "bad_login";
 
 	public static final String COMMAND_PROCESSED = "processed";

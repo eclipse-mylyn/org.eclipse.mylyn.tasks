@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2008 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -50,9 +50,9 @@ public class TaskPropertyTester extends PropertyTester {
 			if (PROPERTY_CONNECTOR_KIND.equals(property)) {
 				return task.getConnectorKind().equals(expectedValue);
 			} else if (PROPERTY_CAN_POST_ATTACHMENT.equals(property)) {
-				return equals(AttachmentUtil.canDownloadAttachment(task), expectedValue);
-			} else if (PROPERTY_CAN_GET_ATTACHEMNT.equals(property)) {
 				return equals(AttachmentUtil.canUploadAttachment(task), expectedValue);
+			} else if (PROPERTY_CAN_GET_ATTACHEMNT.equals(property)) {
+				return equals(AttachmentUtil.canDownloadAttachment(task), expectedValue);
 			} else if (PROPERTY_HAS_EDITS.equals(property)) {
 				return equals(ClearOutgoingAction.hasOutgoingChanges(task), expectedValue);
 			} else if (PROPERTY_HAS_LOCAL_CONTEXT.equals(property)) {

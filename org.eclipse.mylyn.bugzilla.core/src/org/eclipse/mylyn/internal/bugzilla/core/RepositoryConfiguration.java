@@ -484,6 +484,11 @@ public class RepositoryConfiguration implements Serializable {
 			// old bugzilla workflow is used
 			addOperation(bugReport, BugzillaOperation.reassign);
 			addOperation(bugReport, BugzillaOperation.reassignbycomponent);
+		} else {
+			TaskAttribute operationAttribute = bugReport.getRoot().getMappedAttribute(TaskAttribute.USER_ASSIGNED);
+			if (operationAttribute != null) {
+				operationAttribute.getMetaData().setReadOnly(false);
+			}
 		}
 	}
 

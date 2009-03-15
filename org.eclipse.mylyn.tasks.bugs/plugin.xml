@@ -5,19 +5,16 @@
    <extension-point id="taskContributors" name="Task Contributors" schema="schema/taskContributors.exsd"/>
    
    <extension point="org.eclipse.ui.popupMenus">
-        <objectContribution
-              adaptable="false"
-              id="org.eclipse.mylyn.internal.provisional.tasks.bugs.objectContribution"
-              objectClass="org.eclipse.ui.internal.views.log.LogEntry">
-			<action
-		         class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromErrorAction"
-		         enablesFor="1"
-		         icon="icons/etool16/task-repository-new.gif"
-		         menubarPath="org.eclipse.pde.runtime.LogView"
-		         id="org.eclipse.mylyn.tasklist.actions.newTaskFromErrorLog"
-		         label="%NewTaskFromErrorAction.label">
-             </action>
-        </objectContribution>
+        <viewerContribution
+		    id="org.eclipse.mylyn.bugzilla.ide.log.contribution"
+            targetID="org.eclipse.pde.runtime.LogView">
+      	<action
+      		class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromErrorAction"
+         	icon="icons/etool16/task-repository-new.gif"
+         	menubarPath="org.eclipse.pde.runtime.LogView"
+         	id="org.eclipse.mylyn.tasklist.actions.newTaskFromErrorLog"
+         	label="%NewTaskFromErrorAction.label"/>
+      </viewerContribution>
    </extension>
 
    <extension point="org.eclipse.ui.actionSets">
@@ -36,61 +33,6 @@
     	</actionSet>
    </extension>
   
-   <extension
-         point="org.eclipse.ui.handlers">
-       <handler
-            class="org.eclipse.mylyn.internal.tasks.bugs.actions.NewTaskFromMarkerHandler"
-            commandId="org.eclipse.mylyn.tasks.bugs.commands.newTaskFromMarker">
-            <activeWhen>
-                <with variable="activePart">
-                    <test
-                         args="any"
-                         property="org.eclipse.ui.ide.contentGenerator">
-                    </test>
-                </with>
-            </activeWhen>
-            <enabledWhen>
-                  <and>
-                     <count
-                           value="1">
-                     </count>
-                     <iterate
-                           ifEmpty="false"
-                           operator="and">
-                        <instanceof
-                              value="org.eclipse.ui.internal.views.markers.MarkerEntry">
-                        </instanceof>
-                     </iterate>
-                  </and>
-            </enabledWhen>       
-      </handler>
-   </extension>
- 
-   <extension
-         point="org.eclipse.ui.commands">
-      <command
-            description="%commands.newTaskFromMarker.description"
-            id="org.eclipse.mylyn.tasks.bugs.commands.newTaskFromMarker"
-            name="%commands.newTaskFromMarker.name">
-      </command>
-   </extension>
- 
-   <extension
-         point="org.eclipse.ui.menus">
-       <menuContribution
-            locationURI="popup:org.eclipse.ui.ide.MarkersView?after=org.eclipse.ui.ide.markCompleted">
-            <command
-                  commandId="org.eclipse.mylyn.tasks.bugs.commands.newTaskFromMarker"
-                  icon="icons/etool16/task-new.gif"
-                  mnemonic="%commands.newTaskFromMarker.mnemonic"
-                  style="push">
-              <visibleWhen
-                    checkEnabled="true">
-              </visibleWhen>
-           </command>
-      </menuContribution>
-   </extension>
-   
    <extension
          point="org.eclipse.mylyn.commons.core.errorReporters">
       <errorReporter

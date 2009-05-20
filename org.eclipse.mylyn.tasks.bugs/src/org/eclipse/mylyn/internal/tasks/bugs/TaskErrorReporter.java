@@ -11,8 +11,6 @@
 
 package org.eclipse.mylyn.internal.tasks.bugs;
 
-import java.util.Map;
-
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
@@ -20,6 +18,9 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.mylyn.commons.core.AbstractErrorReporter;
 import org.eclipse.mylyn.commons.core.StatusHandler;
+import org.eclipse.mylyn.internal.provisional.commons.ui.WorkbenchUtil;
+import org.eclipse.mylyn.internal.provisional.tasks.bugs.IProduct;
+import org.eclipse.mylyn.internal.tasks.bugs.wizards.ProductStatus;
 import org.eclipse.mylyn.internal.tasks.bugs.wizards.ReportErrorWizard;
 import org.eclipse.mylyn.internal.tasks.ui.util.TasksUiInternal;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
@@ -33,9 +34,12 @@ public class TaskErrorReporter {
 
 	private final TaskContributorManager contributorManager;
 
+	private final SupportProviderManager providerManager;
+
 	public TaskErrorReporter() {
 		this.contributorManager = new TaskContributorManager();
 		this.mappingManager = new PluginRepositoryMappingManager();
+		this.providerManager = new SupportProviderManager();
 	}
 
 	public TaskContributorManager getContributorManager() {
@@ -57,25 +61,27 @@ public class TaskErrorReporter {
 		return AbstractErrorReporter.PRIORITY_NONE;
 	}
 
-	public void process(IStatus status) {
-		Assert.isNotNull(status);
-		AttributeTaskMapper mapper = preProcess(status);
-		postProcess(mapper);
-	}
+//	public void process(IStatus status) {
+//		Assert.isNotNull(status);
+//		AttributeTaskMapper mapper = preProcess(status);
+//		postProcess(mapper);
+//	}
 
-	public AttributeTaskMapper preProcess(IStatus status) {
+	public SupportRequest preProcess(IStatus status, IProduct product) {
 		Assert.isNotNull(status);
-		String pluginId = status.getPlugin();
-		Map<String, String> attributes = mappingManager.getAllAttributes(pluginId);
-		contributorManager.preProcess(status, attributes);
-		return new AttributeTaskMapper(attributes);
+		//Map<String, String> attributes = mappingManager.getAllAttributes(namespace);
+		SupportRequest request = new SupportRequest(providerManager, status, product);
+		contributorManager.preProcess(request);
+		return request;
 	}
 
 	public void postProcess(AttributeTaskMapper mapper) {
 		Assert.isNotNull(mapper);
-		TaskData taskData;
+		contributorManager.process(mapper);
 		try {
-			taskData = mapper.createTaskData(null);
+			TaskData taskData = mapper.createTaskData(null);
+			mapper.setTaskData(taskData);
+			contributorManager.postProcess(mapper);
 			TasksUiInternal.createAndOpenNewTask(taskData);
 		} catch (CoreException e) {
 			StatusHandler.log(new Status(IStatus.ERROR, TasksBugsPlugin.ID_PLUGIN, "Unexpected error reporting error", //$NON-NLS-1$
@@ -84,11 +90,20 @@ public class TaskErrorReporter {
 	}
 
 	public void handle(final IStatus status) {
-		ReportErrorWizard wizard = new ReportErrorWizard(TaskErrorReporter.this, status);
-		WizardDialog dialog = new WizardDialog(TasksUiInternal.getShell(), wizard);
-		dialog.setBlockOnOpen(false);
-		dialog.setPageSize(500, 200);
-		dialog.open();
+		if (status instanceof ProductStatus) {
+			SupportRequest request = preProcess(status, ((ProductStatus) status).getProduct());
+			postProcess((AttributeTaskMapper) request.getDefaultContribution());
+		} else {
+			ReportErrorWizard wizard = new ReportErrorWizard(TaskErrorReporter.this, status);
+			WizardDialog dialog = new WizardDialog(WorkbenchUtil.getShell(), wizard);
+			dialog.setBlockOnOpen(false);
+			dialog.setPageSize(500, 200);
+			dialog.open();
+		}
+	}
+
+	public SupportProviderManager getProviderManager() {
+		return providerManager;
 	}
 
 }

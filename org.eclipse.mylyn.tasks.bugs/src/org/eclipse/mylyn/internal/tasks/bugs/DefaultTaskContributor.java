@@ -18,30 +18,104 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.core.runtime.IBundleGroup;
+import org.eclipse.core.runtime.IProduct;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.mylyn.internal.provisional.tasks.bugs.AbstractTaskContributor;
+import org.eclipse.mylyn.internal.provisional.tasks.bugs.ISupportResponse;
+import org.eclipse.mylyn.internal.provisional.tasks.bugs.ITaskContribution;
 import org.eclipse.mylyn.internal.tasks.bugs.wizards.ErrorLogStatus;
-import org.eclipse.mylyn.internal.tasks.bugs.wizards.FeatureStatus;
-import org.eclipse.mylyn.tasks.ui.editors.TaskEditor;
+import org.eclipse.mylyn.internal.tasks.bugs.wizards.ProductStatus;
+import org.eclipse.mylyn.tasks.core.AbstractRepositoryConnector;
+import org.eclipse.mylyn.tasks.core.ITaskMapping;
+import org.eclipse.mylyn.tasks.core.TaskMapping;
+import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
+import org.eclipse.mylyn.tasks.core.data.TaskData;
+import org.eclipse.mylyn.tasks.ui.TasksUi;
+import org.eclipse.osgi.util.NLS;
 import org.osgi.framework.Bundle;
 
 /**
  * @author Steffen Pingel
  */
+@SuppressWarnings("deprecation")
 public class DefaultTaskContributor extends AbstractTaskContributor {
 
-	public void appendErrorDetails(StringBuilder sb, IStatus status, Date date) {
-		sb.append(Messages.DefaultTaskContributor_Error_DETAILS);
-		if (date != null) {
-			sb.append(Messages.DefaultTaskContributor_DATE);
-			sb.append(date);
+	@Override
+	public void process(ITaskContribution contribution) {
+		String description = getDescription(contribution.getStatus());
+		if (description != null) {
+			contribution.appendToDescription(description);
 		}
-		sb.append(Messages.DefaultTaskContributor_MESSAGE);
-		sb.append(status.getMessage());
-		sb.append(Messages.DefaultTaskContributor_SEVERITY);
-		sb.append(getSeverityText(status.getSeverity()));
-		sb.append(Messages.DefaultTaskContributor_PLUGIN);
-		sb.append(status.getPlugin());
+	}
+
+	@Override
+	public void postProcess(ISupportResponse response) {
+		IStatus contribution = response.getStatus();
+		TaskData taskData = response.getTaskData();
+		if (contribution instanceof ProductStatus) {
+			AbstractRepositoryConnector connector = TasksUi.getRepositoryConnector(taskData.getConnectorKind());
+			ITaskMapping mapping = connector.getTaskMapping(taskData);
+			mapping.merge(new TaskMapping() {
+				@Override
+				public String getSeverity() {
+					return "enhancement"; //$NON-NLS-1$
+				}
+			});
+		}
+		if (response.getProduct() != null) {
+			IBundleGroup bundleGroup = ((SupportProduct) response.getProduct()).getBundleGroup();
+			if (bundleGroup != null) {
+				TaskAttribute attribute = taskData.getRoot().getMappedAttribute(TaskAttribute.VERSION);
+				if (attribute != null) {
+					final String version = getBestMatch(bundleGroup.getVersion(), attribute.getOptions());
+					if (version.length() > 0) {
+						AbstractRepositoryConnector connector = TasksUi.getRepositoryConnector(taskData.getConnectorKind());
+						ITaskMapping mapping = connector.getTaskMapping(taskData);
+						mapping.merge(new TaskMapping() {
+							@Override
+							public String getVersion() {
+								return version;
+							}
+						});
+					}
+				}
+			}
+		}
+	}
+
+	private String getBestMatch(String version, Map<String, String> options) {
+		String match = ""; //$NON-NLS-1$
+		for (String option : options.values()) {
+			if (version.startsWith(option) && option.length() > match.length()) {
+				match = option;
+			}
+		}
+		return match;
+	}
+
+	public void appendErrorDetails(StringBuilder sb, IStatus status, Date date) {
+		sb.append("\n\n");
+		sb.append(Messages.DefaultTaskContributor_Error_Details);
+		if (date != null) {
+			sb.append("\n"); //$NON-NLS-1$
+			sb.append(NLS.bind("Date: {0}", date));
+		}
+		sb.append("\n"); //$NON-NLS-1$
+		sb.append(NLS.bind("Message: {0}", status.getMessage()));
+		sb.append("\n"); //$NON-NLS-1$
+		sb.append(NLS.bind("Severity: {0}", getSeverityText(status.getSeverity())));
+		IProduct product = Platform.getProduct();
+		if (product != null) {
+			sb.append("\n"); //$NON-NLS-1$
+			if (product.getName() != null) {
+				sb.append(NLS.bind("Product: {0} ({1})", product.getName(), product.getId()));
+			} else {
+				sb.append(NLS.bind("Product: {0}", product.getId()));
+			}
+		}
+		sb.append("\n"); //$NON-NLS-1$
+		sb.append(NLS.bind("Plugin: {0}", status.getPlugin()));
 	}
 
 	@Override
@@ -52,32 +126,35 @@ public class DefaultTaskContributor extends AbstractTaskContributor {
 	}
 
 	public String getDescription(IStatus status) {
-		if (status instanceof FeatureStatus) {
-			StringBuilder sb = new StringBuilder();
-			sb.append("\n\n\n"); //$NON-NLS-1$
-			sb.append(Messages.DefaultTaskContributor_INSTALLED_FEATURES_AND_PLUGINS);
-			IBundleGroup[] bundleGroups = ((FeatureStatus) status).getBundleGroup();
-			for (IBundleGroup bundleGroup : bundleGroups) {
-				sb.append(bundleGroup.getIdentifier());
-				sb.append(" "); //$NON-NLS-1$
-				sb.append(bundleGroup.getVersion());
-				sb.append("\n"); //$NON-NLS-1$
+		if (status instanceof ProductStatus) {
+			SupportProduct product = (SupportProduct) ((ProductStatus) status).getProduct();
+			if (product.getBundleGroup() != null) {
+				StringBuilder sb = new StringBuilder();
+				sb.append("\n\n\n"); //$NON-NLS-1$
+				sb.append(Messages.DefaultTaskContributor_INSTALLED_FEATURES_AND_PLUGINS);
+				for (IBundleGroup bundleGroup : new IBundleGroup[] { product.getBundleGroup() }) {
+					sb.append(bundleGroup.getIdentifier());
+					sb.append(" "); //$NON-NLS-1$
+					sb.append(bundleGroup.getVersion());
+					sb.append("\n"); //$NON-NLS-1$
 
-				Bundle[] bundles = bundleGroup.getBundles();
-				if (bundles != null) {
-					for (Bundle bundle : bundles) {
-						sb.append("  "); //$NON-NLS-1$
-						sb.append(bundle.getSymbolicName());
-						String version = (String) bundle.getHeaders().get(Messages.DefaultTaskContributor_Bundle_Version);
-						if (version != null) {
-							sb.append(" "); //$NON-NLS-1$
-							sb.append(version);
+					Bundle[] bundles = bundleGroup.getBundles();
+					if (bundles != null) {
+						for (Bundle bundle : bundles) {
+							sb.append("  "); //$NON-NLS-1$
+							sb.append(bundle.getSymbolicName());
+							String version = (String) bundle.getHeaders().get(
+									Messages.DefaultTaskContributor_Bundle_Version);
+							if (version != null) {
+								sb.append(" "); //$NON-NLS-1$
+								sb.append(version);
+							}
+							sb.append("\n"); //$NON-NLS-1$
 						}
-						sb.append("\n"); //$NON-NLS-1$
 					}
 				}
+				return sb.toString();
 			}
-			return sb.toString();
 		} else if (status instanceof ErrorLogStatus) {
 			ErrorLogStatus errorLogStatus = (ErrorLogStatus) status;
 			StringBuilder sb = new StringBuilder();
@@ -102,11 +179,7 @@ public class DefaultTaskContributor extends AbstractTaskContributor {
 			}
 			return sb.toString();
 		}
-	}
-
-	@Override
-	public String getEditorId(IStatus status) {
-		return TaskEditor.ID_EDITOR;
+		return null;
 	}
 
 	private String getSeverityText(int severity) {

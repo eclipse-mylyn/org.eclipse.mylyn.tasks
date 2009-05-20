@@ -11,11 +11,19 @@
 
 package org.eclipse.mylyn.internal.tasks.bugs.wizards;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.IBundleGroup;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
-import org.eclipse.mylyn.internal.tasks.bugs.PluginRepositoryMappingManager;
+import org.eclipse.mylyn.internal.provisional.tasks.bugs.IProduct;
+import org.eclipse.mylyn.internal.tasks.bugs.AbstractSupportElement;
+import org.eclipse.mylyn.internal.tasks.bugs.SupportProduct;
+import org.eclipse.mylyn.internal.tasks.bugs.SupportProvider;
+import org.eclipse.mylyn.internal.tasks.bugs.SupportProviderManager;
 import org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin;
 import org.eclipse.mylyn.tasks.ui.TasksUiImages;
 
@@ -24,9 +32,48 @@ import org.eclipse.mylyn.tasks.ui.TasksUiImages;
  */
 public class ReportBugOrEnhancementWizard extends Wizard {
 
-	private SelectProductPage selectProductPage;
+	private class SupportContentProvider implements IStructuredContentProvider {
 
-	private PluginRepositoryMappingManager manager;
+		private SupportProviderManager providerManager;
+
+		private Object input;
+
+		public Object[] getElements(Object inputElement) {
+			if (inputElement instanceof SupportProvider) {
+				List<SupportProduct> providerProducts = getProdcuts(inputElement);
+				return providerProducts.toArray();
+			} else if (input == inputElement) {
+				List<AbstractSupportElement> elements = new ArrayList<AbstractSupportElement>();
+				elements.addAll(providerManager.getProviders());
+				elements.addAll(providerManager.getCategories());
+				return elements.toArray();
+			} else {
+				return new Object[0];
+			}
+		}
+
+		private List<SupportProduct> getProdcuts(Object inputElement) {
+			Collection<SupportProduct> products = providerManager.getProducts();
+			SupportProvider provider = (SupportProvider) inputElement;
+			List<SupportProduct> providerProducts = new ArrayList<SupportProduct>();
+			for (SupportProduct product : products) {
+				if (provider.equals(product.getProvider()) && product.isInstalled()) {
+					providerProducts.add(product);
+				}
+			}
+			return providerProducts;
+		}
+
+		public void dispose() {
+			// ignore
+		}
+
+		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+			this.input = newInput;
+			this.providerManager = TasksBugsPlugin.getTaskErrorReporter().getProviderManager();
+		}
+
+	}
 
 	public ReportBugOrEnhancementWizard() {
 		setForcePreviousAndNextButtons(true);
@@ -37,58 +84,39 @@ public class ReportBugOrEnhancementWizard extends Wizard {
 
 	@Override
 	public void addPages() {
-		manager = new PluginRepositoryMappingManager();
-		selectProductPage = new SelectProductPage("selectBundleGroupProvider", manager); //$NON-NLS-1$
-		addPage(selectProductPage);
+		SelectSupportElementPage page = new SelectSupportElementPage("selectProvider", new SupportContentProvider()); //$NON-NLS-1$
+		page.setInput(new Object());
+		addPage(page);
 	}
 
 	@Override
 	public boolean canFinish() {
-		return getSelectedBundleGroup() != null;
+		return getSelectedElement() instanceof SupportProduct;
 	}
 
-	public IBundleGroup[] getSelectedBundleGroup() {
+	public AbstractSupportElement getSelectedElement() {
 		IWizardPage page = getContainer().getCurrentPage();
-		if (page instanceof SelectProductPage) {
-			if (page.isPageComplete() && !((SelectProductPage) page).canFlipToNextPage()) {
-				return ((SelectProductPage) page).getSelectedBundleGroups();
-			}
-		} else if (page instanceof SelectFeaturePage) {
-			if (page.isPageComplete()) {
-				return ((SelectFeaturePage) page).getSelectedBundleGroups();
-			}
+		if (page != null) {
+			return ((SelectSupportElementPage) page).getSelectedElement();
 		}
 		return null;
 	}
 
 	@Override
 	public boolean performFinish() {
-		final IBundleGroup[] bundles = getSelectedBundleGroup();
-		Assert.isNotNull(bundles);
+		final AbstractSupportElement product = getSelectedElement();
+		if (!(product instanceof SupportProduct)) {
+			return false;
+		}
 
 		// delay run this until after the dialog has been closed
 		getShell().getDisplay().asyncExec(new Runnable() {
 			public void run() {
-				String prefix = bundles[0].getIdentifier();
-				for (int i = 1; i < bundles.length; i++) {
-					prefix = getCommonPrefix(prefix, bundles[i].getIdentifier());
-				}
-				TasksBugsPlugin.getTaskErrorReporter().handle(new FeatureStatus(prefix, bundles));
+				TasksBugsPlugin.getTaskErrorReporter().handle(new ProductStatus((IProduct) product));
 			}
 		});
 
 		return true;
-	}
-
-	private static String getCommonPrefix(String s1, String s2) {
-		int len = Math.min(s1.length(), s2.length());
-		StringBuffer prefix = new StringBuffer(len);
-		for (int i = 0; i < len; i++) {
-			if (s1.charAt(i) == s2.charAt(i)) {
-				prefix.append(s1.charAt(i));
-			}
-		}
-		return prefix.toString();
 	}
 
 }

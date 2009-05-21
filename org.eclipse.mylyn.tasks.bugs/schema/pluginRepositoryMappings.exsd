@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Schema file written by PDE -->
-<schema targetNamespace="org.eclipse.mylyn.tasks.bugs" xmlns="http://www.w3.org/2001/XMLSchema">
+<schema targetNamespace="org.eclipse.mylyn.bugzilla.ide" xmlns="http://www.w3.org/2001/XMLSchema">
 <annotation>
       <appinfo>
-         <meta.schema plugin="org.eclipse.mylyn.tasks.bugs" id="pluginRepositoryMappings" name="Plug-in to Repository Mappings"/>
+         <meta.schema plugin="org.eclipse.mylyn.bugzilla.ide" id="pluginRepositoryMappings" name="Plug-in to Repository Mappings"/>
       </appinfo>
       <documentation>
          [Enter description of this extension point.]
@@ -13,7 +13,7 @@
    <element name="extension">
       <annotation>
          <appinfo>
-            <meta.element deprecated="true" internal="true" />
+            <meta.element />
          </appinfo>
       </annotation>
       <complexType>

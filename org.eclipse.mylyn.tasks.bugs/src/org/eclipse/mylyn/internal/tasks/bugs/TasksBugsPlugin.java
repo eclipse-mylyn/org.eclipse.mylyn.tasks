@@ -1,19 +1,15 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2007 Mylyn project committers and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.tasks.bugs;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.mylyn.commons.core.AbstractErrorReporter;
-import org.eclipse.mylyn.internal.tasks.bugs.wizards.ErrorLogStatus;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
@@ -25,15 +21,11 @@ import org.osgi.framework.BundleContext;
  */
 public class TasksBugsPlugin extends AbstractUIPlugin {
 
-	public static class BugReporter extends AbstractErrorReporter {
+	public static class Reporter extends AbstractErrorReporter {
 
 		@Override
 		public int getPriority(IStatus status) {
-			if (status instanceof ErrorLogStatus) {
-				return PRIORITY_DEFAULT;
-			}
-			return PRIORITY_NONE;
-			//return getTaskErrorReporter().getPriority(status);
+			return getTaskErrorReporter().getPriority(status);
 		}
 
 		@Override
@@ -52,7 +44,7 @@ public class TasksBugsPlugin extends AbstractUIPlugin {
 		}
 	}
 
-	public static final String ID_PLUGIN = "org.eclipse.mylyn.tasks.bugs"; //$NON-NLS-1$
+	public static final String ID_PLUGIN = "org.eclipse.mylyn.tasks.bugs";
 
 	private static TasksBugsPlugin INSTANCE;
 

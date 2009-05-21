@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Schema file written by PDE -->
-<schema targetNamespace="org.eclipse.mylyn.tasks.bugs" xmlns="http://www.w3.org/2001/XMLSchema">
+<schema targetNamespace="org.eclipse.mylyn.bugzilla.ide" xmlns="http://www.w3.org/2001/XMLSchema">
 <annotation>
       <appinfo>
-         <meta.schema plugin="org.eclipse.mylyn.tasks.bugs" id="taskContributors" name="Task Contributors"/>
+         <meta.schema plugin="org.eclipse.mylyn.bugzilla.ide" id="taskContributors" name="Task Contributors"/>
       </appinfo>
       <documentation>
          [Enter description of this extension point.]
@@ -11,11 +11,6 @@
    </annotation>
 
    <element name="extension">
-      <annotation>
-         <appinfo>
-            <meta.element internal="true" />
-         </appinfo>
-      </annotation>
       <complexType>
          <sequence minOccurs="1" maxOccurs="unbounded">
             <element ref="contributor"/>
@@ -62,7 +57,7 @@
                   
                </documentation>
                <appinfo>
-                  <meta.attribute kind="java" basedOn="org.eclipse.mylyn.internal.provisional.tasks.bugs.AbstractTaskContributor:"/>
+                  <meta.attribute kind="java"/>
                </appinfo>
             </annotation>
          </attribute>

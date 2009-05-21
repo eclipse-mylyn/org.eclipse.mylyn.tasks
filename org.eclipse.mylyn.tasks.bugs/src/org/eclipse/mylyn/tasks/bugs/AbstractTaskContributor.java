@@ -6,24 +6,26 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-package org.eclipse.mylyn.internal.tasks.bugs;
+package org.eclipse.mylyn.tasks.bugs;
+
+import java.util.Map;
+
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.mylyn.tasks.core.data.TaskData;
 
 /**
  * @author Steffen Pingel
+ * @since 3.0
  */
-public class IRepositoryConstants {
+public abstract class AbstractTaskContributor {
 
-	public static final String REPOSITORY_URL = "repositoryUrl";
+	public abstract Map<String, String> getAttributes(IStatus status);
 
-	public static final String CONNECTOR_KIND = "repositoryKind";
+	public String getEditorId(IStatus status) {
+		return null;
+	}
 
-	public static final String COMPONENT = "component";
-
-	public static final String PRODUCT = "product";
-
-	@Deprecated
-	public static final String BRANDING = "branding";
-
-	public static final String DESCRIPTION = "description";
+	public void postProcess(IStatus status, TaskData taskData) {
+	}
 
 }

@@ -1,12 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2007 Mylyn project committers and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.tasks.bugs;
@@ -22,9 +19,9 @@ import java.util.Map;
  */
 public class PluginRepositoryMapping {
 
-	private final List<String> prefixes = new ArrayList<String>();
+	private List<String> prefixes = new ArrayList<String>();
 
-	private final Map<String, String> attributes = new HashMap<String, String>();
+	private Map<String, String> attributes = new HashMap<String, String>();
 
 	public void addPrefix(String prefix) {
 		prefixes.add(prefix);
@@ -43,7 +40,7 @@ public class PluginRepositoryMapping {
 	}
 
 	public List<String> getPrefixes() {
-		return Collections.unmodifiableList(prefixes);
+		return Collections.unmodifiableList(prefixes); 
 	}
-
+	
 }

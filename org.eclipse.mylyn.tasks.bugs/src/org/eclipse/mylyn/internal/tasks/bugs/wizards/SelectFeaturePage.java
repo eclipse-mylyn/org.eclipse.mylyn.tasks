@@ -1,12 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2008 Mylyn project committers and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.tasks.bugs.wizards;
@@ -15,7 +12,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.eclipse.core.runtime.IBundleGroup;
-import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -31,7 +28,7 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.jface.wizard.WizardPage;
-import org.eclipse.mylyn.internal.tasks.ui.TasksUiPlugin;
+import org.eclipse.mylyn.tasks.ui.TasksUi;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridLayout;
@@ -43,7 +40,7 @@ import org.eclipse.ui.branding.IBundleGroupConstants;
  */
 public class SelectFeaturePage extends WizardPage {
 
-	private static final int TABLE_HEIGHT = 200;
+	private static final int TABLE_HEIGHT = IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH;
 
 	private IBundleGroup selectedBundleGroup;
 
@@ -54,7 +51,7 @@ public class SelectFeaturePage extends WizardPage {
 	public SelectFeaturePage(String pageName, IBundleGroup[] bundleGroups) {
 		super(pageName);
 		this.bundleGroups = bundleGroups;
-		setTitle(Messages.SelectFeaturePage_SELECT_FEATURE);
+		setTitle("Select a feature");
 	}
 
 	public void createControl(Composite parent) {
@@ -77,11 +74,7 @@ public class SelectFeaturePage extends WizardPage {
 		}
 
 		TableViewer viewer = new TableViewer(container, SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
-		GridDataFactory.fillDefaults()
-				.align(SWT.FILL, SWT.FILL)
-				.grab(true, true)
-				.hint(SWT.DEFAULT, TABLE_HEIGHT)
-				.applyTo(viewer.getControl());
+		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, TABLE_HEIGHT).applyTo(viewer.getControl());
 		viewer.setContentProvider(new IStructuredContentProvider() {
 
 			public Object[] getElements(Object inputElement) {
@@ -105,18 +98,18 @@ public class SelectFeaturePage extends WizardPage {
 				}
 				return null;
 			}
-
+			
 			@Override
 			public String getText(Object element) {
 				if (element instanceof IBundleGroup) {
 					IBundleGroup bundleGroup = (IBundleGroup) element;
 					return bundleGroup.getName();
 				}
-				return ""; //$NON-NLS-1$
+				return "";
 			}
 
 		});
-		viewer.setInput(TasksUiPlugin.getRepositoryManager().getRepositoryConnectors());
+		viewer.setInput(TasksUi.getRepositoryManager().getRepositoryConnectors());
 
 		viewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			public void selectionChanged(SelectionChangedEvent event) {
@@ -147,7 +140,6 @@ public class SelectFeaturePage extends WizardPage {
 		viewer.setSorter(new ViewerSorter());
 
 		setControl(container);
-		Dialog.applyDialogFont(container);
 	}
 
 	@Override
@@ -158,8 +150,8 @@ public class SelectFeaturePage extends WizardPage {
 		super.dispose();
 	}
 
-	public IBundleGroup[] getSelectedBundleGroups() {
-		return new IBundleGroup[] { selectedBundleGroup };
+	public IBundleGroup getSelectedBundleGroup() {
+		return selectedBundleGroup;
 	}
 
 }

@@ -1,29 +1,18 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2007 Mylyn project committers and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.tasks.bugs.wizards;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import org.eclipse.jface.viewers.IStructuredContentProvider;
-import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.IBundleGroup;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
-import org.eclipse.mylyn.internal.provisional.tasks.bugs.IProduct;
-import org.eclipse.mylyn.internal.tasks.bugs.AbstractSupportElement;
-import org.eclipse.mylyn.internal.tasks.bugs.SupportProduct;
-import org.eclipse.mylyn.internal.tasks.bugs.SupportProvider;
-import org.eclipse.mylyn.internal.tasks.bugs.SupportProviderManager;
+import org.eclipse.mylyn.internal.tasks.bugs.PluginRepositoryMappingManager;
 import org.eclipse.mylyn.internal.tasks.bugs.TasksBugsPlugin;
 import org.eclipse.mylyn.tasks.ui.TasksUiImages;
 
@@ -32,90 +21,55 @@ import org.eclipse.mylyn.tasks.ui.TasksUiImages;
  */
 public class ReportBugOrEnhancementWizard extends Wizard {
 
-	private class SupportContentProvider implements IStructuredContentProvider {
+	private SelectProductPage selectProductPage;
 
-		private SupportProviderManager providerManager;
-
-		private Object input;
-
-		public Object[] getElements(Object inputElement) {
-			if (inputElement instanceof SupportProvider) {
-				List<SupportProduct> providerProducts = getProdcuts(inputElement);
-				return providerProducts.toArray();
-			} else if (input == inputElement) {
-				List<AbstractSupportElement> elements = new ArrayList<AbstractSupportElement>();
-				elements.addAll(providerManager.getProviders());
-				elements.addAll(providerManager.getCategories());
-				return elements.toArray();
-			} else {
-				return new Object[0];
-			}
-		}
-
-		private List<SupportProduct> getProdcuts(Object inputElement) {
-			Collection<SupportProduct> products = providerManager.getProducts();
-			SupportProvider provider = (SupportProvider) inputElement;
-			List<SupportProduct> providerProducts = new ArrayList<SupportProduct>();
-			for (SupportProduct product : products) {
-				if (provider.equals(product.getProvider()) && product.isInstalled()) {
-					providerProducts.add(product);
-				}
-			}
-			return providerProducts;
-		}
-
-		public void dispose() {
-			// ignore
-		}
-
-		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-			this.input = newInput;
-			this.providerManager = TasksBugsPlugin.getTaskErrorReporter().getProviderManager();
-		}
-
-	}
+	private PluginRepositoryMappingManager manager;
 
 	public ReportBugOrEnhancementWizard() {
 		setForcePreviousAndNextButtons(true);
 		setNeedsProgressMonitor(false);
-		setWindowTitle(Messages.ReportBugOrEnhancementWizard_Report_Bug_or_Enhancement);
+		setWindowTitle("Report Bug or Enhancement");
 		setDefaultPageImageDescriptor(TasksUiImages.BANNER_REPOSITORY);
 	}
 
 	@Override
 	public void addPages() {
-		SelectSupportElementPage page = new SelectSupportElementPage("selectProvider", new SupportContentProvider()); //$NON-NLS-1$
-		page.setInput(new Object());
-		addPage(page);
+		manager = new PluginRepositoryMappingManager();
+		selectProductPage = new SelectProductPage("selectBundleGroupProvider", manager);
+		addPage(selectProductPage);
 	}
 
 	@Override
 	public boolean canFinish() {
-		return getSelectedElement() instanceof SupportProduct;
+		return getSelectedBundleGroup() != null;
 	}
 
-	public AbstractSupportElement getSelectedElement() {
+	public IBundleGroup getSelectedBundleGroup() {
 		IWizardPage page = getContainer().getCurrentPage();
-		if (page != null) {
-			return ((SelectSupportElementPage) page).getSelectedElement();
+		if (page instanceof SelectProductPage) {
+			if (page.isPageComplete() && !((SelectProductPage)page).canFlipToNextPage()) {
+				return ((SelectProductPage)page).getSelectedBundleGroup();
+			}
+		} else if (page instanceof SelectFeaturePage) {
+			if (page.isPageComplete()) {
+				return ((SelectFeaturePage)page).getSelectedBundleGroup();
+			}			
 		}
 		return null;
 	}
-
+	
 	@Override
 	public boolean performFinish() {
-		final AbstractSupportElement product = getSelectedElement();
-		if (!(product instanceof SupportProduct)) {
-			return false;
-		}
-
+		final IBundleGroup bundle = getSelectedBundleGroup();
+		Assert.isNotNull(bundle);
+		
 		// delay run this until after the dialog has been closed
 		getShell().getDisplay().asyncExec(new Runnable() {
 			public void run() {
-				TasksBugsPlugin.getTaskErrorReporter().handle(new ProductStatus((IProduct) product));
-			}
+				TasksBugsPlugin.getTaskErrorReporter().handle(new FeatureStatus(bundle));
+			}			
 		});
-
+		
 		return true;
 	}
 

@@ -1,12 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2008 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2007 Mylyn project committers and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.tasks.bugs;
@@ -30,31 +27,30 @@ import org.eclipse.mylyn.commons.core.StatusHandler;
  */
 public class PluginRepositoryMappingManager {
 
-	private static final String EXTENSION_ID_PLUGIN_REPOSITORY_MAPPING = "org.eclipse.mylyn.tasks.bugs.pluginRepositoryMappings"; //$NON-NLS-1$
+	private static final String[] MAPPING_CHILD_ELEMENTS = new String[] { IRepositoryConstants.PRODUCT,
+			IRepositoryConstants.COMPONENT };
 
-	private static final String ELEMENT_MAPPING = "mapping"; //$NON-NLS-1$
+	private static final String EXTENSION_ID_PLUGIN_REPOSITORY_MAPPING = "org.eclipse.mylyn.tasks.bugs.pluginRepositoryMappings";
 
-	private static final String ELEMENT_BRANDING = "branding"; //$NON-NLS-1$
+	private static final String ELEMENT_MAPPING = "mapping";
 
-	private static final String ELEMENT_REPOSITORY = "repository"; //$NON-NLS-1$
+	private static final String ELEMENT_BRANDING = "branding";
 
-	private static final String ELEMENT_PROPERTY = "property"; //$NON-NLS-1$
+	private static final String ELEMENT_REPOSITORY = "repository";
 
-	private static final String ATTRIBUTE_PLUGIN_ID_PREFIX = "pluginIdPrefix"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_PLUGIN_ID_PREFIX = "pluginIdPrefix";
 
-	private static final String ATTRIBUTE_REPOSITORY_URL = "url"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_REPOSITORY_URL = "url";
 
-	private static final String ATTRIBUTE_REPOSITORY_KIND = "kind"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_REPOSITORY_KIND = "kind";
 
-	private static final String ATTRIBUTE_BRANDING_NAME = "name"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_BRANDING_NAME = "name";
 
-	private static final String ATTRIBUTE_BRANDING_DESCRIPTION = "description"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_BRANDING_DESCRIPTION = "description";
 
-	private static final String ATTRIBUTE_BRANDING_CATEGORY = "category"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_BRANDING_CATEGORY = "category";
 
-	private static final String ATTRIBUTE_NAME = "name"; //$NON-NLS-1$
-
-	private static final String ATTRIBUTE_VALUE = "value"; //$NON-NLS-1$
+	private static final String ATTRIBUTE_VALUE = "value";
 
 	private TreeMap<String, PluginRepositoryMapping> mappingByPrefix;
 
@@ -73,21 +69,22 @@ public class PluginRepositoryMappingManager {
 			attributes.put(IRepositoryConstants.CONNECTOR_KIND, connectorKind);
 		}
 		// attributes
-		for (IConfigurationElement attributeElement : element.getChildren(ELEMENT_PROPERTY)) {
-			String name = attributeElement.getAttribute(ATTRIBUTE_NAME);
-			String value = attributeElement.getAttribute(ATTRIBUTE_VALUE);
-			attributes.put(name, value);
+		for (String elementName : MAPPING_CHILD_ELEMENTS) {
+			for (IConfigurationElement attributeElement : element.getChildren(elementName)) {
+				String value = attributeElement.getAttribute(ATTRIBUTE_VALUE);
+				attributes.put(elementName, value);
+			}
 		}
 		// branding
 		for (IConfigurationElement attributeElement : element.getChildren(ELEMENT_BRANDING)) {
-			attributes.put("brandingName", attributeElement.getAttribute(ATTRIBUTE_BRANDING_NAME)); //$NON-NLS-1$
+			attributes.put("brandingName", attributeElement.getAttribute(ATTRIBUTE_BRANDING_NAME));
 			String description = attributeElement.getAttribute(ATTRIBUTE_BRANDING_DESCRIPTION);
 			if (description != null) {
-				attributes.put("brandingDescription", description); //$NON-NLS-1$
+				attributes.put("brandingDescription", description);
 			}
 			String category = attributeElement.getAttribute(ATTRIBUTE_BRANDING_CATEGORY);
 			if (category != null) {
-				attributes.put("brandingCategory", category); //$NON-NLS-1$
+				attributes.put("brandingCategory", category);
 			}
 		}
 
@@ -97,9 +94,9 @@ public class PluginRepositoryMappingManager {
 			pluginRepositoryMapping.addPrefix(pluginIdPrefix);
 			addPluginRepositoryMapping(pluginRepositoryMapping);
 		} else {
-			StatusHandler.log(new Status(IStatus.ERROR, TasksBugsPlugin.ID_PLUGIN, "Missing attributes in " //$NON-NLS-1$
-					+ EXTENSION_ID_PLUGIN_REPOSITORY_MAPPING + " extension for id \"" + ATTRIBUTE_PLUGIN_ID_PREFIX //$NON-NLS-1$
-					+ "\"")); //$NON-NLS-1$
+			StatusHandler.log(new Status(IStatus.ERROR, TasksBugsPlugin.ID_PLUGIN, "Missing attributes in "
+					+ EXTENSION_ID_PLUGIN_REPOSITORY_MAPPING + " extension for id \"" + ATTRIBUTE_PLUGIN_ID_PREFIX
+					+ "\""));
 		}
 	}
 

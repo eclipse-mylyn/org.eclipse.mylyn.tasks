@@ -25,7 +25,7 @@
             visible="true"> 
         <action
               class="org.eclipse.mylyn.internal.tasks.bugs.actions.ReportBugAction"
-              icon="icons/etool16/report-bug.gif"
+              icon="icons/etool16/task-bug-new.gif"
               id="org.eclipse.mylyn.tasks.ui.bug.report"
               label="%ReportBugAction.label"
               menubarPath="help/helpStart"

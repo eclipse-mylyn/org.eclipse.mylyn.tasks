@@ -1,21 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Schema file written by PDE -->
-<schema targetNamespace="org.eclipse.mylyn.tasks.bugs" xmlns="http://www.w3.org/2001/XMLSchema">
+<schema targetNamespace="org.eclipse.mylyn.tasks.bugs">
 <annotation>
-      <appinfo>
+      <appInfo>
          <meta.schema plugin="org.eclipse.mylyn.tasks.bugs" id="support" name="Integrated Support Extensions"/>
-      </appinfo>
+      </appInfo>
       <documentation>
          Allows client to provide information for integrated bug reporting.
       </documentation>
    </annotation>
 
    <element name="extension">
-      <annotation>
-         <appinfo>
-            <meta.element internal="true" />
-         </appinfo>
-      </annotation>
       <complexType>
          <sequence>
             <element ref="category" minOccurs="0" maxOccurs="unbounded"/>
@@ -42,9 +37,9 @@
                <documentation>
                   
                </documentation>
-               <appinfo>
+               <appInfo>
                   <meta.attribute translatable="true"/>
-               </appinfo>
+               </appInfo>
             </annotation>
          </attribute>
       </complexType>
@@ -240,9 +235,9 @@
                <documentation>
                   A 32x32 branding icon.
                </documentation>
-               <appinfo>
+               <appInfo>
                   <meta.attribute kind="resource"/>
-               </appinfo>
+               </appInfo>
             </annotation>
          </attribute>
          <attribute name="url" type="string">
@@ -255,19 +250,41 @@
       </complexType>
    </element>
 
+   <element name="handler">
+      <complexType>
+         <attribute name="id" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="class" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appInfo>
+                  <meta.attribute kind="java" basedOn="org.eclipse.mylyn.internal.provisional.tasks.bugs.AbstractSupportHandler:"/>
+               </appInfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
    <annotation>
-      <appinfo>
+      <appInfo>
          <meta.section type="since"/>
-      </appinfo>
+      </appInfo>
       <documentation>
          3.2
       </documentation>
    </annotation>
 
    <annotation>
-      <appinfo>
+      <appInfo>
          <meta.section type="examples"/>
-      </appinfo>
+      </appInfo>
       <documentation>
          &lt;extension point=&quot;org.eclipse.mylyn.tasks.bugs.support&quot;&gt;
 &lt;category
@@ -308,12 +325,10 @@
       </documentation>
    </annotation>
 
-
-
    <annotation>
-      <appinfo>
+      <appInfo>
          <meta.section type="copyright"/>
-      </appinfo>
+      </appInfo>
       <documentation>
          Copyright (c) 2009 Tasktop Technologies and others.
       </documentation>

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Schema file written by PDE -->
-<schema targetNamespace="org.eclipse.mylyn.tasks.bugs" xmlns="http://www.w3.org/2001/XMLSchema">
+<schema targetNamespace="org.eclipse.mylyn.tasks.bugs">
 <annotation>
       <appInfo>
          <meta.schema plugin="org.eclipse.mylyn.tasks.bugs" id="support" name="Integrated Support Extensions"/>
@@ -11,11 +11,6 @@
    </annotation>
 
    <element name="extension">
-      <annotation>
-         <appInfo>
-            <meta.element internal="true" />
-         </appInfo>
-      </annotation>
       <complexType>
          <sequence>
             <element ref="category" minOccurs="0" maxOccurs="unbounded"/>
@@ -263,9 +258,6 @@
                <documentation>
                   
                </documentation>
-               <appInfo>
-                  <meta.attribute kind="identifier"/>
-               </appInfo>
             </annotation>
          </attribute>
          <attribute name="class" type="string">
@@ -333,8 +325,6 @@
 &lt;/extension&gt;
       </documentation>
    </annotation>
-
-
 
    <annotation>
       <appInfo>

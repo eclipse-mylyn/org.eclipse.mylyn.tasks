@@ -1,18 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?><!--
-    Copyright (c) 2009 Tasktop Technologies and others.
-    All rights reserved. This program and the accompanying materials
-    are made available under the terms of the Eclipse Public License v1.0
-    which accompanies this distribution, and is available at
-    http://www.eclipse.org/legal/epl-v10.html
-   
-    Contributors:
-         Tasktop Technologies - initial API and implementation
- -->
-
+<?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="org.eclipse.mylyn.test_feature"
       label="Mylyn Test Feature"
-      version="3.2.1.qualifier"
+      version="3.0.0.qualifier"
       plugin="org.eclipse.mylyn">
 
    <description url="http://eclipse.org/mylyn">
@@ -20,7 +10,7 @@
    </description>
 
    <copyright>
-      Copyright (c) 2004, 2008 Tasktop Technologies and others. All rights reserved.
+      Copyright (c) 2004 - 2007 Mylyn project committers and others.
    </copyright>
 
    <license url="license.html">
@@ -86,15 +76,15 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
       <import plugin="org.eclipse.mylyn"/>
       <import plugin="org.eclipse.search"/>
       <import plugin="org.eclipse.mylyn.commons.net"/>
-      <import plugin="org.eclipse.mylyn.bugzilla.ide"/>
-      <import plugin="org.eclipse.mylyn.commons.ui"/>
-      <import plugin="org.eclipse.mylyn.commons.core"/>
+      <import plugin="org.eclipse.mylyn.bugzilla.ide" version="2.3.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.mylyn.commons.ui" version="3.0.0" match="compatible"/>
       <import plugin="org.eclipse.core.resources"/>
       <import plugin="org.eclipse.jdt.core"/>
       <import plugin="org.eclipse.pde"/>
       <import plugin="org.eclipse.pde.core"/>
       <import plugin="org.eclipse.mylyn.monitor.ui"/>
       <import plugin="org.eclipse.mylyn.monitor.core"/>
+      <import plugin="org.eclipse.mylyn.commons.core"/>
       <import plugin="org.eclipse.ui.workbench"/>
       <import plugin="org.eclipse.mylyn.team.ui"/>
       <import plugin="org.eclipse.mylyn.resources.ui"/>
@@ -113,6 +103,7 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
       <import plugin="org.eclipse.mylyn.sandbox.ui"/>
       <import plugin="org.eclipse.core.net"/>
       <import plugin="org.eclipse.mylyn.web.tasks"/>
+      <import plugin="org.eclipse.test.performance"/>
       <import plugin="org.eclipse.mylyn.tasks.bugs"/>
       <import plugin="org.eclipse.mylyn.team.cvs"/>
       <import plugin="org.eclipse.team.core"/>
@@ -132,23 +123,7 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
       <import plugin="org.eclipse.mylyn.commons.core" version="3.0.0" match="compatible"/>
       <import plugin="org.eclipse.ui.navigator"/>
       <import plugin="org.eclipse.mylyn.tasks.core" version="3.0.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.commons.ui" version="3.0.0" match="compatible"/>
-      <import plugin="org.eclipse.compare"/>
-      <import plugin="org.eclipse.team.ui"/>
-      <import plugin="org.junit" version="3.8.2" match="greaterOrEqual"/>
-      <import plugin="org.eclipse.mylyn.wikitext.core" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.textile.core" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.confluence.core" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.confluence.ui" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.mediawiki.core" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.mediawiki.ui" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.textile.ui" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.tracwiki.core" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.wikitext.ui" version="0.9.0" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.tasks.ui" version="3.0.2" match="compatible"/>
-      <import plugin="org.eclipse.mylyn.tasks.core" version="3.0.2" match="compatible"/>
-      <import plugin="org.eclipse.core.expressions"/>
-      <import plugin="org.eclipse.help"/>
+      <import plugin="org.eclipse.mylyn.commons.ui" version="3.0.0" match="greaterOrEqual"/>
    </requires>
 
    <plugin
@@ -167,7 +142,8 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.ide.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.java.tests"
@@ -179,7 +155,8 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.jira.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.monitor.tests"
@@ -197,7 +174,8 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.sandbox.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.tasks.tests"
@@ -209,7 +187,8 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.team.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.tests"
@@ -221,13 +200,15 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.trac.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.xplanner.tests"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.0.0"
+         unpack="false"/>
 
    <plugin
          id="org.eclipse.mylyn.monitor.reports"
@@ -240,43 +221,7 @@ Java and all Java-based trademarks are trademarks of Sun Microsystems, Inc. in t
          id="org.eclipse.mylyn.web.ui"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
-
-   <plugin
-         id="org.eclipse.mylyn.wikitext.tests"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
-
-   <plugin
-         id="org.eclipse.test.performance"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
-
-   <plugin
-         id="org.eclipse.mylyn.commons.tests"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
-
-   <plugin
-         id="org.eclipse.test.performance.ui"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
-
-   <plugin
-         id="org.eclipse.mylyn.ide.capabilities"
-         download-size="0"
-         install-size="0"
          version="0.0.0"
          unpack="false"/>
-
-   <plugin
-         id="org.eclipse.mylyn.discovery.tests"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
 
 </feature>

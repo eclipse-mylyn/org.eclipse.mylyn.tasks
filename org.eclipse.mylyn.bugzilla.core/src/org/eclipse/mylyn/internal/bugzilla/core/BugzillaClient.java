@@ -509,8 +509,8 @@ public class BugzillaClient {
 				BugzillaAttribute.ASSIGNED_TO, BugzillaAttribute.TARGET_MILESTONE, BugzillaAttribute.REPORTER,
 				BugzillaAttribute.DEPENDSON, BugzillaAttribute.BLOCKED, BugzillaAttribute.BUG_FILE_LOC,
 				BugzillaAttribute.NEWCC, BugzillaAttribute.KEYWORDS, BugzillaAttribute.CC,
-				BugzillaAttribute.NEW_COMMENT, BugzillaAttribute.QA_CONTACT, BugzillaAttribute.STATUS_WHITEBOARD,
-				BugzillaAttribute.DEADLINE };
+				BugzillaAttribute.NEW_COMMENT, BugzillaAttribute.QA_CONTACT, BugzillaAttribute.STATUS_WHITEBOARD
+		};
 
 		for (BugzillaAttribute element : reportElements) {
 			BugzillaTaskDataHandler.createAttribute(existingReport, element);

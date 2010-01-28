@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2009 Frank Becker and others.
+ * Copyright (c) 2004, 2009 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *     Frank Becker - initial API and implementation
+ *     Tasktop Technologies - initial API and implementation
  *******************************************************************************/
 
 package org.eclipse.mylyn.internal.bugzilla.core;
@@ -15,7 +15,6 @@ import org.eclipse.core.runtime.Assert;
 import org.eclipse.mylyn.tasks.core.data.TaskAttachmentMapper;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
 import org.eclipse.mylyn.tasks.core.data.TaskAttributeMapper;
-import org.eclipse.mylyn.tasks.core.data.TaskAttributeMetaData;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
 
 /**
@@ -34,83 +33,19 @@ public class BugzillaAttachmentMapper extends TaskAttachmentMapper {
 
 	@Override
 	public void applyTo(TaskAttribute taskAttribute) {
+		// ignore
+		super.applyTo(taskAttribute);
+
 		Assert.isNotNull(taskAttribute);
 		TaskData taskData = taskAttribute.getTaskData();
 		TaskAttributeMapper mapper = taskData.getAttributeMapper();
-		taskAttribute.getMetaData().defaults().setType(TaskAttribute.TYPE_ATTACHMENT);
-		if (getAttachmentId() != null) {
-			mapper.setValue(taskAttribute, getAttachmentId());
-		}
-		if (getAuthor() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_AUTHOR);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_PERSON);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Author);
-			mapper.setRepositoryPerson(child, getAuthor());
-		}
-		if (getContentType() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_CONTENT_TYPE);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_SHORT_TEXT);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Content_Type);
-			mapper.setValue(child, getContentType());
-		}
-		if (getCreationDate() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_DATE);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_DATE);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Creation_Date);
-			mapper.setDateValue(child, getCreationDate());
-		}
-		if (getDescription() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_DESCRIPTION);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_SHORT_TEXT);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Description);
-			mapper.setValue(child, getDescription());
-		}
-		if (getFileName() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_FILENAME);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_SHORT_TEXT);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Filename);
-			mapper.setValue(child, getFileName());
-		}
-		if (isDeprecated() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_IS_DEPRECATED);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_BOOLEAN);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_obsolete);
-			mapper.setBooleanValue(child, isDeprecated());
-		}
-		if (isPatch() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_IS_PATCH);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_BOOLEAN);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_patch);
-			mapper.setBooleanValue(child, isPatch());
-		}
-		if (getLength() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_SIZE);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_SHORT_TEXT);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Size);
-			mapper.setLongValue(child, getLength());
-		}
-		if (getUrl() != null) {
-			TaskAttribute child = taskAttribute.createMappedAttribute(TaskAttribute.ATTACHMENT_URL);
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_URL);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_URL);
-			mapper.setValue(child, getUrl());
-		}
+
 		if (getToken() != null) {
 			TaskAttribute child = taskAttribute.createMappedAttribute(BugzillaAttribute.TOKEN.getKey());
-			TaskAttributeMetaData defaults = child.getMetaData().defaults();
-			defaults.setType(TaskAttribute.TYPE_SHORT_TEXT);
-			defaults.setLabel(Messages.BugzillaAttachmentMapper_Token);
+			child.getMetaData().defaults().setType(TaskAttribute.TYPE_SHORT_TEXT);
 			mapper.setValue(child, getToken());
 		}
+
 	}
 
 	public static BugzillaAttachmentMapper createFrom(TaskAttribute taskAttribute) {
@@ -163,4 +98,5 @@ public class BugzillaAttachmentMapper extends TaskAttachmentMapper {
 		}
 		return attachment;
 	}
+
 }

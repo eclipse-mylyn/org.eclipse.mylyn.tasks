@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaRepositoryResponse;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
@@ -36,6 +37,11 @@ public class BugzillaResponseDetailDialog extends Dialog {
 	}
 
 	@Override
+	protected void createButtonsForButtonBar(Composite parent) {
+		createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL, true);
+	}
+
+	@Override
 	protected Control createDialogArea(Composite parent) {
 		getShell().setText(Messages.BugzillaResponseDetailDialog_Titel);
 
@@ -51,23 +57,23 @@ public class BugzillaResponseDetailDialog extends Dialog {
 		text.setLayoutData(gd);
 		text.setEditable(false);
 
-		String mes = ""; //$NON-NLS-1$
+		StringBuilder mes = new StringBuilder();
 		for (String iterable_map : response.getResponseData().keySet()) {
 			if (mes.length() > 0) {
-				mes += "\n"; //$NON-NLS-1$
+				mes.append("\n"); //$NON-NLS-1$
 			}
-			mes += NLS.bind(Messages.BugzillaResponseDetailDialog_Bug_Line, iterable_map);
+			mes.append(NLS.bind(Messages.BugzillaResponseDetailDialog_Bug_Line, iterable_map));
 			Map<String, List<String>> responseMap = response.getResponseData().get(iterable_map);
 			for (String iterable_list : responseMap.keySet()) {
-				mes += NLS.bind(Messages.BugzillaResponseDetailDialog_Action_Line, iterable_list);
+				mes.append(NLS.bind(Messages.BugzillaResponseDetailDialog_Action_Line, iterable_list));
 				List<String> responseList = responseMap.get(iterable_list);
 				for (String string : responseList) {
-					mes += NLS.bind(Messages.BugzillaResponseDetailDialog_Email_Line, string);
+					mes.append(NLS.bind(Messages.BugzillaResponseDetailDialog_Email_Line, string));
 				}
 			}
 
 		}
-		text.setText(mes);
+		text.setText(mes.toString());
 		parent.pack();
 		applyDialogFont(composite);
 		return composite;

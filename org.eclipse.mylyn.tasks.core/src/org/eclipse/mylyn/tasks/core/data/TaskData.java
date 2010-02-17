@@ -17,6 +17,7 @@ import org.eclipse.mylyn.tasks.core.AbstractRepositoryConnector;
 /**
  * @author Steffen Pingel
  * @since 3.0
+ * @noextend This class is not intended to be subclassed by clients.
  */
 public final class TaskData {
 

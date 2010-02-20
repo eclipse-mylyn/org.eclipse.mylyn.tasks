@@ -38,8 +38,6 @@ import org.eclipse.mylyn.internal.trac.core.TracTaskMapper;
 import org.eclipse.mylyn.internal.trac.core.client.ITracClient;
 import org.eclipse.mylyn.internal.trac.core.client.ITracClient.Version;
 import org.eclipse.mylyn.internal.trac.core.model.TracTicket;
-import org.eclipse.mylyn.internal.trac.core.model.TracTicket.Key;
-import org.eclipse.mylyn.internal.trac.core.util.TracUtil;
 import org.eclipse.mylyn.tasks.core.ITask;
 import org.eclipse.mylyn.tasks.core.ITaskAttachment;
 import org.eclipse.mylyn.tasks.core.RepositoryStatus;
@@ -121,63 +119,63 @@ public class TracTaskDataHandlerTest extends TestCase {
 		assertEquals(null, session.getStaleTasks());
 	}
 
-	public void testMarkStaleTasksXmlRpc010() throws Exception {
-		init(TracTestConstants.TEST_TRAC_010_URL, Version.XML_RPC);
-		markStaleTasks();
-	}
+//	public void testMarkStaleTasksXmlRpc010() throws Exception {
+//		init(TracTestConstants.TEST_TRAC_010_URL, Version.XML_RPC);
+//		markStaleTasks();
+//	}
+//
+//	public void testMarkStaleTasksXmlRpc011() throws Exception {
+//		init(TracTestConstants.TEST_TRAC_011_URL, Version.XML_RPC);
+//		markStaleTasks();
+//	}
 
-	public void testMarkStaleTasksXmlRpc011() throws Exception {
-		init(TracTestConstants.TEST_TRAC_011_URL, Version.XML_RPC);
-		markStaleTasks();
-	}
-
-	private void markStaleTasks() throws Exception {
-		SynchronizationSession session;
-		TracTicket ticket = TracTestUtil.createTicket(client, "markStaleTasks");
-		ITask task = TracTestUtil.createTask(repository, ticket.getId() + "");
-		long lastModified = TracUtil.toTracTime(task.getModificationDate());
-
-		// an empty set should not cause contact to the repository
-		repository.setSynchronizationTimeStamp(null);
-		session = createSession(task);
-		connector.preSynchronization(session, null);
-		assertTrue(session.needsPerformQueries());
-		assertNull(repository.getSynchronizationTimeStamp());
-
-		repository.setSynchronizationTimeStamp(null);
-		session = createSession(task);
-		connector.preSynchronization(session, null);
-		assertTrue(session.needsPerformQueries());
-		assertEquals(Collections.singleton(task), session.getStaleTasks());
-
-		// always returns the ticket because time comparison mode is >=
-		repository.setSynchronizationTimeStamp(lastModified + "");
-		session = createSession(task);
-		connector.preSynchronization(session, null);
-		// TODO this was fixed so it returns false now but only if the 
-		// query returns a single task
-		assertFalse(session.needsPerformQueries());
-		// bug 238043: assertEquals(Collections.emptySet(), session.getStaleTasks());
-		assertEquals(null, session.getStaleTasks());
-
-		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
-		session = createSession(task);
-		connector.preSynchronization(session, null);
-		assertFalse(session.needsPerformQueries());
-		// bug 238043: assertEquals(Collections.emptySet(), session.getStaleTasks());
-		assertEquals(null, session.getStaleTasks());
-
-		// change ticket making sure it gets a new change time
-		Thread.sleep(1000);
-		ticket.putBuiltinValue(Key.DESCRIPTION, lastModified + "");
-		client.updateTicket(ticket, "comment", null);
-
-		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
-		session = createSession(task);
-		connector.preSynchronization(session, null);
-		assertTrue(session.needsPerformQueries());
-		assertEquals(Collections.singleton(task), session.getStaleTasks());
-	}
+//	private void markStaleTasks() throws Exception {
+//		SynchronizationSession session;
+//		TracTicket ticket = TracTestUtil.createTicket(client, "markStaleTasks");
+//		ITask task = TracTestUtil.createTask(repository, ticket.getId() + "");
+//		long lastModified = TracUtil.toTracTime(task.getModificationDate());
+//
+//		// an empty set should not cause contact to the repository
+//		repository.setSynchronizationTimeStamp(null);
+//		session = createSession(task);
+//		connector.preSynchronization(session, null);
+//		assertTrue(session.needsPerformQueries());
+//		assertNull(repository.getSynchronizationTimeStamp());
+//
+//		repository.setSynchronizationTimeStamp(null);
+//		session = createSession(task);
+//		connector.preSynchronization(session, null);
+//		assertTrue(session.needsPerformQueries());
+//		assertEquals(Collections.singleton(task), session.getStaleTasks());
+//
+//		// always returns the ticket because time comparison mode is >=
+//		repository.setSynchronizationTimeStamp(lastModified + "");
+//		session = createSession(task);
+//		connector.preSynchronization(session, null);
+//		// TODO this was fixed so it returns false now but only if the 
+//		// query returns a single task
+//		assertFalse(session.needsPerformQueries());
+//		// bug 238043: assertEquals(Collections.emptySet(), session.getStaleTasks());
+//		assertEquals(null, session.getStaleTasks());
+//
+//		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
+//		session = createSession(task);
+//		connector.preSynchronization(session, null);
+//		assertFalse(session.needsPerformQueries());
+//		// bug 238043: assertEquals(Collections.emptySet(), session.getStaleTasks());
+//		assertEquals(null, session.getStaleTasks());
+//
+//		// change ticket making sure it gets a new change time
+//		Thread.sleep(1000);
+//		ticket.putBuiltinValue(Key.DESCRIPTION, lastModified + "");
+//		client.updateTicket(ticket, "comment", null);
+//
+//		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
+//		session = createSession(task);
+//		connector.preSynchronization(session, null);
+//		assertTrue(session.needsPerformQueries());
+//		assertEquals(Collections.singleton(task), session.getStaleTasks());
+//	}
 
 	public void testMarkStaleTasksNoTimeStampXmlRpc010() throws Exception {
 		init(TracTestConstants.TEST_TRAC_010_URL, Version.XML_RPC);

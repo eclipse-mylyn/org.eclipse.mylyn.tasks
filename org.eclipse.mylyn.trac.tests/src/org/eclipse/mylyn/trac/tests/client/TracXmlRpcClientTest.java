@@ -183,7 +183,7 @@ public class TracXmlRpcClientTest extends AbstractTracClientRepositoryTest {
 
 	public void testWikiToHtml011() throws Exception {
 		connect011();
-		wikiToHtml("http://mylyn.eclipse.org/trac011");
+		wikiToHtml(TracTestConstants.TEST_TRAC_010_URL);
 	}
 
 	public void wikiToHtml(String tracUrl) throws Exception {

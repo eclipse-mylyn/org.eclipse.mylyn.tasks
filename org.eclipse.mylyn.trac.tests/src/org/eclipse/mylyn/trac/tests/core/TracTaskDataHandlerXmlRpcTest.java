@@ -51,7 +51,6 @@ import org.eclipse.mylyn.tasks.core.data.TaskOperation;
 import org.eclipse.mylyn.tasks.core.data.TaskRelation;
 import org.eclipse.mylyn.tasks.ui.TasksUi;
 import org.eclipse.mylyn.trac.tests.support.TracFixture;
-import org.eclipse.mylyn.trac.tests.support.TracTestConstants;
 import org.eclipse.mylyn.trac.tests.support.TracTestUtil;
 import org.eclipse.mylyn.trac.tests.support.XmlRpcServer.TestData;
 
@@ -347,12 +346,12 @@ public class TracTaskDataHandlerXmlRpcTest extends TestCase {
 	}
 
 	public void testOperations() throws Exception {
-		boolean hasReassign = TracTestConstants.TEST_TRAC_011_URL.equals(repository.getRepositoryUrl());
+		boolean hasReassign = TracFixture.current().getVersion().compareTo("0.11") >= 0;
 
 		TaskData taskData = taskDataHandler.getTaskData(repository, "1", new NullProgressMonitor());
 		List<TaskAttribute> operations = taskData.getAttributeMapper().getAttributesByType(taskData,
 				TaskAttribute.TYPE_OPERATION);
-		assertEquals((hasReassign ? 5 : 4), operations.size());
+		assertEquals("Unexpected operations: " + operations, (hasReassign ? 5 : 4), operations.size());
 
 		TaskOperation operation = taskData.getAttributeMapper().getTaskOperation(operations.get(0));
 		assertEquals(TaskAttribute.OPERATION, operation.getTaskAttribute().getId());

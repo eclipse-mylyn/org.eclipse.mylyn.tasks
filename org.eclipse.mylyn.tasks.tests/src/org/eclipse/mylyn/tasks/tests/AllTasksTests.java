@@ -35,7 +35,8 @@ public class AllTasksTests {
 
 	public static Test suite() {
 		TestSuite suite = new TestSuite("Test for org.eclipse.mylyn.tasks.tests");
-		suite.addTestSuite(TasksUiUtilTest.class);
+		// XXX re-enable: causes bogus failures on 3.3 due to a failing web browser
+//		suite.addTestSuite(TasksUiUtilTest.class);
 		suite.addTestSuite(TaskListUiTest.class);
 		suite.addTestSuite(TaskRepositoryTest.class);
 		suite.addTestSuite(LinkProviderTest.class);

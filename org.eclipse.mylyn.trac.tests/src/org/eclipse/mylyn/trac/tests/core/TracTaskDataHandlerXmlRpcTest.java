@@ -114,26 +114,40 @@ public class TracTaskDataHandlerXmlRpcTest extends TestCase {
 		repository.setSynchronizationTimeStamp(lastModified + "");
 		session = createSession(task);
 		connector.preSynchronization(session, null);
-		// TODO this was fixed so it returns false now but only if the 
-		// query returns a single task
+		// false since query that check for changed tasks only returns a single task
 		assertFalse(session.needsPerformQueries());
 		assertEquals(Collections.emptySet(), session.getStaleTasks());
 
+		// nothing has changed, should detect a change
 		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
 		session = createSession(task);
 		connector.preSynchronization(session, null);
 		assertFalse(session.needsPerformQueries());
 		assertEquals(Collections.emptySet(), session.getStaleTasks());
 
-		// change ticket making sure it gets a new change time
-		Thread.sleep(1500);
-		ticket.putBuiltinValue(Key.DESCRIPTION, lastModified + "");
-		client.updateTicket(ticket, "comment", null);
+		long mostRecentlyModified = 0;
+		// try changing ticket 3x to make sure it gets a new change time
+		for (int i = 0; i < 3; i++) {
+			ticket.putBuiltinValue(Key.DESCRIPTION, lastModified + "");
+			client.updateTicket(ticket, "comment", null);
+			TracTicket updateTicket = client.getTicket(ticket.getId(), null);
+			mostRecentlyModified = TracUtil.toTracTime(updateTicket.getLastChanged());
+			// needs to be at least one second ahead of repository time stamp   
+			if (mostRecentlyModified > lastModified + 1) {
+				break;
+			} else if (i == 2) {
+				fail("Failed to update ticket modification time: ticket id=" + ticket.getId() + ", lastModified="
+						+ lastModified + ", mostRectentlyModified=" + mostRecentlyModified);
+			}
+			Thread.sleep(1500);
+		}
 
+		// should now detect a change
 		repository.setSynchronizationTimeStamp((lastModified + 1) + "");
 		session = createSession(task);
 		connector.preSynchronization(session, null);
-		assertTrue(session.needsPerformQueries());
+		assertTrue("Expected change: ticket id=" + ticket.getId() + ", lastModified=" + lastModified
+				+ ", mostRectentlyModified=" + mostRecentlyModified, session.needsPerformQueries());
 		assertEquals(Collections.singleton(task), session.getStaleTasks());
 	}
 

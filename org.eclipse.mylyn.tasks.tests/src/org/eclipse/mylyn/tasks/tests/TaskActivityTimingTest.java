@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2010 Tasktop Technologies and others.
+ * Copyright (c) 2004, 2009 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -349,6 +349,7 @@ public class TaskActivityTimingTest extends TestCase {
 
 		Calendar start = Calendar.getInstance();
 		Calendar end = Calendar.getInstance();
+		end.setTimeInMillis(start.getTimeInMillis());
 		end.add(Calendar.HOUR_OF_DAY, 2);
 
 		Calendar start2 = Calendar.getInstance();
@@ -381,6 +382,7 @@ public class TaskActivityTimingTest extends TestCase {
 
 		Calendar start = Calendar.getInstance();
 		Calendar end = Calendar.getInstance();
+		end.setTimeInMillis(start.getTimeInMillis());
 		end.add(Calendar.HOUR_OF_DAY, 2);
 
 		InteractionEvent event1 = new InteractionEvent(InteractionEvent.Kind.ATTENTION, "structureKind", null,
@@ -497,6 +499,7 @@ public class TaskActivityTimingTest extends TestCase {
 		{
 			Calendar startActiveTime2 = Calendar.getInstance();
 			Calendar endActiveTime2 = Calendar.getInstance();
+			endActiveTime2.setTimeInMillis(startActiveTime2.getTimeInMillis());
 			endActiveTime2.add(Calendar.SECOND, 20);
 
 			Calendar startTime2 = Calendar.getInstance();
@@ -542,6 +545,7 @@ public class TaskActivityTimingTest extends TestCase {
 
 		Calendar startTime = Calendar.getInstance();
 		Calendar endTime = Calendar.getInstance();
+		endTime.setTimeInMillis(startTime.getTimeInMillis());
 		endTime.add(Calendar.SECOND, 20);
 
 		InteractionEvent event1 = new InteractionEvent(InteractionEvent.Kind.SELECTION, "structureKind",
@@ -575,6 +579,7 @@ public class TaskActivityTimingTest extends TestCase {
 	public void testCollapsedTiming() {
 		Calendar startTime1 = Calendar.getInstance();
 		Calendar endTime1 = Calendar.getInstance();
+		endTime1.setTimeInMillis(startTime1.getTimeInMillis());
 		endTime1.add(Calendar.SECOND, 20);
 
 		Calendar startTime2 = Calendar.getInstance();
@@ -620,6 +625,7 @@ public class TaskActivityTimingTest extends TestCase {
 	public void testCollapsedTiming2() {
 		Calendar startTime1 = Calendar.getInstance();
 		Calendar endTime1 = Calendar.getInstance();
+		endTime1.setTimeInMillis(startTime1.getTimeInMillis());
 		endTime1.add(Calendar.SECOND, 20);
 
 		Calendar startTime2 = Calendar.getInstance();
@@ -709,6 +715,7 @@ public class TaskActivityTimingTest extends TestCase {
 		// task attention events occur sequentially
 		Calendar startTime1 = Calendar.getInstance();
 		Calendar endTime1 = Calendar.getInstance();
+		endTime1.setTimeInMillis(startTime1.getTimeInMillis());
 		endTime1.add(Calendar.SECOND, 20);
 
 		Calendar startTime2 = Calendar.getInstance();
@@ -818,6 +825,7 @@ public class TaskActivityTimingTest extends TestCase {
 
 		Calendar activityStart = Calendar.getInstance();
 		Calendar activityEnd = Calendar.getInstance();
+		activityEnd.setTimeInMillis(activityStart.getTimeInMillis());
 		activityEnd.add(Calendar.HOUR_OF_DAY, 1);
 
 		InteractionEvent activityEvent = new InteractionEvent(InteractionEvent.Kind.ATTENTION,

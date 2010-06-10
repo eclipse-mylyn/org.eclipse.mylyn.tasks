@@ -25,13 +25,11 @@ import org.eclipse.mylyn.bugzilla.tests.support.BugzillaFixture;
 import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaAttribute;
-import org.eclipse.mylyn.internal.tasks.core.RepositoryQuery;
 import org.eclipse.mylyn.internal.tasks.core.sync.SubmitTaskJob;
 import org.eclipse.mylyn.internal.tasks.ui.TasksUiPlugin;
 import org.eclipse.mylyn.internal.tasks.ui.util.TasksUiInternal;
 import org.eclipse.mylyn.tasks.core.ITask;
 import org.eclipse.mylyn.tasks.core.ITask.SynchronizationState;
-import org.eclipse.mylyn.tasks.core.data.ITaskDataWorkingCopy;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
 import org.eclipse.mylyn.tasks.core.data.TaskDataModel;
@@ -68,75 +66,76 @@ public class BugzillaRepository32Test extends AbstractBugzillaTest {
 
 	}
 
-	public void testSecondSubmit() throws Exception {
-		init322();
-		String taskNumber = "1";
-		RepositoryQuery query = new RepositoryQuery("bugzilla", "blah");
-		query.setRepositoryUrl(BugzillaTestConstants.TEST_BUGZILLA_322_URL);
-		query.setUrl("?short_desc_type=allwordssubstr&short_desc=&product=TestProduct&long_desc_type=allwordssubstr&long_desc=&order=Importance&ctype=rdf");
-		TasksUiInternal.getTaskList().addQuery(query);
-		TasksUiInternal.synchronizeQuery(connector, query, null, true);
-
-		ITask task = TasksUiInternal.getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber, "");
-		assertNotNull(task);
-		ITaskDataWorkingCopy taskDataState = TasksUi.getTaskDataManager().getWorkingCopy(task);//TasksUiPlugin.getTaskDataManager().getTaskData(task);
-		assertNotNull(taskDataState);
-		TaskDataModel model = new TaskDataModel(repository, task, taskDataState);
-
-		TaskData taskData = model.getTaskData();
-		//remove the token (i.e. unpatched Bugzilla 3.2.2)
-		//taskData.getRoot().removeAttribute("token");
-
-		TaskAttribute attrPriority = taskData.getRoot().getAttribute("priority");
-		boolean p1 = false;
-		if (attrPriority.getValue().equals("P1")) {
-			p1 = true;
-			attrPriority.setValue("P2");
-		} else {
-			attrPriority.setValue("P1");
-		}
-
-		model.attributeChanged(attrPriority);
-		model.save(new NullProgressMonitor());
-		submit(task, model);
-
-		TasksUiInternal.synchronizeRepository(repository, false);
-
-		task = TasksUiPlugin.getTaskList().getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber);
-		assertNotNull(task);
-		assertEquals(!p1, task.getPriority().equals("P1"));
-
-		// Attempt 2
-
-		taskDataState = TasksUi.getTaskDataManager().getWorkingCopy(task);//TasksUiPlugin.getTaskDataManager().getTaskData(task);
-		assertNotNull(taskDataState);
-		model = new TaskDataModel(repository, task, taskDataState);
-
-		taskData = model.getTaskData();
-		//remove the token (i.e. unpatched Bugzilla 3.2.2)
-		//taskData.getRoot().removeAttribute("token");
-
-		attrPriority = taskData.getRoot().getAttribute("priority");
-		p1 = false;
-		if (attrPriority.getValue().equals("P1")) {
-			p1 = true;
-			attrPriority.setValue("P2");
-		} else {
-			attrPriority.setValue("P1");
-		}
-
-		model.attributeChanged(attrPriority);
-		model.save(new NullProgressMonitor());
-		connector.getClientManager().repositoryRemoved(repository);
-		submit(task, model);
-
-		TasksUiInternal.synchronizeRepository(repository, false);
-
-		task = TasksUiPlugin.getTaskList().getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber);
-		assertNotNull(task);
-		assertEquals(!p1, task.getPriority().equals("P1"));
-
-	}
+	// 3.2.2 is no longer supported
+//	public void testSecondSubmit() throws Exception {
+//		init322();
+//		String taskNumber = "1";
+//		RepositoryQuery query = new RepositoryQuery("bugzilla", "blah");
+//		query.setRepositoryUrl(BugzillaTestConstants.TEST_BUGZILLA_322_URL);
+//		query.setUrl("?short_desc_type=allwordssubstr&short_desc=&product=TestProduct&long_desc_type=allwordssubstr&long_desc=&order=Importance&ctype=rdf");
+//		TasksUiInternal.getTaskList().addQuery(query);
+//		TasksUiInternal.synchronizeQuery(connector, query, null, true);
+//
+//		ITask task = TasksUiInternal.getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber, "");
+//		assertNotNull(task);
+//		ITaskDataWorkingCopy taskDataState = TasksUi.getTaskDataManager().getWorkingCopy(task);//TasksUiPlugin.getTaskDataManager().getTaskData(task);
+//		assertNotNull(taskDataState);
+//		TaskDataModel model = new TaskDataModel(repository, task, taskDataState);
+//
+//		TaskData taskData = model.getTaskData();
+//		//remove the token (i.e. unpatched Bugzilla 3.2.2)
+//		//taskData.getRoot().removeAttribute("token");
+//
+//		TaskAttribute attrPriority = taskData.getRoot().getAttribute("priority");
+//		boolean p1 = false;
+//		if (attrPriority.getValue().equals("P1")) {
+//			p1 = true;
+//			attrPriority.setValue("P2");
+//		} else {
+//			attrPriority.setValue("P1");
+//		}
+//
+//		model.attributeChanged(attrPriority);
+//		model.save(new NullProgressMonitor());
+//		submit(task, model);
+//
+//		TasksUiInternal.synchronizeRepository(repository, false);
+//
+//		task = TasksUiPlugin.getTaskList().getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber);
+//		assertNotNull(task);
+//		assertEquals(!p1, task.getPriority().equals("P1"));
+//
+//		// Attempt 2
+//
+//		taskDataState = TasksUi.getTaskDataManager().getWorkingCopy(task);//TasksUiPlugin.getTaskDataManager().getTaskData(task);
+//		assertNotNull(taskDataState);
+//		model = new TaskDataModel(repository, task, taskDataState);
+//
+//		taskData = model.getTaskData();
+//		//remove the token (i.e. unpatched Bugzilla 3.2.2)
+//		//taskData.getRoot().removeAttribute("token");
+//
+//		attrPriority = taskData.getRoot().getAttribute("priority");
+//		p1 = false;
+//		if (attrPriority.getValue().equals("P1")) {
+//			p1 = true;
+//			attrPriority.setValue("P2");
+//		} else {
+//			attrPriority.setValue("P1");
+//		}
+//
+//		model.attributeChanged(attrPriority);
+//		model.save(new NullProgressMonitor());
+//		connector.getClientManager().repositoryRemoved(repository);
+//		submit(task, model);
+//
+//		TasksUiInternal.synchronizeRepository(repository, false);
+//
+//		task = TasksUiPlugin.getTaskList().getTask(BugzillaTestConstants.TEST_BUGZILLA_322_URL, taskNumber);
+//		assertNotNull(task);
+//		assertEquals(!p1, task.getPriority().equals("P1"));
+//
+//	}
 
 	protected void submit(ITask task, TaskDataModel model) throws Exception {
 

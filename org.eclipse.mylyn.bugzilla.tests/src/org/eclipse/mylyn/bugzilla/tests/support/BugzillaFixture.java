@@ -80,7 +80,7 @@ public class BugzillaFixture extends TestFixture {
 			"3.2.3", "");
 
 	public static BugzillaFixture BUGS_3_4 = new BugzillaFixture(BugzillaTestConstants.TEST_BUGZILLA_34_URL, //
-			"3.4.4", "");
+			"3.4.6", "");
 
 	public static BugzillaFixture BUGS_HEAD = new BugzillaFixture(BugzillaTestConstants.TEST_BUGZILLA_HEAD_URL, //
 			"3.5.2+", "");

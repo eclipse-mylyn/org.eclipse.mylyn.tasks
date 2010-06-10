@@ -184,10 +184,17 @@ public class TracXmlRpcClientTest extends TestCase {
 				+ " * {{{monospace}}} or `monospace`\n" + " * ~~strike-through~~\n" + " * ^superscript^ \n"
 				+ " * ,,subscript,,\n" + "= Heading =\n" + "== Subheading ==\n";
 
-		String expectedHtml = "<h1 id=\"WikiFormattingTesting\"><a class=\"missing wiki\" href=\""
-				+ tracUrl
-				+ "/wiki/WikiFormattingTesting\" rel=\"nofollow\">WikiFormattingTesting?</a></h1>\n<ul><li><strong>bold</strong>, <strong>\'\'\' can be bold too</strong>, and <strong>! </strong>\n</li><li><i>italic</i>\n</li><li><strong><i>bold italic</i></strong>\n</li><li><span class=\"underline\">underline</span>\n</li><li><tt>monospace</tt> or <tt>monospace</tt>\n</li><li><del>strike-through</del>\n</li><li><sup>superscript</sup> \n</li><li><sub>subscript</sub>\n</li></ul><h1 id=\"Heading\">Heading</h1>\n<h2 id=\"Subheading\">Subheading</h2>\n";
-
+		String expectedHtml;
+		if (TracFixture.current().getVersion().compareTo("0.12") >= 0) {
+			// the output format has changed in Trac 0.12
+			expectedHtml = "<h1 id=\"WikiFormattingTesting\"><a class=\"missing wiki\" href=\""
+					+ tracUrl
+					+ "/wiki/WikiFormattingTesting\" rel=\"nofollow\">WikiFormattingTesting?</a></h1>\n<ul><li><strong>bold</strong>, <strong>\'\'\' can be bold too</strong>, and <strong>! </strong>\n</li><li><em>italic</em>\n</li><li><strong><em>bold italic</em></strong>\n</li><li><span class=\"underline\">underline</span>\n</li><li><tt>monospace</tt> or <tt>monospace</tt>\n</li><li><del>strike-through</del>\n</li><li><sup>superscript</sup> \n</li><li><sub>subscript</sub>\n</li></ul><h1 id=\"Heading\">Heading</h1>\n<h2 id=\"Subheading\">Subheading</h2>\n";
+		} else {
+			expectedHtml = "<h1 id=\"WikiFormattingTesting\"><a class=\"missing wiki\" href=\""
+					+ tracUrl
+					+ "/wiki/WikiFormattingTesting\" rel=\"nofollow\">WikiFormattingTesting?</a></h1>\n<ul><li><strong>bold</strong>, <strong>\'\'\' can be bold too</strong>, and <strong>! </strong>\n</li><li><i>italic</i>\n</li><li><strong><i>bold italic</i></strong>\n</li><li><span class=\"underline\">underline</span>\n</li><li><tt>monospace</tt> or <tt>monospace</tt>\n</li><li><del>strike-through</del>\n</li><li><sup>superscript</sup> \n</li><li><sub>subscript</sub>\n</li></ul><h1 id=\"Heading\">Heading</h1>\n<h2 id=\"Subheading\">Subheading</h2>\n";
+		}
 		html = ((TracXmlRpcClient) client).wikiToHtml(source, null);
 		assertEquals(expectedHtml, html);
 	}
@@ -334,11 +341,6 @@ public class TracXmlRpcClientTest extends TestCase {
 	}
 
 	public void testGetRecentWikiChanges() throws Exception {
-		// FIXME 3.4 re-enable for trunk
-		if (TracFixture.current() == TracFixture.TRAC_TRUNK_XML_RPC) {
-			return;
-		}
-
 		TracWikiPageInfo[] changes = ((TracXmlRpcClient) client).getRecentWikiChanges(new Date(0), null);
 		TracWikiPageInfo testPage = null;
 		for (TracWikiPageInfo item : changes) {

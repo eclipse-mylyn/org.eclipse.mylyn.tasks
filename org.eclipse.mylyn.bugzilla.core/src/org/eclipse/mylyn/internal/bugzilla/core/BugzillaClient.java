@@ -846,7 +846,7 @@ public class BugzillaClient {
 						a = a.getAttribute("state"); //$NON-NLS-1$
 						String id = "flag-" + flagnumber.getValue(); //$NON-NLS-1$
 						String value = a.getValue();
-						if (value.equals(" ")) { //$NON-NLS-1$
+						if (value.equals(" ") || value.equals("")) { //$NON-NLS-1$ //$NON-NLS-2$
 							value = "X"; //$NON-NLS-1$
 						}
 						if (value.equals("?") && requestee != null) { //$NON-NLS-1$
@@ -962,7 +962,7 @@ public class BugzillaClient {
 				String requesteeName = "requestee_type-" + id.substring(26); //$NON-NLS-1$
 				String requesteeValue = requestee.getValue();
 				value = state.getValue();
-				if (value.equals(" ")) { //$NON-NLS-1$
+				if (value.equals(" ") || value.equals("")) { //$NON-NLS-1$ //$NON-NLS-2$
 					value = "X"; //$NON-NLS-1$
 				}
 				if (value.equals("?")) { //$NON-NLS-1$
@@ -975,7 +975,7 @@ public class BugzillaClient {
 				String requesteeName = "requestee-" + id.substring(21); //$NON-NLS-1$
 				String requesteeValue = requestee.getValue();
 				value = state.getValue();
-				if (value.equals(" ") | value.equals("")) { //$NON-NLS-1$//$NON-NLS-2$
+				if (value.equals(" ") || value.equals("")) { //$NON-NLS-1$//$NON-NLS-2$
 					value = "X"; //$NON-NLS-1$
 				}
 				if (value.equals("?")) { //$NON-NLS-1$
@@ -1274,7 +1274,7 @@ public class BugzillaClient {
 						TaskAttribute requestee = a.getAttribute("requestee"); //$NON-NLS-1$
 						a = a.getAttribute("state"); //$NON-NLS-1$
 						value = a.getValue();
-						if (value.equals(" ")) { //$NON-NLS-1$
+						if (value.equals(" ") || value.equals("")) { //$NON-NLS-1$ //$NON-NLS-2$
 							continue;
 						}
 						String flagname = a.getMetaData().getLabel();
@@ -1300,7 +1300,7 @@ public class BugzillaClient {
 						a = a.getAttribute("state"); //$NON-NLS-1$
 						id = "flag-" + flagnumber.getValue(); //$NON-NLS-1$
 						value = a.getValue();
-						if (value.equals(" ")) { //$NON-NLS-1$
+						if (value.equals(" ") || value.equals("")) { //$NON-NLS-1$ //$NON-NLS-2$
 							value = "X"; //$NON-NLS-1$
 						}
 						if (value.equals("?") && requestee != null) { //$NON-NLS-1$

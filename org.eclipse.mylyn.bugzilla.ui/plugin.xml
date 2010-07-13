@@ -98,6 +98,9 @@
                label="%Mark_not_obsolete_Action_Label"
                menubarPath="org.eclipse.mylyn.bugzilla.ui.attachments.mark/markadditions"
                tooltip="%Mark_not_obsolete_Action_Tooltip">
+            <enablement> 
+              <objectState name="connectorKind" value="bugzilla"/>
+            </enablement> 
          </action>
          <action
                class="org.eclipse.mylyn.internal.bugzilla.ui.action.BugzillaObsoleteAttachmentAction"
@@ -106,22 +109,26 @@
                label="%Mark_obsolete_Action_Label"
                menubarPath="org.eclipse.mylyn.bugzilla.ui.attachments.mark/markadditions"
                tooltip="%Mark_obsolete_Action_Tooltip">
+             <enablement> 
+              <objectState name="connectorKind" value="bugzilla"/>
+            </enablement> 
          </action>
          <action
                class="org.eclipse.mylyn.internal.bugzilla.ui.action.BugzillaAttachmentUpdateAction"
-               enablesFor="*"
+               enablesFor="1"
                id="org.eclipse.mylyn.bugzilla.ui.contribution.attachment.update"
                label="%Details_Action_Label"
                menubarPath="org.eclipse.mylyn.bugzilla.ui.attachments.mark"
                tooltip="%Details_Action_Tooltip">
          </action>
-          <menu
+         <visibility>
+               <objectState name="connectorKind" value="bugzilla"></objectState>
+         </visibility>
+         <menu
                 id="org.eclipse.mylyn.bugzilla.ui.attachments.mark"
                 label="%Mark_as_Menu_Label"
                 path="markadditions">
-          </menu>
+         </menu>
       </objectContribution>
    </extension>
-
-   
 </plugin>

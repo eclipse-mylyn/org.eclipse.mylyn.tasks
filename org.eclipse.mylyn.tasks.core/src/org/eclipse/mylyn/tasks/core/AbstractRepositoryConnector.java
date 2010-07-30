@@ -153,9 +153,13 @@ public abstract class AbstractRepositoryConnector {
 	}
 
 	/**
+	 * Returns the ID for the task that is referenced by <code>taskUrl</code>. If the ID can not be determined
+	 * <code>null</code> may be returned.
+	 * 
+	 * @return the ID of the task referenced by taskUrl; null, if the ID can not be determined
 	 * @since 2.0
 	 */
-	public abstract String getTaskIdFromTaskUrl(String taskFullUrl);
+	public abstract String getTaskIdFromTaskUrl(String taskUrl);
 
 	/**
 	 * Used for referring to the task in the UI.
@@ -188,6 +192,10 @@ public abstract class AbstractRepositoryConnector {
 	}
 
 	/**
+	 * Returns the URL for the task that corresponds to <code>taskId</code>. If the URL can not be constructed
+	 * <code>null</code> may be returned.
+	 * 
+	 * @return the URL of the task; null, if the URL can not be determined
 	 * @since 2.0
 	 */
 	public abstract String getTaskUrl(String repositoryUrl, String taskId);

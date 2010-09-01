@@ -14,6 +14,7 @@ package org.eclipse.mylyn.internal.bugzilla.core;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -73,6 +74,8 @@ public class RepositoryConfiguration implements Serializable {
 	private String encoding = null;
 
 	private String eTagValue = null;
+
+	private Date lastModifiedHeader = null;
 
 	public RepositoryConfiguration() {
 	}
@@ -859,6 +862,14 @@ public class RepositoryConfiguration implements Serializable {
 
 	public void setETagValue(String eTagValue) {
 		this.eTagValue = eTagValue;
+	}
+
+	public Date getLastModifiedHeader() {
+		return lastModifiedHeader;
+	}
+
+	public void setLastModifiedHeader(Date lastModifiedHeader) {
+		this.lastModifiedHeader = lastModifiedHeader;
 	}
 
 	public String getETagValue() {

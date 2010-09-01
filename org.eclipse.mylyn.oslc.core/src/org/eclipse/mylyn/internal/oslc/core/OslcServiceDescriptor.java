@@ -27,7 +27,7 @@ import org.eclipse.mylyn.internal.oslc.core.cm.Messages;
  */
 public class OslcServiceDescriptor implements Serializable {
 
-	private static final long serialVersionUID = -5981264972265788764L;
+	private static final long serialVersionUID = -3981264972265788764L;
 
 	private final Set<OslcCreationDialogDescriptor> creationDialogs;
 
@@ -208,6 +208,11 @@ public class OslcServiceDescriptor implements Serializable {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return title;
 	}
 
 }

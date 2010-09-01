@@ -13,7 +13,6 @@ package org.eclipse.mylyn.internal.oslc.core;
 
 /**
  * @see http://open-services.net/bin/view/Main/OslcServiceProviderCatalogV1
- * 
  * @author Robert Elves
  */
 public class OslcServiceProvider {
@@ -33,6 +32,11 @@ public class OslcServiceProvider {
 
 	public String getUrl() {
 		return url;
+	}
+
+	@Override
+	public String toString() {
+		return name;
 	}
 
 }

@@ -33,6 +33,8 @@ public class BugzillaUiPlugin extends AbstractUIPlugin {
 
 	public static final String ID_PLUGIN = "org.eclipse.mylyn.bugzilla.ui"; //$NON-NLS-1$
 
+	public static final String ATTACHMENT_WIZARD_SETTINGS_SECTION = "BugzillaAttachmentWizard."; //$NON-NLS-1$
+
 	public static final String SEARCH_PAGE_ID = BugzillaUiPlugin.ID_PLUGIN + ".search.bugzillaSearchPage"; //$NON-NLS-1$
 
 	public static final String SEARCH_PAGE_CONTEXT = BugzillaUiPlugin.ID_PLUGIN + ".bugzillaSearchContext"; //$NON-NLS-1$

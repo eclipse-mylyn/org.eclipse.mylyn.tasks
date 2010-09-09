@@ -60,10 +60,10 @@ public class ToggleTaskActivationAction extends Action implements ITaskActivatio
 
 	@Override
 	public void run() {
-		if (!task.isActive()) {
-			TasksUiInternal.activateTaskThroughCommand(task);
+		if (task.isActive()) {
+			TasksUiInternal.deactivateTaskThroughCommand(task);
 		} else {
-			TasksUi.getTaskActivityManager().deactivateTask(task);
+			TasksUiInternal.activateTaskThroughCommand(task);
 		}
 		update();
 	}

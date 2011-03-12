@@ -120,6 +120,12 @@ public final class TaskHyperlinkPresenter extends MultipleHyperlinkPresenter {
 		showHyperlinks(hyperlinks, false);
 	}
 
+	/**
+	 * Implements Eclipse 3.7 API.
+	 * 
+	 * @see #showHyperlinks(IHyperlink[])
+	 * @since 3.5
+	 */
 	// TODO e3.7 add @Override annotation
 	public void showHyperlinks(IHyperlink[] hyperlinks, boolean takesFocusWhenVisible) {
 		activeRegion = null;

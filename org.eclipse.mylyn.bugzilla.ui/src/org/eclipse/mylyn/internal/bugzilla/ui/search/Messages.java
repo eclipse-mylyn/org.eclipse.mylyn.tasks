@@ -79,8 +79,6 @@ public class Messages extends NLS {
 
 	public static String BugzillaSearchPage_none;
 
-	public static String BugzillaSearchPage_notregexp;
-
 	public static String BugzillaSearchPage_Number_of_days_must_be_a_positive_integer;
 
 	public static String BugzillaSearchPage_Operating_System;
@@ -159,8 +157,6 @@ public class Messages extends NLS {
 
 	public static String BugzillaSearchPage_Query_Title;
 
-	public static String BugzillaSearchPage_regexp;
-
 	public static String BugzillaSearchPage_reporter;
 
 	public static String BugzillaSearchPage_Resolution;
@@ -172,8 +168,6 @@ public class Messages extends NLS {
 	public static String BugzillaSearchPage_Severity;
 
 	public static String BugzillaSearchPage_Status;
-
-	public static String BugzillaSearchPage_substring;
 
 	public static String BugzillaSearchPage_Summary;
 

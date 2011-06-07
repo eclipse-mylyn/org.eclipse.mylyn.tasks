@@ -75,6 +75,16 @@
 				<td>URL for the discovery directory.</td>
 			</tr>
 		</table>
+		<h2 id="How_can_I_report_a_dead-lock_or_a_problem_about_a_stalled_UI.3F">How can I report a dead-lock or a problem about a stalled UI?</h2>
+		<p>The recommended way is to file a bug with a full thread dump using jstack which is part of the Java Development Kit 6. These wiki pages have more details on using jstack on different platforms: </p>
+		<ul>
+			<li>
+				<a href="http://wiki.eclipse.org/How_to_report_a_deadlock" target="mylyn_external">How to report a deadlock</a>
+			</li>
+			<li>
+				<a href="http://wiki.eclipse.org/Mylyn_Contributor_Reference#Debugging" target="mylyn_external">Debugging Mylyn</a>
+			</li>
+		</ul>
 		<h2 id="How_do_I_enable_debugging_output_for_network_communications.3F">How do I enable debugging output for network communications?</h2>
 		<p>Add the following lines to the <code>eclipse.ini</code> file in your eclipse directory to enable tracing of header information for HTTP requests. Log output is written to the console eclipse was started from. Make sure to add these after the line that says 
 			<b><code>-vmargs</code></b>. Add a <code>-vmwargs</code> line if there is none in the file.

@@ -318,7 +318,7 @@ public class SaxMultiBugReportContentHandler extends DefaultHandler {
 			break;
 		}
 
-			// Comment attributes
+		// Comment attributes
 		case WHO:
 			if (taskComment != null) {
 				taskComment.author = parsedText;
@@ -673,7 +673,7 @@ public class SaxMultiBugReportContentHandler extends DefaultHandler {
 				.createPerson(comment.author);
 		author.setName(comment.authorName);
 		taskComment.setAuthor(author);
-		taskComment.setIsPrivate(comment.isPrivate.equals("1")); //$NON-NLS-1$
+		taskComment.setIsPrivate("1".equals(comment.isPrivate)); //$NON-NLS-1$
 		TaskAttribute attrTimestamp = attribute.createAttribute(BugzillaAttribute.BUG_WHEN.getKey());
 		attrTimestamp.setValue(comment.createdTimeStamp);
 		taskComment.setCreationDate(repositoryTaskData.getAttributeMapper().getDateValue(attrTimestamp));

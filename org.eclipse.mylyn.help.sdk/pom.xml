@@ -5,10 +5,10 @@
   <parent>
     <artifactId>mylyn-tasks-parent</artifactId>
     <groupId>org.eclipse.mylyn.tasks</groupId>
-    <version>3.6.0-SNAPSHOT</version>
+    <version>3.6.1-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.mylyn</groupId>
   <artifactId>org.eclipse.mylyn.help.sdk</artifactId>
-  <version>3.6.0-SNAPSHOT</version>
+  <version>3.6.0.v20110608-1400</version>
   <packaging>eclipse-plugin</packaging>
 </project>

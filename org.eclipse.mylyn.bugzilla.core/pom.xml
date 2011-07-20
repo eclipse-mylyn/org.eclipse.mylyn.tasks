@@ -9,7 +9,7 @@
   </parent>
   <groupId>org.eclipse.mylyn.tasks</groupId>
   <artifactId>org.eclipse.mylyn.bugzilla.core</artifactId>
-  <version>3.6.0.v20110608-1400</version>
+  <version>3.6.1.v20110720-0100</version>
   <packaging>eclipse-plugin</packaging>
   <build>
     <plugins>

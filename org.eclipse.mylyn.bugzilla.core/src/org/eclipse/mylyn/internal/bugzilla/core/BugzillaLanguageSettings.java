@@ -42,6 +42,10 @@ public class BugzillaLanguageSettings {
 
 	public static final String COMMAND_SUSPICIOUS_ACTION = "suspicious_action"; //$NON-NLS-1$
 
+	public static final String COMMAND_ERROR_CONFIRM_MATCH = "error_confirm_match"; //$NON-NLS-1$
+
+	public static final String COMMAND_ERROR_MATCH_FAILED = "error_match_failed"; //$NON-NLS-1$
+
 	public static final String COMMAND_BUG = "bug"; //$NON-NLS-1$
 
 	public static final String COMMAND_SUBMITTED = "submitted"; //$NON-NLS-1$

@@ -11,6 +11,8 @@
 
 package org.eclipse.mylyn.internal.bugzilla.ui.editor;
 
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +23,9 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.jface.fieldassist.ControlDecoration;
+import org.eclipse.jface.fieldassist.FieldDecoration;
+import org.eclipse.jface.fieldassist.FieldDecorationRegistry;
 import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
@@ -30,12 +35,15 @@ import org.eclipse.mylyn.internal.bugzilla.core.BugzillaCustomField;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaOperation;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaRepositoryConnector;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaRepositoryResponse;
+import org.eclipse.mylyn.internal.bugzilla.core.BugzillaStatus;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaTaskDataHandler;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaVersion;
 import org.eclipse.mylyn.internal.bugzilla.core.IBugzillaConstants;
 import org.eclipse.mylyn.internal.bugzilla.core.RepositoryConfiguration;
 import org.eclipse.mylyn.internal.bugzilla.ui.BugzillaUiPlugin;
 import org.eclipse.mylyn.internal.provisional.commons.ui.WorkbenchUtil;
+import org.eclipse.mylyn.internal.tasks.ui.PersonProposalProvider;
+import org.eclipse.mylyn.internal.tasks.ui.editors.PersonAttributeEditor;
 import org.eclipse.mylyn.internal.tasks.ui.editors.TaskEditorActionPart;
 import org.eclipse.mylyn.tasks.core.RepositoryResponse;
 import org.eclipse.mylyn.tasks.core.RepositoryStatus;
@@ -57,9 +65,17 @@ import org.eclipse.mylyn.tasks.ui.editors.LayoutHint;
 import org.eclipse.mylyn.tasks.ui.editors.TaskEditor;
 import org.eclipse.mylyn.tasks.ui.editors.TaskEditorInput;
 import org.eclipse.mylyn.tasks.ui.editors.TaskEditorPartDescriptor;
+import org.eclipse.osgi.util.NLS;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
 import org.eclipse.ui.forms.events.HyperlinkAdapter;
 import org.eclipse.ui.forms.events.HyperlinkEvent;
+import org.eclipse.ui.handlers.IHandlerActivation;
+import org.eclipse.ui.keys.IBindingService;
 
 /**
  * @author Rob Elves
@@ -76,6 +92,12 @@ public class BugzillaTaskEditorPage extends AbstractTaskEditorPage {
 	private final Map<TaskAttribute, AbstractAttributeEditor> attributeEditorMap;
 
 	private TaskDataModelListener productListener;
+
+	private final List<ControlDecoration> errorDecorations = new ArrayList<ControlDecoration>();
+
+	private final List<PersonAttributeEditor> editorsWithError = new ArrayList<PersonAttributeEditor>(3);
+
+	private IHandlerActivation contentAssistHandlerActivation;
 
 	public BugzillaTaskEditorPage(TaskEditor editor) {
 		this(editor, BugzillaCorePlugin.CONNECTOR_KIND);
@@ -328,6 +350,14 @@ public class BugzillaTaskEditorPage extends AbstractTaskEditorPage {
 				attrToken.setValue(tokenString);
 			}
 		}
+		//		for (ControlDecoration decoration : errorDecorations) {
+		//			decoration.hide();
+		//			decoration.dispose();
+		//		}
+		//		errorDecorations.clear();
+		//		for (PersonAttributeEditor editor : editorsWithError) {
+		//			editor.getContentAssistCommandAdapter().setEnabled(true);
+		//		}
 		if (!checkCanSubmit(IMessageProvider.ERROR)) {
 			return;
 		}
@@ -497,7 +527,15 @@ public class BugzillaTaskEditorPage extends AbstractTaskEditorPage {
 
 	@Override
 	protected void handleTaskSubmitted(SubmitJobEvent event) {
-		if (event.getJob().getResponse() != null && event.getJob().getResponse() instanceof BugzillaRepositoryResponse) {
+		if (event.getJob().getStatus() != null) {
+			switch (event.getJob().getStatus().getCode()) {
+			case BugzillaStatus.ERROR_CONFIRM_MATCH:
+			case BugzillaStatus.ERROR_MATCH_FAILED:
+				presentErrorToUI((BugzillaStatus) event.getJob().getStatus());
+				break;
+			}
+		} else if (event.getJob().getResponse() != null
+				&& event.getJob().getResponse() instanceof BugzillaRepositoryResponse) {
 			final RepositoryResponse response = event.getJob().getResponse();
 			if (response instanceof BugzillaRepositoryResponse) {
 				final BugzillaRepositoryResponse bugzillaResponse = (BugzillaRepositoryResponse) response;
@@ -506,8 +544,27 @@ public class BugzillaTaskEditorPage extends AbstractTaskEditorPage {
 							IMessageProvider.INFORMATION, new HyperlinkAdapter() {
 								@Override
 								public void linkActivated(HyperlinkEvent event) {
+
+									String message = ""; //$NON-NLS-1$
+									for (String iterable_map : bugzillaResponse.getResponseData().keySet()) {
+										if (message.length() > 0) {
+											message += "\n"; //$NON-NLS-1$
+										}
+										message += NLS.bind(Messages.BugzillaTaskEditorPage_Bug_Line, iterable_map);
+										Map<String, List<String>> responseMap = bugzillaResponse.getResponseData().get(
+												iterable_map);
+										for (String iterable_list : responseMap.keySet()) {
+											message += NLS.bind(Messages.BugzillaTaskEditorPage_Action_Line,
+													iterable_list);
+											List<String> responseList = responseMap.get(iterable_list);
+											for (String string : responseList) {
+												message += NLS.bind(Messages.BugzillaTaskEditorPage_Email_Line, string);
+											}
+										}
+									}
 									BugzillaResponseDetailDialog dialog = new BugzillaResponseDetailDialog(
-											WorkbenchUtil.getShell(), bugzillaResponse);
+											WorkbenchUtil.getShell(), Messages.BugzillaTaskEditorPage_Response_Titel,
+											message);
 									dialog.open();
 								}
 							});
@@ -566,5 +623,113 @@ public class BugzillaTaskEditorPage extends AbstractTaskEditorPage {
 			}
 		}
 		return true;
+	}
+
+	private void presentErrorToUI(BugzillaStatus bugzillaStatus) {
+		String resultString;
+		String resultDetail = ""; //$NON-NLS-1$
+		int count = 0;
+		String fieldString = ""; //$NON-NLS-1$
+		Map<String, List<String>> response = bugzillaStatus.getResponseData();
+		FieldDecorationRegistry registry = FieldDecorationRegistry.getDefault();
+		FieldDecoration fieldDecoration = registry.getFieldDecoration(FieldDecorationRegistry.DEC_ERROR);
+
+		for (String string : response.keySet()) {
+			TaskAttribute attribute = getModel().getTaskData().getRoot().getAttribute(string);
+			if (count++ > 0) {
+				fieldString += MessageFormat.format(Messages.BugzillaTaskEditorPage_Error_Label_N,
+						attribute.getMetaData().getLabel());
+			} else {
+				fieldString += MessageFormat.format(Messages.BugzillaTaskEditorPage_Error_Label_1,
+						attribute.getMetaData().getLabel());
+			}
+			resultDetail += attribute.getMetaData().getLabel() + "\n"; //$NON-NLS-1$
+
+			AbstractAttributeEditor editor = getEditorForAttribute(attribute);
+			if (editor != null) {
+				Map<String, String> newPersonProposalMap = new HashMap<String, String>();
+				String decorationText = ""; //$NON-NLS-1$
+				for (String responseValue : response.get(string)) {
+					if (responseValue.startsWith("#msg#")) { //$NON-NLS-1$
+						decorationText += responseValue.substring(5);
+					} else {
+						newPersonProposalMap.put(responseValue, responseValue);
+					}
+					resultDetail += "\t\t" //$NON-NLS-1$
+							+ (responseValue.startsWith("#msg#") ? responseValue.substring(5) : responseValue) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+				}
+
+				final Control control = editor.getControl();
+
+				ControlDecoration decoration = new ControlDecoration(control, SWT.LEFT | SWT.TOP);
+				decoration.setImage(fieldDecoration.getImage());
+				IBindingService bindingService = (IBindingService) PlatformUI.getWorkbench().getService(
+						IBindingService.class);
+				if (!decorationText.equals("")) { //$NON-NLS-1$
+					decoration.setDescriptionText(decorationText);
+					errorDecorations.add(decoration);
+				} else {
+					decoration.setDescriptionText(NLS.bind(
+							Messages.BugzillaTaskEditorPage_Content_Assist_for_Error_Available,
+							bindingService.getBestActiveBindingFormattedFor(ContentAssistCommandAdapter.CONTENT_PROPOSAL_COMMAND)));
+					errorDecorations.add(decoration);
+
+					PersonAttributeEditor personEditor = ((PersonAttributeEditor) editor);
+					final PersonProposalProvider personProposalProvider = (PersonProposalProvider) personEditor.getContentAssistCommandAdapter()
+							.getContentProposalProvider();
+					personProposalProvider.setErrorProposals(newPersonProposalMap);
+					editorsWithError.add(personEditor);
+					personEditor.getText().addKeyListener(new KeyListener() {
+
+						public void keyReleased(KeyEvent e) {
+							// ignore
+						}
+
+						public void keyPressed(KeyEvent e) {
+							if (e.keyCode != SWT.ARROW_LEFT && e.keyCode != SWT.ARROW_RIGHT && e.keyCode != SWT.CTRL
+									&& !((e.keyCode == 32) && ((e.stateMask & SWT.CTRL) == SWT.CTRL))) {
+								for (ControlDecoration error : errorDecorations) {
+									if (error.getControl() == control) {
+										error.hide();
+										errorDecorations.remove(error);
+										error.dispose();
+										break;
+									}
+								}
+								personProposalProvider.setErrorProposals(null);
+							}
+						}
+					});
+				}
+
+			}
+		}
+		final String codeString;
+		switch (bugzillaStatus.getCode()) {
+		case BugzillaStatus.ERROR_CONFIRM_MATCH:
+			codeString = Messages.BugzillaTaskEditorPage_Confirm;
+			break;
+		case BugzillaStatus.ERROR_MATCH_FAILED:
+			codeString = Messages.BugzillaTaskEditorPage_Error;
+			break;
+		default:
+			codeString = ""; //$NON-NLS-1$
+			break;
+		}
+		if (count > 1) {
+			resultString = MessageFormat.format(Messages.BugzillaTaskEditorPage_Message_more, codeString, fieldString);
+		} else {
+			resultString = MessageFormat.format(Messages.BugzillaTaskEditorPage_Message_one, codeString, fieldString);
+		}
+
+		final String resultDetailString = resultDetail;
+		getTaskEditor().setMessage(resultString, IMessageProvider.ERROR, new HyperlinkAdapter() {
+			@Override
+			public void linkActivated(HyperlinkEvent event) {
+				BugzillaResponseDetailDialog dialog = new BugzillaResponseDetailDialog(WorkbenchUtil.getShell(),
+						codeString + Messages.BugzillaTaskEditorPage_match_Detail, resultDetailString);
+				dialog.open();
+			}
+		});
 	}
 }

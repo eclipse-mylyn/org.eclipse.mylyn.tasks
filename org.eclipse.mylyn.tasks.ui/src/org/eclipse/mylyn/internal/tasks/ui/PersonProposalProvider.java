@@ -61,7 +61,9 @@ public class PersonProposalProvider implements IContentProposalProvider {
 
 	private TaskData currentTaskData;
 
-	private final Map<String, String> proposals;
+	private Map<String, String> proposals;
+
+	private Map<String, String> errorProposals = null;
 
 	public PersonProposalProvider(AbstractTask task, TaskData taskData) {
 		this(task, taskData, new HashMap<String, String>(0));
@@ -116,19 +118,36 @@ public class PersonProposalProvider implements IContentProposalProvider {
 
 		// retrieve subset of the tree set using key range
 		SortedSet<String> addressSet = getAddressSet();
-		if (!searchText.equals("")) { //$NON-NLS-1$
-			// lower bounds
-			searchText = searchText.toLowerCase();
+		if (errorProposals == null || !errorProposals.isEmpty()) {
+			if (!searchText.equals("")) { //$NON-NLS-1$
+				// lower bounds
+				searchText = searchText.toLowerCase();
 
-			// compute the upper bound
-			char[] nextWord = searchText.toCharArray();
-			nextWord[searchText.length() - 1]++;
+				// compute the upper bound
+				char[] nextWord = searchText.toCharArray();
+				nextWord[searchText.length() - 1]++;
 
-			// filter matching keys 
-			addressSet = new TreeSet<String>(addressSet.subSet(searchText, new String(nextWord)));
+				// filter matching keys 
+				addressSet = new TreeSet<String>(addressSet.subSet(searchText, new String(nextWord)));
 
-			// add matching keys based on pretty names 
-			addMatchingProposalsByPrettyName(addressSet, searchText);
+				// add matching keys based on pretty names 
+				addMatchingProposalsByPrettyName(addressSet, searchText);
+			}
+		}
+		if (repositoryUrl != null && connectorKind != null) {
+			TaskRepository repository = TasksUi.getRepositoryManager().getRepository(connectorKind, repositoryUrl);
+
+			if (repository != null) {
+				AuthenticationCredentials credentials = repository.getCredentials(AuthenticationType.REPOSITORY);
+				if (credentials != null && credentials.getUserName().length() > 0) {
+					currentUser = credentials.getUserName();
+				}
+			}
+		}
+		if (errorProposals != null && !errorProposals.isEmpty()) {
+			for (String proposal : errorProposals.keySet()) {
+				addAddress(addressSet, proposal);
+			}
 		}
 
 		IContentProposal[] result = new IContentProposal[addressSet.size()];
@@ -227,16 +246,6 @@ public class PersonProposalProvider implements IContentProposalProvider {
 				tasks.add(currentTask);
 			}
 
-			TaskRepository repository = TasksUi.getRepositoryManager().getRepository(connectorKind, repositoryUrl);
-
-			if (repository != null) {
-				AuthenticationCredentials credentials = repository.getCredentials(AuthenticationType.REPOSITORY);
-				if (credentials != null && credentials.getUserName().length() > 0) {
-					currentUser = credentials.getUserName();
-					addressSet.add(currentUser);
-				}
-			}
-
 			Collection<AbstractTask> allTasks = TasksUiPlugin.getTaskList().getAllTasks();
 			for (AbstractTask task : allTasks) {
 				if (repositoryUrl.equals(task.getRepositoryUrl())) {
@@ -309,6 +318,22 @@ public class PersonProposalProvider implements IContentProposalProvider {
 		if (address != null && address.trim().length() > 0) {
 			addresses.add(address.trim());
 		}
+	}
+
+	public Map<String, String> getProposals() {
+		return proposals;
+	}
+
+	public void setProposals(Map<String, String> proposals) {
+		this.proposals = proposals;
+	}
+
+	public Map<String, String> getErrorProposals() {
+		return errorProposals;
+	}
+
+	public void setErrorProposals(Map<String, String> errorProposals) {
+		this.errorProposals = errorProposals;
 	}
 
 }

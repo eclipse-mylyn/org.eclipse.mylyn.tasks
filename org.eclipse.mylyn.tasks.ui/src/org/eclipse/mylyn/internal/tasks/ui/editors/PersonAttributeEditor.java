@@ -26,6 +26,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
 import org.eclipse.ui.forms.events.HyperlinkAdapter;
 import org.eclipse.ui.forms.events.HyperlinkEvent;
 import org.eclipse.ui.forms.widgets.FormToolkit;
@@ -35,6 +36,7 @@ import org.eclipse.ui.forms.widgets.ImageHyperlink;
  * @author Steffen Pingel
  */
 public class PersonAttributeEditor extends TextAttributeEditor {
+	private ContentAssistCommandAdapter contentAssistCommandAdapter = null;
 
 	public PersonAttributeEditor(TaskDataModel manager, TaskAttribute taskAttribute) {
 		super(manager, taskAttribute);
@@ -139,5 +141,13 @@ public class PersonAttributeEditor extends TextAttributeEditor {
 		if (getText() != null && getText() != getControl()) {
 			getText().setBackground(color);
 		}
+	}
+
+	public ContentAssistCommandAdapter getContentAssistCommandAdapter() {
+		return contentAssistCommandAdapter;
+	}
+
+	public void setContentAssistCommandAdapter(ContentAssistCommandAdapter contentAssistCommandAdapter) {
+		this.contentAssistCommandAdapter = contentAssistCommandAdapter;
 	}
 }

@@ -1919,7 +1919,30 @@ public class BugzillaClient {
 										"You have been logged out. Please retry operation.")); //$NON-NLS-1$
 							}
 						}
+						for (Iterator<String> iterator = bugzillaLanguageSettings.getResponseForCommand(
+								BugzillaLanguageSettings.COMMAND_ERROR_CONFIRM_MATCH).iterator(); iterator.hasNext()
+								&& !found;) {
+							String value = iterator.next().toLowerCase(Locale.ENGLISH);
+							found = found || title.indexOf(value) != -1;
+						}
+						if (found) {
+							BugzillaStatus status = new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
+									BugzillaStatus.ERROR_CONFIRM_MATCH, repositoryUrl.toString(), "Confirm Match", body); //$NON-NLS-1$
+							parseResultConfirmMatch(tokenizer, status);
+						}
 
+						found = false;
+						for (Iterator<String> iterator = bugzillaLanguageSettings.getResponseForCommand(
+								BugzillaLanguageSettings.COMMAND_ERROR_MATCH_FAILED).iterator(); iterator.hasNext()
+								&& !found;) {
+							String value = iterator.next().toLowerCase(Locale.ENGLISH);
+							found = found || title.indexOf(value) != -1;
+						}
+						if (found) {
+							BugzillaStatus status = new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
+									BugzillaStatus.ERROR_MATCH_FAILED, repositoryUrl.toString(), "Match Failed", body); //$NON-NLS-1$
+							parseResultMatchFailed(tokenizer, status);
+						}
 						isTitle = false;
 					}
 				} else {
@@ -2456,4 +2479,116 @@ public class BugzillaClient {
 		}
 	}
 
+	private void parseResultConfirmMatch(HtmlStreamTokenizer tokenizer, BugzillaStatus status) throws IOException,
+			CoreException {
+		boolean isSelect = false;
+		String name = ""; //$NON-NLS-1$
+		String value = ""; //$NON-NLS-1$
+		try {
+			for (Token token = tokenizer.nextToken(); token.getType() != Token.EOF; token = tokenizer.nextToken()) {
+				if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.SELECT
+						&& !((HtmlTag) (token.getValue())).isEndTag()) {
+					isSelect = true;
+					name = ((HtmlTag) (token.getValue())).getAttribute("id"); //$NON-NLS-1$
+					continue;
+				}
+
+				if (isSelect) {
+					if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.OPTION
+							&& !((HtmlTag) (token.getValue())).isEndTag()) {
+						value = ((HtmlTag) (token.getValue())).getAttribute("value"); //$NON-NLS-1$
+						status.addResponseData(name, value);
+					}
+					if (token.getType() == Token.TAG && ((HtmlTag) token.getValue()).getTagType() == Tag.SELECT
+							&& ((HtmlTag) token.getValue()).isEndTag()) {
+						isSelect = false;
+					}
+				}
+			}
+			throw new CoreException(status);
+		} catch (ParseException e) {
+			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
+					RepositoryStatus.ERROR_INTERNAL, "Unable to parse response from " + repositoryUrl.toString() + ".")); //$NON-NLS-1$//$NON-NLS-2$
+		}
+	}
+
+	private void parseResultMatchFailed(HtmlStreamTokenizer tokenizer, BugzillaStatus status) throws IOException,
+			CoreException {
+		boolean isDT = false;
+		String dtString = ""; //$NON-NLS-1$
+		String lastDTValue = ""; //$NON-NLS-1$
+		boolean isDiv = false;
+		String divString = ""; //$NON-NLS-1$
+		try {
+			for (Token token = tokenizer.nextToken(); token.getType() != Token.EOF; token = tokenizer.nextToken()) {
+				if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.TD
+						&& ((HtmlTag) (token.getValue())).isEndTag()) {
+					isDT = false;
+					if (!dtString.equals("")) { //$NON-NLS-1$
+						lastDTValue = dtString;
+					}
+					dtString = ""; //$NON-NLS-1$
+					continue;
+				}
+				if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.DIV
+						&& ((HtmlTag) (token.getValue())).isEndTag()) {
+					isDiv = false;
+					if (divString.length() > 4) {
+						if (lastDTValue.equals("CC:")) { //$NON-NLS-1$
+							lastDTValue = "newcc"; //$NON-NLS-1$
+						}
+						if (lastDTValue.equals("Assignee:")) { //$NON-NLS-1$
+							lastDTValue = "assigned_to"; //$NON-NLS-1$
+						}
+						if (lastDTValue.equals("QAContact:")) { //$NON-NLS-1$
+							lastDTValue = "qa_contact"; //$NON-NLS-1$
+						}
+
+						int start = divString.indexOf("</b>"); //$NON-NLS-1$
+						int optionValue = divString.indexOf("<option value=\"", start + 4); //$NON-NLS-1$
+						String value = ""; //$NON-NLS-1$
+						if (optionValue == -1) {
+							int startText = divString.indexOf(">", start + 4) + 1; //$NON-NLS-1$
+							int endText = divString.indexOf("<", startText + 1); //$NON-NLS-1$
+							String temp = divString.substring(startText, endText);
+							value = divString.substring(5, start) + temp;
+							status.addResponseData(lastDTValue, "#msg#" + value); //$NON-NLS-1$
+						} else {
+							while (optionValue != -1) {
+								int endText = divString.indexOf("\">", optionValue + 1); //$NON-NLS-1$
+								value = divString.substring(optionValue + 15, endText);
+								value = value.replace("&#64;", "@"); //$NON-NLS-1$ //$NON-NLS-2$
+								status.addResponseData(lastDTValue, value);
+								optionValue = divString.indexOf("<option value=\"", endText + 1); //$NON-NLS-1$
+							}
+						}
+					}
+					dtString = ""; //$NON-NLS-1$
+					divString = ""; //$NON-NLS-1$
+					continue;
+				}
+				if (isDiv) {
+					divString += (" " + token.getValue()); //$NON-NLS-1$
+				}
+				if (isDT) {
+					if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.DIV
+							&& !((HtmlTag) (token.getValue())).isEndTag()) {
+						isDiv = true;
+						divString = ""; //$NON-NLS-1$
+					} else {
+						dtString += token.getValue();
+					}
+				}
+				if (token.getType() == Token.TAG && ((HtmlTag) (token.getValue())).getTagType() == Tag.TD
+						&& !((HtmlTag) (token.getValue())).isEndTag()) {
+					isDT = true;
+					continue;
+				}
+			}
+			throw new CoreException(status);
+		} catch (ParseException e) {
+			throw new CoreException(new BugzillaStatus(IStatus.ERROR, BugzillaCorePlugin.ID_PLUGIN,
+					RepositoryStatus.ERROR_INTERNAL, "Unable to parse response from " + repositoryUrl.toString() + ".")); //$NON-NLS-1$ //$NON-NLS-2$
+		}
+	}
 }

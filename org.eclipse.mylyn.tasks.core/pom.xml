@@ -5,7 +5,7 @@
   <parent>
     <artifactId>mylyn-tasks-parent</artifactId>
     <groupId>org.eclipse.mylyn.tasks</groupId>
-    <version>3.6.1-SNAPSHOT</version>
+    <version>3.6.2-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.mylyn.tasks</groupId>
   <artifactId>org.eclipse.mylyn.tasks.core</artifactId>

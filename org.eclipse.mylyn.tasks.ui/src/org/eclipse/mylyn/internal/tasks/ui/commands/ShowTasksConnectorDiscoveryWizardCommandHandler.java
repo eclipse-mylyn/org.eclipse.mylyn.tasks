@@ -51,7 +51,7 @@ public class ShowTasksConnectorDiscoveryWizardCommandHandler extends AbstractHan
 					button.setSelection(TasksUiPlugin.getDefault()
 							.getPreferenceStore()
 							.getBoolean(ITasksUiPreferenceConstants.SERVICE_MESSAGES_ENABLED));
-					button.setText("Notify when new connectors are available");
+					button.setText("Notify when updates are available");
 					button.setFont(JFaceResources.getDialogFont());
 					button.addSelectionListener(new SelectionAdapter() {
 						@Override

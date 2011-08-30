@@ -748,7 +748,7 @@ public class RepositoryConfiguration implements Serializable {
 				break;
 			case RESOLVED:
 				addOperation(bugReport, BugzillaOperation.none);
-				if (everConfirmed == null && unconfirmedAllowed) {
+				if (everConfirmed != null && "0".equals(everConfirmed.getValue()) && unconfirmedAllowed) { //$NON-NLS-1$
 					addOperation(bugReport, BugzillaOperation.unconfirmed);
 				} else {
 					addOperation(bugReport, BugzillaOperation.confirmed);
@@ -757,7 +757,7 @@ public class RepositoryConfiguration implements Serializable {
 				break;
 			case VERIFIED:
 				addOperation(bugReport, BugzillaOperation.none);
-				if (everConfirmed == null && unconfirmedAllowed) {
+				if (everConfirmed != null && "0".equals(everConfirmed.getValue()) && unconfirmedAllowed) { //$NON-NLS-1$
 					addOperation(bugReport, BugzillaOperation.unconfirmed);
 				} else {
 					addOperation(bugReport, BugzillaOperation.confirmed);

@@ -36,14 +36,4 @@
     <module>org.eclipse.mylyn.trac.tests</module>
     <module>org.eclipse.mylyn.trac.ui</module>
   </modules>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.sonatype.tycho</groupId>
-        <artifactId>tycho-maven-plugin</artifactId>
-        <version>0.10.0</version>
-        <extensions>true</extensions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

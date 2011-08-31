@@ -49,7 +49,7 @@ import org.eclipse.mylyn.tests.util.TestUtil.PrivilegeLevel;
  */
 public class BugzillaFixture extends TestFixture {
 
-	public static final String SERVER = System.getProperty("mylyn.bugzilla.server", "mylyn.eclipse.org");
+	public static final String SERVER = System.getProperty("mylyn.bugzilla.server", "mylyn.org");
 
 	public static final String TEST_BUGZILLA_30_URL = getServerUrl("bugs30");
 
@@ -121,7 +121,7 @@ public class BugzillaFixture extends TestFixture {
 
 	public static BugzillaFixture DEFAULT = BUGS_4_0;
 
-	public static final BugzillaFixture[] ALL = new BugzillaFixture[] { BUGS_2_22, BUGS_3_0, BUGS_3_2, BUGS_3_4,
+	public static final BugzillaFixture[] ALL = new BugzillaFixture[] { /*BUGS_2_22, BUGS_3_0, BUGS_3_2, */BUGS_3_4,
 			BUGS_3_6, BUGS_4_0, BUGS_HEAD };
 
 	public static final BugzillaFixture[] ONLY_3_6_SPECIFIC = new BugzillaFixture[] { BUGS_3_6,

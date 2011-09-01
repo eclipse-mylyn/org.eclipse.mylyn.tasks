@@ -36,8 +36,13 @@ import org.eclipse.ui.PlatformUI;
 
 /**
  * @author Rob Elves
+ * @author Steffen Pingel
  */
 public class BugzillaRepositorySettingsPageTest extends TestCase {
+
+	private static final String REPOSITORY_URL_ALTERNATIVE = BugzillaFixture.BUGS_3_4.getRepositoryUrl();
+
+	private static final String REPOSITORY_URL = BugzillaFixture.BUGS_4_0.getRepositoryUrl();
 
 	private TaskRepositoryManager manager;
 
@@ -48,7 +53,7 @@ public class BugzillaRepositorySettingsPageTest extends TestCase {
 		super.setUp();
 		manager = TasksUiPlugin.getRepositoryManager();
 		manager.clearRepositories(TasksUiPlugin.getDefault().getRepositoriesFilePath());
-		repository = new TaskRepository(BugzillaCorePlugin.CONNECTOR_KIND, BugzillaFixture.TEST_BUGZILLA_222_URL);
+		repository = new TaskRepository(BugzillaCorePlugin.CONNECTOR_KIND, REPOSITORY_URL);
 		Credentials credentials = TestUtil.readCredentials();
 		repository.setCredentials(AuthenticationType.REPOSITORY, new AuthenticationCredentials(credentials.username,
 				credentials.password), false);
@@ -152,11 +157,11 @@ public class BugzillaRepositorySettingsPageTest extends TestCase {
 		BugzillaClient client = createClient(page.getRepositoryUrl(), page.getUserName(), page.getPassword(),
 				page.getHttpAuthUserId(), page.getHttpAuthPassword(), page.getCharacterEncoding());
 		client.validate(null);
-		page.setUrl(BugzillaFixture.TEST_BUGZILLA_218_URL);
+		page.setUrl(REPOSITORY_URL_ALTERNATIVE);
 		wizard.performFinish();
 		assertEquals(1, manager.getAllRepositories().size());
 		TaskRepository repositoryTest = manager.getRepository(BugzillaCorePlugin.CONNECTOR_KIND,
-				BugzillaFixture.TEST_BUGZILLA_218_URL);
+				REPOSITORY_URL_ALTERNATIVE);
 		assertNotNull(repositoryTest);
 		assertEquals(tempUid, repositoryTest.getUserName());
 		assertEquals(tempPass, repositoryTest.getPassword());
@@ -174,8 +179,7 @@ public class BugzillaRepositorySettingsPageTest extends TestCase {
 		page.setUserId("bogus");
 		wizard.performFinish();
 		assertEquals(1, manager.getAllRepositories().size());
-		TaskRepository repositoryTest = manager.getRepository(BugzillaCorePlugin.CONNECTOR_KIND,
-				BugzillaFixture.TEST_BUGZILLA_222_URL);
+		TaskRepository repositoryTest = manager.getRepository(BugzillaCorePlugin.CONNECTOR_KIND, REPOSITORY_URL);
 		assertNotNull(repositoryTest);
 		wizard = new EditRepositoryWizard(repositoryTest);
 		dialog = new WizardDialog(PlatformUI.getWorkbench().getDisplay().getActiveShell(), wizard);

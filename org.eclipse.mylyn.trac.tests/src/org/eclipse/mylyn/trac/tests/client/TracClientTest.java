@@ -22,15 +22,17 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.mylyn.internal.trac.core.TracAttribute;
 import org.eclipse.mylyn.internal.trac.core.client.ITracClient;
+import org.eclipse.mylyn.internal.trac.core.client.ITracClient.Version;
 import org.eclipse.mylyn.internal.trac.core.client.TracException;
 import org.eclipse.mylyn.internal.trac.core.client.TracLoginException;
 import org.eclipse.mylyn.internal.trac.core.client.TracPermissionDeniedException;
-import org.eclipse.mylyn.internal.trac.core.client.ITracClient.Version;
 import org.eclipse.mylyn.internal.trac.core.model.TracSearch;
 import org.eclipse.mylyn.internal.trac.core.model.TracTicket;
-import org.eclipse.mylyn.internal.trac.core.model.TracVersion;
 import org.eclipse.mylyn.internal.trac.core.model.TracTicket.Key;
+import org.eclipse.mylyn.internal.trac.core.model.TracTicketField;
+import org.eclipse.mylyn.internal.trac.core.model.TracVersion;
 import org.eclipse.mylyn.tests.util.TestUtil;
 import org.eclipse.mylyn.tests.util.TestUtil.Credentials;
 import org.eclipse.mylyn.tests.util.TestUtil.PrivilegeLevel;
@@ -210,6 +212,19 @@ public class TracClientTest extends TestCase {
 		});
 		assertEquals("1.0", versions[0].getName());
 		assertEquals("2.0", versions[1].getName());
+	}
+
+	public void testUpdateAttributesChangedTicketFields() throws Exception {
+		client = fixture.connect(fixture.getRepositoryUrl());
+		client.updateAttributes(new NullProgressMonitor(), true);
+		// modify field to bogus value
+		TracTicketField field = client.getTicketFieldByName(TracAttribute.MILESTONE.getTracKey());
+		field.setDefaultValue("modified default value");
+
+		// updating should reset modified field
+		client.updateAttributes(new NullProgressMonitor(), true);
+		field = client.getTicketFieldByName(TracAttribute.MILESTONE.getTracKey());
+		assertEquals("", field.getDefaultValue());
 	}
 
 	public void testValidate() throws Exception {

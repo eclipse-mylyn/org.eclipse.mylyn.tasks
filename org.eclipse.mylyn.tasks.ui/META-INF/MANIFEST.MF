@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: org.eclipse.mylyn.tasks.ui;singleton:=true
-Bundle-Version: 3.6.4.v20111117-0100
+Bundle-Version: 3.6.5.v20111214-0100
 Bundle-Activator: org.eclipse.mylyn.internal.tasks.ui.TasksUiPlugin
 Require-Bundle: org.eclipse.ui,
  org.eclipse.compare,

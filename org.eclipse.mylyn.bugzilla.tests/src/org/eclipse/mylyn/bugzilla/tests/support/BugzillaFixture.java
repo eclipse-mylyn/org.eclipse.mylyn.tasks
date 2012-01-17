@@ -51,37 +51,25 @@ public class BugzillaFixture extends TestFixture {
 
 	public static final String SERVER = System.getProperty("mylyn.bugzilla.server", "mylyn.org");
 
-	public static final String TEST_BUGZILLA_30_URL = getServerUrl("bugs30");
-
-	public static final String TEST_BUGZILLA_218_URL = getServerUrl("bugs218");
-
-	public static final String TEST_BUGZILLA_220_URL = getServerUrl("bugs220");
-
-	public static final String TEST_BUGZILLA_2201_URL = getServerUrl("bugs220");
-
-	public static final String TEST_BUGZILLA_222_URL = getServerUrl("bugs222");
-
-	public static final String TEST_BUGZILLA_303_URL = getServerUrl("bugs30");
-
-	public static final String TEST_BUGZILLA_32_URL = getServerUrl("bugs32");
-
-	public static final String TEST_BUGZILLA_322_URL = getServerUrl("bugs322");
-
-	public static final String TEST_BUGZILLA_323_URL = getServerUrl("bugs323");
-
 	public static final String TEST_BUGZILLA_34_URL = getServerUrl("bugs34");
 
 	public static final String TEST_BUGZILLA_36_URL = getServerUrl("bugs36");
 
 	public static final String TEST_BUGZILLA_40_URL = getServerUrl("bugs40");
 
-	public static final String TEST_BUGZILLA_HEAD_URL = getServerUrl("bugshead");
+	public static final String TEST_BUGZILLA_42_URL = getServerUrl("bugs42");
 
-	public static final String TEST_BUGZILLA_LATEST_URL = TEST_BUGZILLA_36_URL;
+	public static final String TEST_BUGZILLA_HEAD_URL = getServerUrl("bugshead");
 
 	private static final String getServerUrl(String version) {
 		return "http://" + SERVER + "/" + version;
 	}
+
+	public static final String CUSTOM_WF = "Custom Workflow";
+
+	public static final String CUSTOM_WF_AND_STATUS = "Custom Workflow and Status";
+
+	public static final String XML_RPC_DISABLED = "XML-RPC disabled";
 
 	private static BugzillaFixture current;
 
@@ -89,40 +77,36 @@ public class BugzillaFixture extends TestFixture {
 	 * @deprecated not supported any more
 	 */
 	@Deprecated
-	public static BugzillaFixture BUGS_2_22 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_222_URL, //
-			"2.22.7", "");
-
-	public static BugzillaFixture BUGS_3_0 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_30_URL, //
-			"3.0.11", "");
-
-	public static BugzillaFixture BUGS_3_2 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_32_URL, //
-			"3.2.10", "");
-
 	public static BugzillaFixture BUGS_3_4 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_34_URL, //
-			"3.4.12", "");
+			"3.4.13", "");
 
 	public static BugzillaFixture BUGS_3_6 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_36_URL, //
-			"3.6.6", "");
+			"3.6.7", "");
 
 	public static BugzillaFixture BUGS_3_6_CUSTOM_WF = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_36_URL
-			+ "-custom-wf", "3.6.6", "Custom Workflow");
+			+ "-custom-wf", "3.6.7", CUSTOM_WF);
 
 	public static BugzillaFixture BUGS_3_6_CUSTOM_WF_AND_STATUS = new BugzillaFixture(
-			BugzillaFixture.TEST_BUGZILLA_36_URL + "-custom-wf-and-status", "3.6.6", "Custom Workflow and Status");
+			BugzillaFixture.TEST_BUGZILLA_36_URL + "-custom-wf-and-status", "3.6.7", CUSTOM_WF_AND_STATUS);
 
 	public static BugzillaFixture BUGS_3_6_XML_RPC_DISABLED = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_36_URL
-			+ "-xml-rpc-disabled", "3.6.6", "XML-RPC disabled");
+			+ "-xml-rpc-disabled", "3.6.7", XML_RPC_DISABLED);
+
+	public static BugzillaFixture BUGS_4_0 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_40_URL, //
+			"4.0.3", "");
+
+	public static BugzillaFixture BUGS_4_2 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_42_URL, //
+			"4.2RC1+", "");
 
 	public static BugzillaFixture BUGS_HEAD = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_HEAD_URL, //
 			"4.3", "");
 
-	public static BugzillaFixture BUGS_4_0 = new BugzillaFixture(BugzillaFixture.TEST_BUGZILLA_40_URL, //
-			"4.0.2", "");
-
 	public static BugzillaFixture DEFAULT = BUGS_4_0;
 
+	public static final String TEST_BUGZILLA_LATEST_URL = BUGS_3_6.getRepositoryUrl();
+
 	public static final BugzillaFixture[] ALL = new BugzillaFixture[] { /*BUGS_2_22, BUGS_3_0, BUGS_3_2, */BUGS_3_4,
-			BUGS_3_6, BUGS_4_0, BUGS_HEAD };
+			BUGS_3_6, BUGS_4_0, /*BUGS_4_2, BUGS_HEAD */};
 
 	public static final BugzillaFixture[] ONLY_3_6_SPECIFIC = new BugzillaFixture[] { BUGS_3_6,
 			BUGS_3_6_XML_RPC_DISABLED, BUGS_3_6_CUSTOM_WF, BUGS_3_6_CUSTOM_WF_AND_STATUS };

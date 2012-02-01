@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Mylyn Tasks Tests
 Bundle-SymbolicName: org.eclipse.mylyn.tasks.tests;singleton:=true
-Bundle-Version: 3.6.1.v20110903-0100
+Bundle-Version: 3.6.2.v20120201-0100
 Bundle-Activator: org.eclipse.mylyn.tasks.tests.TasksTestsPlugin
 Bundle-Vendor: Eclipse Mylyn
 Require-Bundle: org.eclipse.core.runtime,

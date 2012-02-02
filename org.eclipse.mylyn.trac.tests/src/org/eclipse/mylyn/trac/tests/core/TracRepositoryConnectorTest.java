@@ -39,8 +39,8 @@ import org.eclipse.mylyn.internal.trac.core.client.ITracClient.Version;
 import org.eclipse.mylyn.internal.trac.core.model.TracPriority;
 import org.eclipse.mylyn.internal.trac.core.model.TracSearch;
 import org.eclipse.mylyn.internal.trac.core.model.TracTicket;
-import org.eclipse.mylyn.internal.trac.core.model.TracVersion;
 import org.eclipse.mylyn.internal.trac.core.model.TracTicket.Key;
+import org.eclipse.mylyn.internal.trac.core.model.TracVersion;
 import org.eclipse.mylyn.internal.trac.ui.wizard.TracRepositorySettingsPage;
 import org.eclipse.mylyn.tasks.core.IRepositoryQuery;
 import org.eclipse.mylyn.tasks.core.ITask;
@@ -268,19 +268,20 @@ public class TracRepositoryConnectorTest extends TestCase {
 		TaskData taskData = taskDataHandler.createTaskDataFromTicket(client, repository, ticket, null);
 
 		ITask task = TasksUi.getRepositoryModel().createTask(repository, taskData.getTaskId());
-		task.setPriority("P1");
+		task.setPriority("P2");
 
 		// create task from task data
 		connector.updateTaskFromTaskData(repository, task, taskData);
 		assertEquals(repository.getRepositoryUrl() + ITracClient.TICKET_URL + "456", task.getUrl());
 		assertEquals("456", task.getTaskKey());
 		assertEquals("mysummary", task.getSummary());
-		assertEquals("P3", task.getPriority());
 		// depending on the access mode createTaskDataFromTicket() creates different default attributes  
 		if (client.getAccessMode() == Version.TRAC_0_9) {
 			assertEquals(AbstractTask.DEFAULT_TASK_KIND, task.getTaskKind());
+			assertEquals("P2", task.getPriority());
 		} else {
 			assertEquals("Defect", task.getTaskKind());
+			assertEquals("P3", task.getPriority());
 		}
 	}
 

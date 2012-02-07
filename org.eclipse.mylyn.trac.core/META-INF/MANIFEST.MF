@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: org.eclipse.mylyn.trac.core;singleton:=true
-Bundle-Version: 3.6.2.v20120206-0100
+Bundle-Version: 3.6.2.v20120207-0100
 Bundle-Vendor: %Bundle-Vendor
 Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.mylyn.context.core;bundle-version="[3.0.0,4.0.0)",

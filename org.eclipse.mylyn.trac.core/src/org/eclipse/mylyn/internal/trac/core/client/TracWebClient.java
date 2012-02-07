@@ -485,8 +485,13 @@ public class TracWebClient extends AbstractTracClient {
 		int tokenType;
 		while ((tokenType = t.nextToken()) != StreamTokenizer.TT_EOF) {
 			switch (tokenType) {
+			case '"':
 			case StreamTokenizer.TT_WORD:
-				if (state == AttributeState.IN_LIST) {
+				if (state == AttributeState.IN_ATTRIBUTE_VALUE_LIST && "options".equals(attributeType)) { //$NON-NLS-1$
+					if (attributeFactory != null) {
+						attributeFactory.addAttribute(t.sval);
+					}
+				} else if (state == AttributeState.IN_LIST) {
 					if ("component".equals(t.sval)) { //$NON-NLS-1$
 						data.components = new ArrayList<TracComponent>();
 						attributeFactory = new AttributeFactory() {
@@ -549,13 +554,6 @@ public class TracWebClient extends AbstractTracClient {
 					}
 				} else if (state == AttributeState.IN_ATTRIBUTE_KEY) {
 					attributeType = t.sval;
-				}
-				break;
-			case '"':
-				if (state == AttributeState.IN_ATTRIBUTE_VALUE_LIST && "options".equals(attributeType)) { //$NON-NLS-1$
-					if (attributeFactory != null) {
-						attributeFactory.addAttribute(t.sval);
-					}
 				}
 				break;
 			case ':':

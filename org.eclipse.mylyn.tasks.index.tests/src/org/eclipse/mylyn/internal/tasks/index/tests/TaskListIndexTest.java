@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies and others.
+ * Copyright (c) 2011, 2012 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -42,6 +42,7 @@ import org.eclipse.mylyn.internal.tasks.index.core.TaskListIndex;
 import org.eclipse.mylyn.internal.tasks.index.core.TaskListIndex.IndexField;
 import org.eclipse.mylyn.internal.tasks.index.core.TaskListIndex.TaskCollector;
 import org.eclipse.mylyn.internal.tasks.index.tests.util.MockTestContext;
+import org.eclipse.mylyn.tasks.core.IRepositoryManager;
 import org.eclipse.mylyn.tasks.core.ITask;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
@@ -118,7 +119,8 @@ public class TaskListIndexTest {
 	}
 
 	private void setupIndex() {
-		index = new TaskListIndex(context.getTaskList(), context.getDataManager(), tempDir, 0L);
+		index = new TaskListIndex(context.getTaskList(), context.getDataManager(),
+				(IRepositoryManager) context.getRepositoryManager(), tempDir, 0L);
 		index.setDefaultField(IndexField.CONTENT);
 		index.setReindexDelay(0L);
 	}
@@ -319,7 +321,7 @@ public class TaskListIndexTest {
 		assertFalse(index.matches(repositoryTask, content));
 
 		// now make data indexable
-		attribute.getMetaData().putValue(TaskListIndex.META_INDEXED_AS_CONTENT, "true");
+		attribute.getMetaData().putValue(TaskAttribute.META_INDEXED_AS_CONTENT, "true");
 		// update
 		context.getDataManager().putSubmittedTaskData(repositoryTask, taskData, new DelegatingProgressMonitor());
 
@@ -327,6 +329,10 @@ public class TaskListIndexTest {
 		assertTrue(index.matches(repositoryTask, content));
 	}
 
+	/**
+	 * Verify that multiple threads can concurrently use the index to find tasks, i.e. that no threads are blocked from
+	 * finding tasks by other threads.
+	 */
 	@Test
 	public void testMultithreadedAccessOnFind() throws CoreException, InterruptedException, ExecutionException {
 		setupIndex();
@@ -378,4 +384,26 @@ public class TaskListIndexTest {
 			executorService.shutdownNow();
 		}
 	}
+
+	@Test
+	public void testRepositoryUrlChanged() throws InterruptedException, CoreException {
+		setupIndex();
+
+		ITask repositoryTask = context.createRepositoryTask();
+		final String originalHandle = repositoryTask.getHandleIdentifier();
+
+		index.waitUntilIdle();
+
+		final String newUrl = context.getMockRepository().getRepositoryUrl() + "/changed";
+
+		context.refactorMockRepositoryUrl(newUrl);
+
+		Assert.assertFalse(originalHandle.equals(repositoryTask.getHandleIdentifier()));
+
+		index.waitUntilIdle();
+
+		Assert.assertTrue(index.matches(repositoryTask,
+				IndexField.IDENTIFIER.fieldName() + ":" + index.escapeFieldValue(repositoryTask.getHandleIdentifier())));
+	}
+
 }

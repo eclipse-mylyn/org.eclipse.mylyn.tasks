@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies and others.
+ * Copyright (c) 2011, 2012 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,6 +20,8 @@ class Messages extends NLS {
 	private static final String BUNDLE_NAME = "org.eclipse.mylyn.internal.tasks.index.core.messages"; //$NON-NLS-1$
 
 	public static String TaskListIndex_indexerJob;
+
+	public static String TaskListIndex_task_rebuilding_index;
 
 	public static String TaskListIndex_task_rebuildingIndex;
 	static {

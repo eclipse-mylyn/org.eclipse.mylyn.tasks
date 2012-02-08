@@ -16,5 +16,8 @@ package org.eclipse.mylyn.internal.tasks.index.ui;
  */
 public class TasksIndexUi {
 
-	public static final String BUNDLE_ID = "org.eclipse.mylyn.tasks.index.ui"; //$NON-NLS-1$
+	/**
+	 * the symbolic name of the tasks index UI bundle
+	 */
+	public static final String ID_PLUGIN = "org.eclipse.mylyn.tasks.index.ui"; //$NON-NLS-1$
 }

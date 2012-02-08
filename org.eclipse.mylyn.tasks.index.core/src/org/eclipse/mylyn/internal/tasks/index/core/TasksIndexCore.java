@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies.
+ * Copyright (c) 2011, 2012 Tasktop Technologies.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,6 +14,9 @@ package org.eclipse.mylyn.internal.tasks.index.core;
  * @author David Green
  */
 public class TasksIndexCore {
-	public static final String BUNDLE_ID = "org.eclipse.mylyn.tasks.index.core"; //$NON-NLS-1$
+	/**
+	 * the symbolic name of the tasks index core bundle.
+	 */
+	public static final String ID_PLUGIN = "org.eclipse.mylyn.tasks.index.core"; //$NON-NLS-1$
 
 }

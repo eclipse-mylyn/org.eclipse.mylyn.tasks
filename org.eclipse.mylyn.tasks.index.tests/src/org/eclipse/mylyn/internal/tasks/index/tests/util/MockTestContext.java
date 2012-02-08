@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies and others.
+ * Copyright (c) 2011, 2012 Tasktop Technologies and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylyn.commons.core.DelegatingProgressMonitor;
+import org.eclipse.mylyn.internal.tasks.core.ITasksCoreConstants;
 import org.eclipse.mylyn.internal.tasks.core.LocalRepositoryConnector;
 import org.eclipse.mylyn.internal.tasks.core.LocalTask;
 import org.eclipse.mylyn.internal.tasks.core.RepositoryModel;
@@ -35,6 +36,9 @@ import org.eclipse.mylyn.tasks.core.data.TaskData;
 import org.eclipse.mylyn.tasks.tests.connector.MockRepositoryConnector;
 import org.eclipse.mylyn.tasks.tests.connector.MockTask;
 
+/**
+ * @author David Green
+ */
 public class MockTestContext {
 
 	private final TaskList taskList;
@@ -153,5 +157,21 @@ public class MockTestContext {
 
 	public FullMockRepositoryConnector getMockRepositoryConnector() {
 		return mockRepositoryConnector;
+	}
+
+	public void refactorMockRepositoryUrl(String newUrl) throws CoreException {
+		String oldUrl = getMockRepository().getRepositoryUrl();
+
+		for (ITask task : getTaskList().getAllTasks()) {
+			if (oldUrl.equals(task.getAttribute(ITasksCoreConstants.ATTRIBUTE_OUTGOING_NEW_REPOSITORY_URL))) {
+				getDataManager().refactorRepositoryUrl(task, task.getRepositoryUrl(), newUrl);
+			}
+			if (task.getRepositoryUrl().equals(oldUrl)) {
+				getDataManager().refactorRepositoryUrl(task, newUrl, newUrl);
+			}
+		}
+		getTaskList().refactorRepositoryUrl(oldUrl, newUrl);
+		getMockRepository().setRepositoryUrl(newUrl);
+		getRepositoryManager().notifyRepositoryUrlChanged(getMockRepository(), oldUrl);
 	}
 }

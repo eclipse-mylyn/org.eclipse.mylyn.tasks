@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies.
+ * Copyright (c) 2011, 2012 Tasktop Technologies.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,6 +15,11 @@ import org.eclipse.mylyn.commons.workbench.SubstringPatternFilter;
 import org.eclipse.mylyn.internal.tasks.index.core.TaskListIndex;
 import org.eclipse.mylyn.tasks.core.ITask;
 
+/**
+ * A pattern filter that uses a {@link TaskListIndex} to support ITask matching.
+ * 
+ * @author David Green
+ */
 public class IndexedSubstringPatternFilter extends SubstringPatternFilter {
 
 	private final TaskListIndex index;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011 Tasktop Technologies.
+ * Copyright (c) 2011, 2012 Tasktop Technologies.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,8 @@
 
 package org.eclipse.mylyn.internal.tasks.index.core;
 
+import static org.eclipse.mylyn.tasks.core.data.TaskAttribute.META_INDEXED_AS_CONTENT;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -19,7 +21,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +52,10 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.util.Version;
+import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -64,26 +67,77 @@ import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.internal.tasks.core.AbstractTask;
+import org.eclipse.mylyn.internal.tasks.core.ITaskList;
 import org.eclipse.mylyn.internal.tasks.core.ITaskListChangeListener;
 import org.eclipse.mylyn.internal.tasks.core.ITaskListRunnable;
+import org.eclipse.mylyn.internal.tasks.core.TaskComment;
 import org.eclipse.mylyn.internal.tasks.core.TaskContainerDelta;
 import org.eclipse.mylyn.internal.tasks.core.TaskList;
 import org.eclipse.mylyn.internal.tasks.core.data.ITaskDataManagerListener;
 import org.eclipse.mylyn.internal.tasks.core.data.TaskDataManager;
 import org.eclipse.mylyn.internal.tasks.core.data.TaskDataManagerEvent;
 import org.eclipse.mylyn.tasks.core.IRepositoryElement;
+import org.eclipse.mylyn.tasks.core.IRepositoryListener;
+import org.eclipse.mylyn.tasks.core.IRepositoryManager;
 import org.eclipse.mylyn.tasks.core.IRepositoryPerson;
 import org.eclipse.mylyn.tasks.core.ITask;
+import org.eclipse.mylyn.tasks.core.TaskRepository;
+import org.eclipse.mylyn.tasks.core.data.AbstractTaskSchema;
+import org.eclipse.mylyn.tasks.core.data.DefaultTaskSchema;
+import org.eclipse.mylyn.tasks.core.data.ITaskDataManager;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
-import org.eclipse.mylyn.tasks.core.data.TaskCommentMapper;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
 
 /**
- * An index on a task list.
+ * An index on a task list, provides a way to {@link #find(String, TaskCollector, int) search for tasks}, and a way to
+ * {@link #matches(ITask, String) match tasks}. Tasks are matched against a search query.
+ * <p>
+ * The task list has a configurable delay before it updates, meaning that there is a period of time where the index will
+ * be out of date with respect to task changes. The idea is that updates to the index can be "batched" for greater
+ * efficiency. Additionally, it's possible for a task to be updated either before or after the index is added to the
+ * task list as a listener, thus opening the possibility of changes without updates to the index. In either of these
+ * cases, the index can be out of date with respect to the current state of tasks. If the index is used in such a state,
+ * the result could be either false matches, no match where there should be a match, or incorrect prioritization of
+ * index "hits".
+ * </p>
+ * <p>
+ * The index has the option of reindexing all tasks via API. This will bring the index up to date and is useful for
+ * cases where it's known that the index may not be up to date. In its current form this reindex operation can be
+ * triggered by the user by including "index:reset" in the search string. Reindexing is potentially an expensive, IO
+ * intensive long-running operation. With about 20,000 tasks in my task list and an SSD, reindexing takes about 90
+ * seconds.
+ * </p>
  * 
  * @author David Green
  */
-public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeListener {
+public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeListener, IRepositoryListener {
+
+	private class MaintainIndexJob extends Job {
+
+		public MaintainIndexJob() {
+			super(Messages.TaskListIndex_indexerJob);
+			setUser(false);
+			setSystem(false); // true?
+			setPriority(Job.LONG);
+		}
+
+		@Override
+		public IStatus run(IProgressMonitor m) {
+			if (m.isCanceled()) {
+				return Status.CANCEL_STATUS;
+			}
+			try {
+				maintainIndex(m);
+			} catch (CoreException e) {
+				MultiStatus logStatus = new MultiStatus(TasksIndexCore.ID_PLUGIN, 0,
+						"Failed to update task list index", e); //$NON-NLS-1$
+				logStatus.add(e.getStatus());
+				StatusHandler.log(logStatus);
+			}
+			return Status.OK_STATUS;
+		}
+
+	}
 
 	public abstract static class TaskCollector {
 
@@ -93,44 +147,41 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 
 	private static final Object COMMAND_RESET_INDEX = "index:reset"; //$NON-NLS-1$
 
-	/**
-	 * Task attribute meta-data key that should be set to "true" to have attribute value indexed as part of the task
-	 * {@link IndexField#CONTENT}. Provides a way for connectors to specify non-standard attributes as indexable. By
-	 * default, {@link TaskAttribute#SUMMARY summary} and {@link TaskAttribute#DESCRIPTION description} are indexed.
-	 */
-	public static final String META_INDEXED_AS_CONTENT = "index-content"; //$NON-NLS-1$
-
 	public static enum IndexField {
-		IDENTIFIER(false, null, false), //
-		TASK_KEY(false, null, false), //
-		REPOSITORY_URL(false, null, false), //
-		SUMMARY(true, null, false), //
-		CONTENT(true, null, false), //
-		ASSIGNEE(true, TaskAttribute.USER_ASSIGNED, false), //
-		REPORTER(true, TaskAttribute.USER_REPORTER, false), //
-		PERSON(true, null, false), //
-		COMPONENT(true, TaskAttribute.COMPONENT, false), //
-		COMPLETION_DATE(true, null, true), //
-		CREATION_DATE(true, null, true), //
-		DUE_DATE(true, null, true), //
-		MODIFICATION_DATE(true, null, true), //
-		DESCRIPTION(true, TaskAttribute.DESCRIPTION, false), //
-		KEYWORDS(true, TaskAttribute.KEYWORDS, false), //
-		PRODUCT(true, TaskAttribute.PRODUCT, false), //
-		RESOLUTION(true, TaskAttribute.RESOLUTION, false), //
-		SEVERITY(true, TaskAttribute.SEVERITY, false), //
-		STATUS(true, TaskAttribute.STATUS, false);
-
-		private final boolean userVisible;
+		IDENTIFIER(false, null, TaskAttribute.TYPE_SHORT_TEXT), //
+		TASK_KEY(false, DefaultTaskSchema.getInstance().TASK_KEY), //
+		REPOSITORY_URL(false, null, TaskAttribute.TYPE_URL), //
+		SUMMARY(true, DefaultTaskSchema.getInstance().SUMMARY), //
+		CONTENT(true, null, TaskAttribute.TYPE_LONG_TEXT), //
+		ASSIGNEE(true, DefaultTaskSchema.getInstance().USER_ASSIGNED), //
+		REPORTER(true, DefaultTaskSchema.getInstance().USER_REPORTER), //
+		PERSON(true, null, TaskAttribute.TYPE_PERSON), //
+		COMPONENT(true, DefaultTaskSchema.getInstance().COMPONENT), //
+		COMPLETION_DATE(true, DefaultTaskSchema.getInstance().DATE_COMPLETION), //
+		CREATION_DATE(true, DefaultTaskSchema.getInstance().DATE_CREATION), //
+		DUE_DATE(true, DefaultTaskSchema.getInstance().DATE_DUE), //
+		MODIFICATION_DATE(true, DefaultTaskSchema.getInstance().DATE_MODIFICATION), //
+		DESCRIPTION(true, DefaultTaskSchema.getInstance().DESCRIPTION), //
+		KEYWORDS(true, DefaultTaskSchema.getInstance().KEYWORDS), //
+		PRODUCT(true, DefaultTaskSchema.getInstance().PRODUCT), //
+		RESOLUTION(true, DefaultTaskSchema.getInstance().RESOLUTION), //
+		SEVERITY(true, DefaultTaskSchema.getInstance().SEVERITY), //
+		STATUS(true, DefaultTaskSchema.getInstance().STATUS);
 
 		private final String attributeId;
 
-		private final boolean dateTime;
+		private final String type;
 
-		private IndexField(boolean userVisible, String attributeId, boolean dateTime) {
+		private final boolean userVisible;
+
+		private IndexField(boolean userVisible, AbstractTaskSchema.Field field) {
+			this(userVisible, field.getKey(), field.getType());
+		}
+
+		private IndexField(boolean userVisible, String attributeId, String type) {
 			this.userVisible = userVisible;
 			this.attributeId = attributeId;
-			this.dateTime = dateTime;
+			this.type = type;
 		}
 
 		public String fieldName() {
@@ -152,10 +203,24 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		}
 
 		/**
-		 * indicate if the field is a date/time field
+		 * the type of field, as it relates to <code>TaskAttribute.TYPE_*</code>
 		 */
-		public boolean isDateTime() {
-			return dateTime;
+		public String getType() {
+			return type;
+		}
+
+		/**
+		 * indicate if the field is a date or date/time field
+		 */
+		public boolean isTypeDate() {
+			return type != null && (TaskAttribute.TYPE_DATE.equals(type) || TaskAttribute.TYPE_DATETIME.equals(type));
+		}
+
+		/**
+		 * indicate if this is a person field
+		 */
+		public boolean isPersonField() {
+			return type != null && (TaskAttribute.TYPE_PERSON.equals(type) || TaskAttribute.TYPE_PERSON.equals(type));
 		}
 
 		public static IndexField fromFieldName(String fieldName) {
@@ -166,27 +231,42 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			}
 		}
 
-		public boolean isPersonField() {
-			return this == PERSON || this == REPORTER || this == ASSIGNEE;
-		}
 	}
 
 	private static enum MaintainIndexType {
 		STARTUP, REINDEX
 	}
 
+	// FIXME: document concurrency model
+
 	private Directory directory;
 
 	private MaintainIndexJob maintainIndexJob;
 
+	/**
+	 * must be synchronized before accessing or modifying
+	 */
 	private final Map<ITask, TaskData> reindexQueue = new HashMap<ITask, TaskData>();
 
+	/**
+	 * do not access directly, instead use {@link #getIndexReader()}. 'this' must be synchronized before accessing or
+	 * modifying
+	 */
 	private IndexReader indexReader;
 
-	private boolean rebuildIndex = false;
+	/**
+	 * indicate the need to rebuild the whole index
+	 */
+	private volatile boolean rebuildIndex = false;
 
+	/**
+	 * 'this' must be synchronized before accessing or modifying
+	 */
 	private String lastPatternString;
 
+	/**
+	 * 'this' must be synchronized before accessing or modifying
+	 */
 	private Set<String> lastResults;
 
 	private IndexField defaultField = IndexField.SUMMARY;
@@ -195,87 +275,173 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 
 	private final TaskDataManager dataManager;
 
+	private final IRepositoryManager repositoryManager;
+
 	private long startupDelay = 6000L;
 
 	private long reindexDelay = 3000L;
 
 	private int maxMatchSearchHits = 1500;
 
+	/**
+	 * must hold this lock as a read lock when accessing the index, and must hold this lock as a write lock when closing
+	 * or reassigning {@link #indexReader}.
+	 */
 	private final ReadWriteLock indexReaderLock = new ReentrantReadWriteLock(true);
 
-	private TaskListIndex(TaskList taskList, TaskDataManager dataManager) {
-		if (taskList == null) {
-			throw new IllegalArgumentException();
-		}
-		if (dataManager == null) {
-			throw new IllegalArgumentException();
-		}
+	private TaskListIndex(TaskList taskList, TaskDataManager dataManager, IRepositoryManager repositoryManager) {
+		Assert.isNotNull(taskList);
+		Assert.isNotNull(dataManager);
+		Assert.isNotNull(repositoryManager);
+
 		this.taskList = taskList;
 		this.dataManager = dataManager;
+		this.repositoryManager = repositoryManager;
 	}
 
-	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, File indexLocation) {
-		this(taskList, dataManager, indexLocation, 6000L);
+	/**
+	 * the task list associated with this index
+	 */
+	public ITaskList getTaskList() {
+		return taskList;
 	}
 
-	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, File indexLocation, long startupDelay) {
-		this(taskList, dataManager);
-		if (startupDelay < 0L || startupDelay > (1000L * 60)) {
-			throw new IllegalArgumentException();
-		}
-		if (indexLocation == null) {
-			throw new IllegalArgumentException();
-		}
+	/**
+	 * the data manager associated with this index
+	 */
+	public ITaskDataManager getDataManager() {
+		return dataManager;
+	}
+
+	/**
+	 * the repository manager associated with this index
+	 */
+	public IRepositoryManager getRepositoryManager() {
+		return repositoryManager;
+	}
+
+	/**
+	 * Create an index on the given task list. Must be matched by a corresponding call to {@link #close()}.
+	 * 
+	 * @param taskList
+	 *            the task list that is to be indexed
+	 * @param dataManager
+	 *            the data manager that corresponds to the task list
+	 * @param repositoryManager
+	 *            the repository manager that corresponds to the task list
+	 * @param indexLocation
+	 *            the location of the index on the filesystem
+	 * @see #TaskListIndex(TaskList, TaskDataManager, Directory)
+	 */
+	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, IRepositoryManager repositoryManager,
+			File indexLocation) {
+		this(taskList, dataManager, repositoryManager, indexLocation, 6000L);
+	}
+
+	/**
+	 * Create an index on the given task list. Must be matched by a corresponding call to {@link #close()}.
+	 * 
+	 * @param taskList
+	 *            the task list that is to be indexed
+	 * @param dataManager
+	 *            the data manager that corresponds to the task list
+	 * @param repositoryManager
+	 *            the repository manager that corresponds to the task list
+	 * @param startupDelay
+	 *            the delay in miliseconds before the index initialization maintenance process should begin
+	 * @see #TaskListIndex(TaskList, TaskDataManager, File)
+	 */
+	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, IRepositoryManager repositoryManager,
+			File indexLocation, long startupDelay) {
+		this(taskList, dataManager, repositoryManager);
+		Assert.isTrue(startupDelay >= 0L && startupDelay <= (1000L * 60));
+		Assert.isNotNull(indexLocation);
+
 		this.startupDelay = startupDelay;
 		if (!indexLocation.exists()) {
 			rebuildIndex = true;
 			if (!indexLocation.mkdirs()) {
-				StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.BUNDLE_ID,
+				StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
 						"Cannot create task list index folder: " + indexLocation)); //$NON-NLS-1$
 			}
 		}
 		if (indexLocation.exists() && indexLocation.isDirectory()) {
 			try {
-				Logger.getLogger(TaskListIndex.class.getName()).fine("task list index: " + indexLocation); //$NON-NLS-1$
-
 				directory = new NIOFSDirectory(indexLocation);
 			} catch (IOException e) {
-				StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.BUNDLE_ID,
+				StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
 						"Cannot create task list index", e)); //$NON-NLS-1$
 			}
 		}
 		initialize();
 	}
 
-	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, Directory directory) {
-		this(taskList, dataManager);
+	/**
+	 * Create an index on the given task list. Must be matched by a corresponding call to {@link #close()}.
+	 * 
+	 * @param taskList
+	 *            the task list that is to be indexed
+	 * @param dataManager
+	 *            the data manager that corresponds to the task list
+	 * @param repositoryManager
+	 *            the repository manager that corresponds to the task list
+	 * @param directory
+	 *            the directory in which the index should be stored
+	 * @see #TaskListIndex(TaskList, TaskDataManager, File)
+	 */
+	public TaskListIndex(TaskList taskList, TaskDataManager dataManager, IRepositoryManager repositoryManager,
+			Directory directory) {
+		this(taskList, dataManager, repositoryManager);
 		this.directory = directory;
 		initialize();
 	}
 
+	/**
+	 * the delay before reindexing occurs after a task has changed or after {@link #reindex()} is called
+	 */
 	public long getReindexDelay() {
 		return reindexDelay;
 	}
 
+	/**
+	 * the delay before reindexing occurs after a task has changed or after {@link #reindex()} is called.
+	 * 
+	 * @param reindexDelay
+	 *            The delay in miliseconds. Specify 0 to indicate no delay.
+	 */
 	public void setReindexDelay(long reindexDelay) {
+		Assert.isTrue(reindexDelay >= 0);
 		this.reindexDelay = reindexDelay;
 	}
 
+	/**
+	 * the default field used to match tasks when unspecified in the query
+	 */
 	public IndexField getDefaultField() {
 		return defaultField;
 	}
 
+	/**
+	 * the default field used to match tasks when unspecified in the query
+	 */
 	public void setDefaultField(IndexField defaultField) {
+		Assert.isNotNull(defaultField);
 		this.defaultField = defaultField;
 		synchronized (this) {
 			lastResults = null;
 		}
 	}
 
+	/**
+	 * the maximum number of search hits that should be provided when using {@link #matches(ITask, String)}
+	 */
 	public int getMaxMatchSearchHits() {
 		return maxMatchSearchHits;
 	}
 
+	/**
+	 * the maximum number of search hits that should be provided when using {@link #matches(ITask, String)}
+	 */
 	public void setMaxMatchSearchHits(int maxMatchSearchHits) {
 		this.maxMatchSearchHits = maxMatchSearchHits;
 	}
@@ -295,6 +461,7 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		maintainIndexJob = new MaintainIndexJob();
 		dataManager.addListener(this);
 		taskList.addChangeListener(this);
+		repositoryManager.addListener(this);
 
 		scheduleIndexMaintenance(MaintainIndexType.STARTUP);
 	}
@@ -318,12 +485,31 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			} catch (InterruptedException e) {
 				// ignore
 			}
-			maintainIndexJob.run(new NullProgressMonitor());
+			try {
+				maintainIndex(new NullProgressMonitor());
+			} catch (CoreException e) {
+				MultiStatus logStatus = new MultiStatus(TasksIndexCore.ID_PLUGIN, 0,
+						"Failed to update task list index", e); //$NON-NLS-1$
+				logStatus.add(e.getStatus());
+				StatusHandler.log(logStatus);
+			}
 		} else {
 			maintainIndexJob.schedule(delay);
 		}
 	}
 
+	/**
+	 * Indicates if the given task matches the given pattern string. Uses the backing index to detect a match by looking
+	 * for tasks that match the given pattern string. The results of the search are cached such that future calls to
+	 * this method using the same pattern string do not require use of the backing index, making this method very
+	 * efficient for multiple calls with the same pattern string. Cached results for a given pattern string are
+	 * discarded if this method is called with a different pattern string.
+	 * 
+	 * @param task
+	 *            the task to match
+	 * @param patternString
+	 *            the pattern used to detect a match
+	 */
 	public boolean matches(ITask task, String patternString) {
 		if (patternString.equals(COMMAND_RESET_INDEX)) {
 			reindex();
@@ -336,10 +522,13 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			if (indexReader != null) {
 				Set<String> hits;
 
-				if (lastResults == null || (lastPatternString == null || !lastPatternString.equals(patternString))) {
+				final boolean needIndexHit;
+				synchronized (this) {
+					needIndexHit = lastResults == null
+							|| (lastPatternString == null || !lastPatternString.equals(patternString));
+				}
+				if (needIndexHit) {
 					this.lastPatternString = patternString;
-
-					long startTime = System.currentTimeMillis();
 
 					hits = new HashSet<String>();
 
@@ -352,7 +541,7 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 							hits.add(document.get(IndexField.IDENTIFIER.fieldName()));
 						}
 					} catch (IOException e) {
-						StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.BUNDLE_ID,
+						StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
 								"Unexpected failure within task list index", e)); //$NON-NLS-1$
 					} finally {
 						try {
@@ -362,8 +551,6 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 						}
 					}
 
-					Logger.getLogger(TaskListIndex.class.getName()).fine(
-							"New query in " + (System.currentTimeMillis() - startTime) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$
 				} else {
 					hits = lastResults;
 				}
@@ -402,7 +589,22 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		maintainIndexJob.join();
 	}
 
+	/**
+	 * finds tasks that match the given pattern string
+	 * 
+	 * @param patternString
+	 *            the pattern string, used to match tasks
+	 * @param collector
+	 *            the collector that receives tasks
+	 * @param resultsLimit
+	 *            the maximum number of tasks to find. Specifying a limit enables the index to be more efficient since
+	 *            it can skip over matching tasks that do not score highly enough. Specify {@link Integer#MAX_VALUE} if
+	 *            there should be no limit.
+	 */
 	public void find(String patternString, TaskCollector collector, int resultsLimit) {
+		Assert.isNotNull(patternString);
+		Assert.isNotNull(collector);
+		Assert.isTrue(resultsLimit > 0);
 
 		Lock readLock = indexReaderLock.readLock();
 		readLock.lock();
@@ -422,13 +624,13 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 						}
 					}
 				} catch (IOException e) {
-					StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.BUNDLE_ID,
+					StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
 							"Unexpected failure within task list index", e)); //$NON-NLS-1$
 				} finally {
 					try {
 						indexSearcher.close();
 					} catch (IOException e) {
-						e.printStackTrace();
+						// ignore
 					}
 				}
 			}
@@ -478,6 +680,7 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 	public void close() {
 		dataManager.removeListener(this);
 		taskList.removeChangeListener(this);
+		repositoryManager.removeListener(this);
 
 		maintainIndexJob.cancel();
 		try {
@@ -494,7 +697,7 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 					try {
 						indexReader.close();
 					} catch (IOException e) {
-						e.printStackTrace();
+						// ignore
 					}
 					indexReader = null;
 				}
@@ -502,7 +705,8 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			try {
 				directory.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				StatusHandler.log(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
+						"Cannot close index: " + e.getMessage(), e)); //$NON-NLS-1$
 			}
 		} finally {
 			writeLock.unlock();
@@ -527,7 +731,7 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			rebuildIndex = true;
 			// expected if the index doesn't exist
 		} catch (IOException e) {
-			e.printStackTrace();
+			// ignore
 		}
 		return null;
 	}
@@ -595,12 +799,16 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 				.getAttributeMapper()
 				.getAttributesByType(root.getTaskData(), TaskAttribute.TYPE_COMMENT);
 		for (TaskAttribute commentAttribute : commentAttributes) {
-			TaskCommentMapper commentMapper = TaskCommentMapper.createFrom(commentAttribute);
-			String text = commentMapper.getText();
+
+			TaskComment taskComment = new TaskComment(root.getTaskData().getAttributeMapper().getTaskRepository(),
+					task, commentAttribute);
+			root.getTaskData().getAttributeMapper().updateTaskComment(taskComment, commentAttribute);
+
+			String text = taskComment.getText();
 			if (text.length() != 0) {
 				addIndexedAttribute(document, IndexField.CONTENT, text);
 			}
-			IRepositoryPerson author = commentMapper.getAuthor();
+			IRepositoryPerson author = taskComment.getAuthor();
 			if (author != null) {
 				addIndexedAttribute(document, IndexField.PERSON, author.getPersonId());
 			}
@@ -636,11 +844,6 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 			if (attribute != null) {
 				attributes.add(attribute);
 			}
-			// bugzilla
-			attribute = root.getAttribute("status_whiteboard"); //$NON-NLS-1$
-			if (attribute != null) {
-				attributes.add(attribute);
-			}
 		}
 
 		for (TaskAttribute attribute : root.getAttributes().values()) {
@@ -672,14 +875,33 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		if (attribute == null) {
 			return;
 		}
-		// if (indexField == IndexField.ASSIGNEE) {
-		// System.out.println(indexField + "=" + attribute.getValue());
-		// }
-		List<String> values = attribute.getValues();
+		List<String> values = attribute.getTaskData().getAttributeMapper().getValueLabels(attribute);
+		if (values.isEmpty()) {
+			return;
+		}
+
+		if (indexField.isPersonField()) {
+			IRepositoryPerson repositoryPerson = attribute.getTaskData()
+					.getAttributeMapper()
+					.getRepositoryPerson(attribute);
+			addIndexedAttribute(document, indexField, repositoryPerson);
+
+			if (values.size() <= 1) {
+				return;
+			}
+		}
+
 		for (String value : values) {
 			if (value.length() != 0) {
 				addIndexedAttribute(document, indexField, value);
 			}
+		}
+	}
+
+	private void addIndexedAttribute(Document document, IndexField indexField, IRepositoryPerson person) {
+		if (person != null) {
+			addIndexedAttribute(document, indexField, person.getPersonId());
+			addIndexedAttribute(document, indexField, person.getName());
 		}
 	}
 
@@ -714,194 +936,6 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		} else {
 			field.setValue(value);
 		}
-	}
-
-	private class MaintainIndexJob extends Job {
-
-		public MaintainIndexJob() {
-			super(Messages.TaskListIndex_indexerJob);
-			setUser(false);
-			setSystem(false); // true?
-			setPriority(Job.LONG);
-		}
-
-		@Override
-		public IStatus run(IProgressMonitor m) {
-			final int WORK_PER_SEGMENT = 1000;
-			SubMonitor monitor = SubMonitor.convert(m, 3 * WORK_PER_SEGMENT);
-			try {
-				try {
-					if (monitor.isCanceled()) {
-						return Status.CANCEL_STATUS;
-					}
-					if (!rebuildIndex) {
-						try {
-							IndexReader reader = IndexReader.open(directory, false);
-							reader.close();
-						} catch (CorruptIndexException e) {
-							rebuildIndex = true;
-						}
-					}
-
-					if (rebuildIndex) {
-						synchronized (reindexQueue) {
-							reindexQueue.clear();
-						}
-
-						SubMonitor reindexMonitor = monitor.newChild(WORK_PER_SEGMENT);
-
-						final IndexWriter writer = new IndexWriter(directory, new TaskAnalyzer(), true,
-								IndexWriter.MaxFieldLength.UNLIMITED);
-						try {
-
-							final List<ITask> allTasks = new ArrayList<ITask>(5000);
-
-							taskList.run(new ITaskListRunnable() {
-								public void execute(IProgressMonitor monitor) throws CoreException {
-									for (ITask task : taskList.getAllTasks()) {
-										if (taskIsIndexable(task, null)) {
-											allTasks.add(task);
-										}
-									}
-								}
-							}, monitor.newChild(1));
-
-							int reindexErrorCount = 0;
-
-							reindexMonitor.beginTask(Messages.TaskListIndex_task_rebuildingIndex, allTasks.size());
-							for (ITask task : allTasks) {
-								if (!taskIsIndexable(task, null)) {
-									continue;
-								}
-								try {
-									TaskData taskData = dataManager.getTaskData(task);
-									add(writer, task, taskData);
-
-									reindexMonitor.worked(1);
-								} catch (CoreException e) {
-									// an individual task data error should not prevent the index from updating
-									// but don't flood the log in the case of multiple errors
-									if (reindexErrorCount++ == 0) {
-										StatusHandler.log(e.getStatus());
-									}
-								} catch (IOException e) {
-									throw e;
-								}
-							}
-							synchronized (TaskListIndex.this) {
-								rebuildIndex = false;
-							}
-						} finally {
-							writer.close();
-							reindexMonitor.done();
-						}
-					} else {
-						monitor.worked(WORK_PER_SEGMENT);
-					}
-					for (;;) {
-
-						synchronized (reindexQueue) {
-							if (reindexQueue.isEmpty()) {
-								break;
-							}
-						}
-
-						Map<ITask, TaskData> queue = new HashMap<ITask, TaskData>();
-
-						IndexReader reader = IndexReader.open(directory, false);
-						try {
-							synchronized (reindexQueue) {
-								queue.putAll(reindexQueue);
-								for (ITask task : queue.keySet()) {
-									reindexQueue.remove(task);
-								}
-							}
-							Iterator<Entry<ITask, TaskData>> it = queue.entrySet().iterator();
-							while (it.hasNext()) {
-								Entry<ITask, TaskData> entry = it.next();
-
-								reader.deleteDocuments(new Term(IndexField.IDENTIFIER.fieldName(), entry.getKey()
-										.getHandleIdentifier()));
-
-							}
-						} finally {
-							reader.close();
-						}
-						monitor.worked(WORK_PER_SEGMENT);
-
-						IndexWriter writer = new IndexWriter(directory, new TaskAnalyzer(), false,
-								IndexWriter.MaxFieldLength.UNLIMITED);
-						try {
-							for (Entry<ITask, TaskData> entry : queue.entrySet()) {
-								ITask task = entry.getKey();
-								TaskData taskData = entry.getValue();
-
-								add(writer, task, taskData);
-							}
-						} finally {
-							writer.close();
-						}
-						monitor.worked(WORK_PER_SEGMENT);
-					}
-					Lock writeLock = indexReaderLock.writeLock();
-					writeLock.lock();
-					try {
-						synchronized (TaskListIndex.this) {
-							if (indexReader != null) {
-								indexReader.close();
-								indexReader = null;
-							}
-						}
-					} finally {
-						writeLock.unlock();
-					}
-				} catch (CoreException e) {
-					throw e;
-				} catch (Throwable e) {
-					throw new CoreException(new Status(IStatus.ERROR, TasksIndexCore.BUNDLE_ID,
-							"Unexpected exception: " + e.getMessage(), e)); //$NON-NLS-1$
-				}
-			} catch (CoreException e) {
-				MultiStatus logStatus = new MultiStatus(TasksIndexCore.BUNDLE_ID, 0,
-						"Failed to update task list index", e); //$NON-NLS-1$
-				logStatus.add(e.getStatus());
-				StatusHandler.log(logStatus);
-			} finally {
-				monitor.done();
-			}
-			return Status.OK_STATUS;
-		}
-
-		/**
-		 * @param writer
-		 * @param task
-		 *            the task
-		 * @param taskData
-		 *            may be null for local tasks
-		 * @throws CorruptIndexException
-		 * @throws IOException
-		 */
-		private void add(IndexWriter writer, ITask task, TaskData taskData) throws CorruptIndexException, IOException {
-			if (!taskIsIndexable(task, taskData)) {
-				return;
-			}
-
-			Document document = new Document();
-
-			document.add(new Field(IndexField.IDENTIFIER.fieldName(), task.getHandleIdentifier(), Store.YES,
-					org.apache.lucene.document.Field.Index.ANALYZED));
-			if (taskData == null) {
-				if ("local".equals(((AbstractTask) task).getConnectorKind())) { //$NON-NLS-1$
-					addIndexedAttributes(document, task);
-				} else {
-					return;
-				}
-			} else {
-				addIndexedAttributes(document, task, taskData.getRoot());
-			}
-			writer.addDocument(document);
-		}
-
 	}
 
 	/**
@@ -949,5 +983,220 @@ public class TaskListIndex implements ITaskDataManagerListener, ITaskListChangeL
 		// see http://lucene.apache.org/java/2_9_1/queryparsersyntax.html#Escaping%20Special%20Characters
 		String escaped = value.replaceAll("([\\+\\-\\!\\(\\)\\{\\}\\[\\]^\"~\\*\\?:\\\\]|&&|\\|\\|)", "\\\\$1"); //$NON-NLS-1$ //$NON-NLS-2$
 		return escaped;
+	}
+
+	private void maintainIndex(IProgressMonitor m) throws CoreException {
+		final int WORK_PER_SEGMENT = 1000;
+		SubMonitor monitor = SubMonitor.convert(m, 2 * WORK_PER_SEGMENT);
+		try {
+			try {
+				if (!rebuildIndex) {
+					try {
+						IndexReader reader = IndexReader.open(directory, false);
+						reader.close();
+					} catch (CorruptIndexException e) {
+						rebuildIndex = true;
+					}
+				}
+
+				if (rebuildIndex) {
+					synchronized (reindexQueue) {
+						reindexQueue.clear();
+					}
+
+					IStatus status = rebuildIndexCompletely(monitor.newChild(WORK_PER_SEGMENT));
+					if (!status.isOK()) {
+						StatusHandler.log(status);
+					}
+				} else {
+					monitor.worked(WORK_PER_SEGMENT);
+				}
+
+				// index any tasks that have been changed
+				indexQueuedTasks(monitor.newChild(WORK_PER_SEGMENT));
+
+				// prevent new searches from reading the now-stale index
+				closeIndexReader();
+			} catch (IOException e) {
+				throw new CoreException(new Status(IStatus.ERROR, TasksIndexCore.ID_PLUGIN,
+						"Unexpected exception: " + e.getMessage(), e)); //$NON-NLS-1$
+			}
+		} finally {
+			monitor.done();
+		}
+	}
+
+	private void closeIndexReader() throws IOException {
+		Lock writeLock = indexReaderLock.writeLock();
+		writeLock.lock();
+		try {
+			synchronized (this) {
+				if (indexReader != null) {
+					indexReader.close();
+					indexReader = null;
+				}
+			}
+		} finally {
+			writeLock.unlock();
+		}
+	}
+
+	private void indexQueuedTasks(SubMonitor monitor) throws CorruptIndexException, LockObtainFailedException,
+			IOException {
+
+		synchronized (reindexQueue) {
+			if (reindexQueue.isEmpty()) {
+				return;
+			}
+
+			monitor.beginTask(Messages.TaskListIndex_task_rebuilding_index, reindexQueue.size());
+		}
+
+		try {
+			IndexWriter writer = null;
+			try {
+				Map<ITask, TaskData> workingQueue = new HashMap<ITask, TaskData>();
+
+				// reindex tasks that are in the reindexQueue, making multiple passes so that we catch anything
+				// added/changed while we were reindexing
+				for (;;) {
+					workingQueue.clear();
+
+					synchronized (reindexQueue) {
+						if (reindexQueue.isEmpty()) {
+							break;
+						}
+						// move items from the reindexQueue to the temporary working queue
+						workingQueue.putAll(reindexQueue);
+						reindexQueue.keySet().removeAll(workingQueue.keySet());
+					}
+
+					if (writer == null) {
+						writer = new IndexWriter(directory, new TaskAnalyzer(), false,
+								IndexWriter.MaxFieldLength.UNLIMITED);
+					}
+
+					monitor.setWorkRemaining(workingQueue.size());
+
+					for (Entry<ITask, TaskData> entry : workingQueue.entrySet()) {
+						ITask task = entry.getKey();
+						TaskData taskData = entry.getValue();
+
+						writer.deleteDocuments(new Term(IndexField.IDENTIFIER.fieldName(), task.getHandleIdentifier()));
+
+						add(writer, task, taskData);
+
+						monitor.worked(1);
+					}
+				}
+			} finally {
+				if (writer != null) {
+					writer.close();
+				}
+			}
+		} finally {
+			monitor.done();
+		}
+	}
+
+	private class TaskListState implements ITaskListRunnable {
+		List<ITask> indexableTasks;
+
+		public void execute(IProgressMonitor monitor) throws CoreException {
+			Collection<AbstractTask> tasks = taskList.getAllTasks();
+			indexableTasks = new ArrayList<ITask>(tasks.size());
+
+			for (ITask task : tasks) {
+				if (taskIsIndexable(task, null)) {
+					indexableTasks.add(task);
+				}
+			}
+		}
+
+	}
+
+	private IStatus rebuildIndexCompletely(SubMonitor monitor) throws CorruptIndexException, LockObtainFailedException,
+			IOException, CoreException {
+
+		MultiStatus multiStatus = new MultiStatus(TasksIndexCore.ID_PLUGIN, 0, null, null);
+
+		// get indexable tasks from the task list
+		final TaskListState taskListState = new TaskListState();
+		taskList.run(taskListState, monitor.newChild(0));
+
+		monitor.beginTask(Messages.TaskListIndex_task_rebuilding_index, taskListState.indexableTasks.size());
+		try {
+			final IndexWriter writer = new IndexWriter(directory, new TaskAnalyzer(), true,
+					IndexWriter.MaxFieldLength.UNLIMITED);
+			try {
+
+				for (ITask task : taskListState.indexableTasks) {
+					if (taskIsIndexable(task, null)) {
+						try {
+							TaskData taskData = dataManager.getTaskData(task);
+							add(writer, task, taskData);
+						} catch (CoreException e) {
+							// an individual task data error should not prevent the index from updating
+							multiStatus.add(e.getStatus());
+						}
+					}
+					monitor.worked(1);
+				}
+				synchronized (this) {
+					rebuildIndex = false;
+				}
+			} finally {
+				writer.close();
+			}
+		} finally {
+			monitor.done();
+		}
+		return multiStatus;
+	}
+
+	/**
+	 * @param writer
+	 * @param task
+	 *            the task
+	 * @param taskData
+	 *            may be null for local tasks
+	 * @throws CorruptIndexException
+	 * @throws IOException
+	 */
+	private void add(IndexWriter writer, ITask task, TaskData taskData) throws CorruptIndexException, IOException {
+		if (!taskIsIndexable(task, taskData)) {
+			return;
+		}
+
+		Document document = new Document();
+
+		document.add(new Field(IndexField.IDENTIFIER.fieldName(), task.getHandleIdentifier(), Store.YES,
+				org.apache.lucene.document.Field.Index.ANALYZED));
+		if (taskData == null) {
+			if ("local".equals(((AbstractTask) task).getConnectorKind())) { //$NON-NLS-1$
+				addIndexedAttributes(document, task);
+			} else {
+				return;
+			}
+		} else {
+			addIndexedAttributes(document, task, taskData.getRoot());
+		}
+		writer.addDocument(document);
+	}
+
+	public void repositoryAdded(TaskRepository repository) {
+		// ignore
+	}
+
+	public void repositoryRemoved(TaskRepository repository) {
+		// ignore
+	}
+
+	public void repositorySettingsChanged(TaskRepository repository) {
+		// ignore
+	}
+
+	public void repositoryUrlChanged(TaskRepository repository, String oldUrl) {
+		reindex();
 	}
 }

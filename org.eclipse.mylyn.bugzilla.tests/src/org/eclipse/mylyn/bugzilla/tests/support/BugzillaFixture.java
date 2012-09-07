@@ -103,7 +103,7 @@ public class BugzillaFixture extends TestFixture {
 	public static BugzillaFixture DEFAULT = BUGS_4_2;
 
 	public static final BugzillaFixture[] ALL = new BugzillaFixture[] { BUGS_3_4, BUGS_3_6, BUGS_3_6_XML_RPC_DISABLED,
-			BUGS_3_6_CUSTOM_WF, BUGS_3_6_CUSTOM_WF_AND_STATUS, BUGS_4_0, BUGS_4_2, BUGS_HEAD };
+			BUGS_3_6_CUSTOM_WF, BUGS_3_6_CUSTOM_WF_AND_STATUS, BUGS_4_0, BUGS_4_2 /*, BUGS_HEAD */};
 
 	private final String version;
 

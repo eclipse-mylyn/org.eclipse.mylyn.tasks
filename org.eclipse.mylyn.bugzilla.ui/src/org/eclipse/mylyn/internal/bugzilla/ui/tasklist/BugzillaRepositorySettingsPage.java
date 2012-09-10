@@ -25,14 +25,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
-import org.eclipse.mylyn.commons.workbench.WorkbenchUtil;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaClient;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaClientFactory;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaCorePlugin;
@@ -49,6 +46,7 @@ import org.eclipse.mylyn.tasks.core.AbstractRepositoryConnector;
 import org.eclipse.mylyn.tasks.core.RepositoryStatus;
 import org.eclipse.mylyn.tasks.core.RepositoryTemplate;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
+import org.eclipse.mylyn.tasks.core.sync.TaskJob;
 import org.eclipse.mylyn.tasks.ui.TasksUi;
 import org.eclipse.mylyn.tasks.ui.wizards.AbstractRepositorySettingsPage;
 import org.eclipse.swt.SWT;
@@ -558,26 +556,9 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 		}
 		applyToInternal(repository);
 		if (changed) {
-			final String jobName = MessageFormat.format(
-					Messages.BugzillaRepositorySettingsPage_Updating_repository_configuration_for_X,
-					repository.getRepositoryUrl());
-			Job updateJob = new Job(jobName) {
-				@Override
-				protected IStatus run(IProgressMonitor monitor) {
-					monitor.beginTask(jobName, IProgressMonitor.UNKNOWN);
-					try {
-						performUpdate(repository, connector, monitor);
-					} finally {
-						monitor.done();
-					}
-					return Status.OK_STATUS;
-				}
-			};
-			// show the progress in the system task bar if this is a user job (i.e. forced)
-			updateJob.setProperty(WorkbenchUtil.SHOW_IN_TASKBAR_ICON_PROPERTY, Boolean.TRUE);
-			updateJob.setUser(true);
-			updateJob.schedule();
-
+			TaskJob job = TasksUiInternal.getJobFactory().createUpdateRepositoryConfigurationJob(connector, repository,
+					null);
+			job.schedule();
 		}
 	}
 
@@ -594,6 +575,10 @@ public class BugzillaRepositorySettingsPage extends AbstractRepositorySettingsPa
 		return s1.equals(s2);
 	}
 
+	/**
+	 * @deprecated this method will be removed in 3.9
+	 */
+	@Deprecated
 	public void performUpdate(final TaskRepository repository, final AbstractRepositoryConnector connector,
 			IProgressMonitor monitor) {
 		try {

@@ -85,6 +85,7 @@ public class MockRepositoryConnectorWithTaskDataHandler extends MockRepositoryCo
 				mapper.setReporter("");
 				mapper.setStatus("NEW");
 				mapper.setSummary("");
+				mapper.setTaskKey("");
 				return true;
 			}
 

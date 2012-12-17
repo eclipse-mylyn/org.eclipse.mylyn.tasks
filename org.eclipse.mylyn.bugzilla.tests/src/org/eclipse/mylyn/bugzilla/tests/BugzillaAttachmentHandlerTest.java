@@ -506,4 +506,5 @@ public class BugzillaAttachmentHandlerTest extends AbstractBugzillaTest {
 		}
 		fail("Should have failed due to invalid userid and password.");
 	}
+
 }

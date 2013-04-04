@@ -16,6 +16,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.mylyn.commons.net.Policy;
 import org.eclipse.mylyn.internal.tasks.core.ITasksCoreConstants;
 import org.eclipse.mylyn.internal.tasks.core.ITasksCoreConstants.MutexSchedulingRule;
 import org.eclipse.mylyn.internal.tasks.core.data.TaskDataManager;
@@ -107,6 +108,13 @@ public class SubmitTaskAttachmentJob extends SubmitJob {
 		}
 		fireDone();
 		return (errorStatus == Status.CANCEL_STATUS) ? Status.CANCEL_STATUS : Status.OK_STATUS;
+	}
+
+	private IProgressMonitor subMonitorFor(IProgressMonitor monitor, int ticks) {
+		if (!isUser()) {
+			return Policy.backgroundMonitorFor(monitor);
+		}
+		return Policy.subMonitorFor(monitor, ticks);
 	}
 
 }

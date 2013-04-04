@@ -23,6 +23,7 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.mylyn.commons.core.StatusHandler;
+import org.eclipse.mylyn.commons.net.Policy;
 import org.eclipse.mylyn.internal.tasks.core.ITasksCoreConstants;
 import org.eclipse.mylyn.internal.tasks.core.ITasksCoreConstants.MutexSchedulingRule;
 import org.eclipse.mylyn.internal.tasks.core.TaskTask;
@@ -184,6 +185,13 @@ public class SubmitTaskJob extends SubmitJob {
 	@Override
 	public ITask getTask() {
 		return task;
+	}
+
+	private IProgressMonitor subMonitorFor(IProgressMonitor monitor, int ticks) {
+		if (!isUser()) {
+			return Policy.backgroundMonitorFor(monitor);
+		}
+		return Policy.subMonitorFor(monitor, ticks);
 	}
 
 }

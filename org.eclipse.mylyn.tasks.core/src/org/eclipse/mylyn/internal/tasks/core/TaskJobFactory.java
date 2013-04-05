@@ -144,6 +144,7 @@ public class TaskJobFactory implements ITaskJobFactory {
 		SubmitJob job = new SubmitTaskJob(taskDataManager, connector, taskRepository, task, taskData, oldAttributes,
 				getTaskJobListeners(connector));
 		job.setPriority(Job.INTERACTIVE);
+		job.setUser(true);
 		try {
 			taskList.run(new ITaskListRunnable() {
 				public void execute(IProgressMonitor monitor) throws CoreException {
@@ -189,6 +190,7 @@ public class TaskJobFactory implements ITaskJobFactory {
 			}
 		};
 		updateJob.setPriority(Job.INTERACTIVE);
+		updateJob.setUser(true);
 		return updateJob;
 	}
 

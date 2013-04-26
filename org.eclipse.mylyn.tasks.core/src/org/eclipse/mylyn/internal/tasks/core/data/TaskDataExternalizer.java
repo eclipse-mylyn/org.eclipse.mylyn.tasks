@@ -177,7 +177,14 @@ public class TaskDataExternalizer {
 	}
 
 	public TaskDataState readState(InputStream in) throws IOException, SAXException {
-		XMLReader parser = XMLReaderFactory.createXMLReader();
+		XMLReader parser;
+		try {
+			// use Xerces to ensure XML 1.1 is handled correctly
+			Class<?> clazz = Class.forName("org.apache.xerces.parsers.SAXParser"); //$NON-NLS-1$
+			parser = (XMLReader) clazz.newInstance();
+		} catch (Throwable e) {
+			parser = XMLReaderFactory.createXMLReader();
+		}
 		TaskDataStateReader handler = new TaskDataStateReader(taskRepositoryManager);
 		parser.setContentHandler(handler);
 		parser.parse(new InputSource(in));

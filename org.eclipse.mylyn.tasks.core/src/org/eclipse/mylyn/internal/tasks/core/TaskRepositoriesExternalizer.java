@@ -23,13 +23,17 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.mylyn.commons.core.StatusHandler;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.XMLReaderFactory;
 
 /**
  * @author Rob Elves
@@ -112,7 +116,7 @@ public class TaskRepositoriesExternalizer {
 			}
 
 			SaxRepositoriesContentHandler contentHandler = new SaxRepositoriesContentHandler();
-			XMLReader reader = XMLReaderFactory.createXMLReader();
+			XMLReader reader = TaskRepositoriesExternalizer.createXmlReader();
 			reader.setContentHandler(contentHandler);
 			reader.parse(new InputSource(inputStream));
 			return contentHandler.getRepositories();
@@ -132,4 +136,23 @@ public class TaskRepositoriesExternalizer {
 			}
 		}
 	}
+
+	public static XMLReader createXmlReader() throws SAXException {
+		try {
+			// use Xerces to ensure XML 1.1 is handled correctly
+			Class<?> clazz = Class.forName("org.apache.xerces.parsers.SAXParser"); //$NON-NLS-1$
+			return (XMLReader) clazz.newInstance();
+		} catch (Throwable e) {
+			SAXParser saxParser;
+			try {
+				SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+				saxParserFactory.setNamespaceAware(true);
+				saxParser = saxParserFactory.newSAXParser();
+			} catch (ParserConfigurationException e2) {
+				throw new SAXException(e2);
+			}
+			return saxParser.getXMLReader();
+		}
+	}
+
 }

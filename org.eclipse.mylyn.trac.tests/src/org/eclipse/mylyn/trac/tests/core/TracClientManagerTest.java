@@ -60,7 +60,7 @@ public class TracClientManagerTest extends TestCase {
 
 	public void testWriteCache() throws Exception {
 		TaskRepository taskRepository = new TaskRepository(TracCorePlugin.CONNECTOR_KIND,
-				TracTestConstants.TEST_TRAC_010_URL);
+				TracTestConstants.TEST_TRAC_012_URL);
 		taskRepository.setVersion(Version.TRAC_0_9.name());
 		taskRepository.setCredentials(AuthenticationType.REPOSITORY, null, false);
 

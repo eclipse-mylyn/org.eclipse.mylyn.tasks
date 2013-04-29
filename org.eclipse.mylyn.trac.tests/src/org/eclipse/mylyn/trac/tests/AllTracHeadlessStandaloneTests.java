@@ -53,12 +53,14 @@ public class AllTracHeadlessStandaloneTests {
 					addTests(suite, fixture);
 				}
 				// validation tests
+				/*
 				for (TracFixture fixture : TracFixture.MISC) {
 					fixture.createSuite(suite);
 					fixture.add(TracClientFactoryTest.class);
 					fixture.add(TracClientTest.class);
 					fixture.done();
 				}
+				*/
 			}
 		}
 		return suite;

@@ -18,7 +18,7 @@ import org.eclipse.mylyn.commons.sdk.util.TestConfiguration;
  */
 public class TracTestConstants {
 
-	public static final String TEST_TRAC_010_URL = TestConfiguration.getRepositoryUrl("trac010");
+	public static final String TEST_TRAC_010_URL = TestConfiguration.getRepositoryUrl("trac-010");
 
 	public static final String TEST_TRAC_010_SSL_URL = TestConfiguration.getRepositoryUrl("trac010", true);
 
@@ -26,13 +26,13 @@ public class TracTestConstants {
 
 	public static final String TEST_TRAC_010_FORM_AUTH_URL = TestConfiguration.getRepositoryUrl("trac010formauth");
 
-	public static final String TEST_TRAC_011_URL = TestConfiguration.getRepositoryUrl("trac011");
+	public static final String TEST_TRAC_011_URL = TestConfiguration.getRepositoryUrl("trac-0.11.7");
 
-	public static final String TEST_TRAC_012_URL = TestConfiguration.getRepositoryUrl("trac012");
+	public static final String TEST_TRAC_012_URL = TestConfiguration.getRepositoryUrl("trac-0.12.5");
 
-	public static final String TEST_TRAC_10_URL = TestConfiguration.getRepositoryUrl("trac10");
+	public static final String TEST_TRAC_10_URL = TestConfiguration.getRepositoryUrl("trac-1.0");
 
-	public static final String TEST_TRAC_TRUNK_URL = TestConfiguration.getRepositoryUrl("tractrunk");
+	public static final String TEST_TRAC_TRUNK_URL = TestConfiguration.getRepositoryUrl("trac-trunk");
 
 	public static final String TEST_TRAC_INVALID_URL = TestConfiguration.getRepositoryUrl("doesnotexist");
 

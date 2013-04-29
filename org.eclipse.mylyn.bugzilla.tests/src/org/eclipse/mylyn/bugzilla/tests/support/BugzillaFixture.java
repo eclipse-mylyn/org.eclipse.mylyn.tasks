@@ -52,13 +52,13 @@ public class BugzillaFixture extends TestFixture {
 
 	public static final String TEST_BUGZILLA_34_URL = getServerUrl("bugs34");
 
-	public static final String TEST_BUGZILLA_36_URL = getServerUrl("bugs36");
+	public static final String TEST_BUGZILLA_36_URL = getServerUrl("bugzilla-3.6.13");
 
-	public static final String TEST_BUGZILLA_40_URL = getServerUrl("bugs40");
+	public static final String TEST_BUGZILLA_40_URL = getServerUrl("bugzilla-4.0.10");
 
-	public static final String TEST_BUGZILLA_42_URL = getServerUrl("bugs42");
+	public static final String TEST_BUGZILLA_42_URL = getServerUrl("bugzilla-4.2.5");
 
-	public static final String TEST_BUGZILLA_HEAD_URL = getServerUrl("bugshead");
+	public static final String TEST_BUGZILLA_HEAD_URL = getServerUrl("bugzilla-trunk");
 
 	private static final String getServerUrl(String version) {
 		return TestConfiguration.getRepositoryUrl(version);

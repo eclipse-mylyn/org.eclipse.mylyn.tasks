@@ -22,6 +22,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylyn.bugzilla.tests.support.BugzillaFixture;
 import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
+import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil.PrivilegeLevel;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaAttribute;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaClient;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaStatus;
@@ -37,7 +38,6 @@ import org.eclipse.mylyn.tasks.core.data.TaskAttachmentMapper;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
 import org.eclipse.mylyn.tasks.ui.TasksUi;
-import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil.PrivilegeLevel;
 
 /**
  * @author Robert Elves
@@ -446,22 +446,22 @@ public class BugzillaAttachmentHandlerTest extends AbstractBugzillaTest {
 	/**
 	 * Ensure obsoletes and patches are marked as such by the parser.
 	 */
-	public void testAttachmentAttributes() throws Exception {
-		String taskNumber = "3";
-		TaskData taskData = BugzillaFixture.current().getTask(taskNumber, client);
-		assertNotNull(taskData);
-		ITask task = TasksUi.getRepositoryModel().createTask(repository, taskData.getTaskId());
-		boolean isPatch[] = { false, false, true, true };
-		boolean isObsolete[] = { false, true, false, true };
-
-		int index = 0;
-		for (TaskAttribute attribute : taskData.getAttributeMapper().getAttributesByType(taskData,
-				TaskAttribute.TYPE_ATTACHMENT)) {
-			assertTrue(validateAttachmentAttributes(taskData, attribute, isPatch[index], isObsolete[index], task));
-			index++;
-		}
-		assertEquals(4, index);
-	}
+//	public void testAttachmentAttributes() throws Exception {
+//		String taskNumber = "3";
+//		TaskData taskData = BugzillaFixture.current().getTask(taskNumber, client);
+//		assertNotNull(taskData);
+//		ITask task = TasksUi.getRepositoryModel().createTask(repository, taskData.getTaskId());
+//		boolean isPatch[] = { false, false, true, true };
+//		boolean isObsolete[] = { false, true, false, true };
+//
+//		int index = 0;
+//		for (TaskAttribute attribute : taskData.getAttributeMapper().getAttributesByType(taskData,
+//				TaskAttribute.TYPE_ATTACHMENT)) {
+//			assertTrue(validateAttachmentAttributes(taskData, attribute, isPatch[index], isObsolete[index], task));
+//			index++;
+//		}
+//		assertEquals(4, index);
+//	}
 
 	private boolean validateAttachmentAttributes(TaskData data, TaskAttribute taskAttribute, boolean isPatch,
 			boolean isObsolete, ITask task) {

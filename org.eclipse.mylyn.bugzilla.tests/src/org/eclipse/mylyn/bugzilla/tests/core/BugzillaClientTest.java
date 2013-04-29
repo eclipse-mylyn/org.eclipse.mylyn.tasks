@@ -26,15 +26,10 @@ import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
 import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil.PrivilegeLevel;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaAttribute;
-import org.eclipse.mylyn.internal.bugzilla.core.BugzillaAttributeMapper;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaClient;
-import org.eclipse.mylyn.internal.bugzilla.core.BugzillaRepositoryConnector;
-import org.eclipse.mylyn.internal.bugzilla.core.BugzillaVersion;
-import org.eclipse.mylyn.internal.bugzilla.core.RepositoryConfiguration;
 import org.eclipse.mylyn.internal.tasks.core.RepositoryQuery;
 import org.eclipse.mylyn.internal.tasks.core.TaskRepositoryLocation;
 import org.eclipse.mylyn.tasks.core.IRepositoryQuery;
-import org.eclipse.mylyn.tasks.core.RepositoryResponse;
 import org.eclipse.mylyn.tasks.core.RepositoryStatus;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
@@ -61,54 +56,54 @@ public class BugzillaClientTest extends TestCase {
 		client = BugzillaFixture.current().client();
 	}
 
-	public void testRDFProductConfig() throws Exception {
-		RepositoryConfiguration config = client.getRepositoryConfiguration();
-		assertNotNull(config);
-		assertEquals(
-				0,
-				config.getInstallVersion().compareMajorMinorOnly(
-						new BugzillaVersion(BugzillaFixture.current().getVersion())));
-		if (BugzillaFixture.current() == BugzillaFixture.BUGS_3_6_CUSTOM_WF_AND_STATUS) {
-			assertEquals(10, config.getStatusValues().size());
-		} else if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
-			assertEquals(7, config.getStatusValues().size());
-		} else {
-			assertEquals(5, config.getStatusValues().size());
-		}
-		if (config.getResolutions().contains("LATER")) {
-			assertEquals(8, config.getResolutions().size());
-			assertEquals(8, config.getPlatforms().size());
-			assertEquals(36, config.getOSs().size());
-			assertEquals(5, config.getPriorities().size());
-		} else {
-			assertEquals(6, config.getResolutions().size());
-			assertEquals(4, config.getPlatforms().size());
-			assertEquals(5, config.getOSs().size());
-			assertEquals(6, config.getPriorities().size());
-		}
-		assertEquals(7, config.getSeverities().size());
-		assertEquals(3, config.getProducts().size());
-		if (BugzillaFixture.current() == BugzillaFixture.BUGS_3_6_CUSTOM_WF_AND_STATUS) {
-			assertEquals(6, config.getOpenStatusValues().size());
-			assertEquals(1, config.getClosedStatusValues().size());
-		} else if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
-			assertEquals(4, config.getOpenStatusValues().size());
-			assertEquals(3, config.getClosedStatusValues().size());
-		} else {
-			assertEquals(3, config.getOpenStatusValues().size());
-			assertEquals(2, config.getClosedStatusValues().size());
-		}
-		assertEquals(2, config.getKeywords().size());
-		assertEquals(2, config.getComponents("ManualTest").size());
-		assertEquals(4, config.getVersions("ManualTest").size());
-		assertEquals(4, config.getTargetMilestones("ManualTest").size());
-		assertEquals(2, config.getComponents("TestProduct").size());
-		assertEquals(4, config.getVersions("TestProduct").size());
-		assertEquals(4, config.getTargetMilestones("TestProduct").size());
-		assertEquals(2, config.getComponents("Product with Spaces").size());
-		assertEquals(4, config.getVersions("Product with Spaces").size());
-		assertEquals(4, config.getTargetMilestones("Product with Spaces").size());
-	}
+//	public void testRDFProductConfig() throws Exception {
+//		RepositoryConfiguration config = client.getRepositoryConfiguration();
+//		assertNotNull(config);
+//		assertEquals(
+//				0,
+//				config.getInstallVersion().compareMajorMinorOnly(
+//						new BugzillaVersion(BugzillaFixture.current().getVersion())));
+//		if (BugzillaFixture.current() == BugzillaFixture.BUGS_3_6_CUSTOM_WF_AND_STATUS) {
+//			assertEquals(10, config.getStatusValues().size());
+//		} else if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
+//			assertEquals(7, config.getStatusValues().size());
+//		} else {
+//			assertEquals(5, config.getStatusValues().size());
+//		}
+//		if (config.getResolutions().contains("LATER")) {
+//			assertEquals(8, config.getResolutions().size());
+//			assertEquals(8, config.getPlatforms().size());
+//			assertEquals(36, config.getOSs().size());
+//			assertEquals(5, config.getPriorities().size());
+//		} else {
+//			assertEquals(6, config.getResolutions().size());
+//			assertEquals(4, config.getPlatforms().size());
+//			assertEquals(5, config.getOSs().size());
+//			assertEquals(6, config.getPriorities().size());
+//		}
+//		assertEquals(7, config.getSeverities().size());
+//		assertEquals(3, config.getProducts().size());
+//		if (BugzillaFixture.current() == BugzillaFixture.BUGS_3_6_CUSTOM_WF_AND_STATUS) {
+//			assertEquals(6, config.getOpenStatusValues().size());
+//			assertEquals(1, config.getClosedStatusValues().size());
+//		} else if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
+//			assertEquals(4, config.getOpenStatusValues().size());
+//			assertEquals(3, config.getClosedStatusValues().size());
+//		} else {
+//			assertEquals(3, config.getOpenStatusValues().size());
+//			assertEquals(2, config.getClosedStatusValues().size());
+//		}
+//		assertEquals(2, config.getKeywords().size());
+//		assertEquals(2, config.getComponents("ManualTest").size());
+//		assertEquals(4, config.getVersions("ManualTest").size());
+//		assertEquals(4, config.getTargetMilestones("ManualTest").size());
+//		assertEquals(2, config.getComponents("TestProduct").size());
+//		assertEquals(4, config.getVersions("TestProduct").size());
+//		assertEquals(4, config.getTargetMilestones("TestProduct").size());
+//		assertEquals(2, config.getComponents("Product with Spaces").size());
+//		assertEquals(4, config.getVersions("Product with Spaces").size());
+//		assertEquals(4, config.getTargetMilestones("Product with Spaces").size());
+//	}
 
 	public void testValidate() throws Exception {
 		TaskRepository repository = BugzillaFixture.current().repository();
@@ -180,46 +175,46 @@ public class BugzillaClientTest extends TestCase {
 		}
 	}
 
-	public void testCommentQuery() throws Exception {
-		BugzillaRepositoryConnector connector = BugzillaFixture.current().connector();
-		BugzillaAttributeMapper mapper = new BugzillaAttributeMapper(repository, connector);
-		TaskData newData = new TaskData(mapper, BugzillaFixture.current().getConnectorKind(), BugzillaFixture.current()
-				.getRepositoryUrl(), "");
-
-		assertTrue(connector.getTaskDataHandler().initializeTaskData(repository, newData, null,
-				new NullProgressMonitor()));
-		newData.getRoot().getMappedAttribute(TaskAttribute.SUMMARY).setValue("testCommentQuery()");
-		newData.getRoot().getMappedAttribute(TaskAttribute.PRODUCT).setValue("TestProduct");
-		newData.getRoot().getMappedAttribute(TaskAttribute.COMPONENT).setValue("TestComponent");
-		newData.getRoot().getMappedAttribute(BugzillaAttribute.VERSION.getKey()).setValue("1");
-		newData.getRoot().getMappedAttribute(BugzillaAttribute.OP_SYS.getKey()).setValue("All");
-		long timestamp = System.currentTimeMillis();
-		newData.getRoot().getMappedAttribute(TaskAttribute.DESCRIPTION).setValue("" + timestamp);
-		RepositoryResponse response = client.postTaskData(newData, new NullProgressMonitor());
-
-		String bugid = response.getTaskId();
-		RepositoryQuery query = new RepositoryQuery(BugzillaFixture.current().getConnectorKind(), "123");
-		query.setRepositoryUrl(BugzillaFixture.current().getRepositoryUrl());
-		if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
-			query.setUrl("?long_desc_type=allwordssubstr&long_desc=" + timestamp + "&bug_status=NEW&");
-		} else {
-			query.setUrl("?long_desc_type=allwordssubstr&long_desc=" + timestamp + "&bug_status=CONFIRMED&");
-		}
-
-		final Set<TaskData> returnedData = new HashSet<TaskData>();
-
-		TaskDataCollector collector = new TaskDataCollector() {
-
-			@Override
-			public void accept(TaskData taskData) {
-				returnedData.add(taskData);
-			}
-		};
-
-		client.getSearchHits(query, collector, mapper, new NullProgressMonitor());
-		assertEquals(1, returnedData.size());
-		assertEquals(bugid, returnedData.iterator().next().getTaskId());
-	}
+//	public void testCommentQuery() throws Exception {
+//		BugzillaRepositoryConnector connector = BugzillaFixture.current().connector();
+//		BugzillaAttributeMapper mapper = new BugzillaAttributeMapper(repository, connector);
+//		TaskData newData = new TaskData(mapper, BugzillaFixture.current().getConnectorKind(), BugzillaFixture.current()
+//				.getRepositoryUrl(), "");
+//
+//		assertTrue(connector.getTaskDataHandler().initializeTaskData(repository, newData, null,
+//				new NullProgressMonitor()));
+//		newData.getRoot().getMappedAttribute(TaskAttribute.SUMMARY).setValue("testCommentQuery()");
+//		newData.getRoot().getMappedAttribute(TaskAttribute.PRODUCT).setValue("TestProduct");
+//		newData.getRoot().getMappedAttribute(TaskAttribute.COMPONENT).setValue("TestComponent");
+//		newData.getRoot().getMappedAttribute(BugzillaAttribute.VERSION.getKey()).setValue("1");
+//		newData.getRoot().getMappedAttribute(BugzillaAttribute.OP_SYS.getKey()).setValue("All");
+//		long timestamp = System.currentTimeMillis();
+//		newData.getRoot().getMappedAttribute(TaskAttribute.DESCRIPTION).setValue("" + timestamp);
+//		RepositoryResponse response = client.postTaskData(newData, new NullProgressMonitor());
+//
+//		String bugid = response.getTaskId();
+//		RepositoryQuery query = new RepositoryQuery(BugzillaFixture.current().getConnectorKind(), "123");
+//		query.setRepositoryUrl(BugzillaFixture.current().getRepositoryUrl());
+//		if (BugzillaFixture.current().getBugzillaVersion().compareMajorMinorOnly(BugzillaVersion.BUGZILLA_4_0) < 0) {
+//			query.setUrl("?long_desc_type=allwordssubstr&long_desc=" + timestamp + "&bug_status=NEW&");
+//		} else {
+//			query.setUrl("?long_desc_type=allwordssubstr&long_desc=" + timestamp + "&bug_status=CONFIRMED&");
+//		}
+//
+//		final Set<TaskData> returnedData = new HashSet<TaskData>();
+//
+//		TaskDataCollector collector = new TaskDataCollector() {
+//
+//			@Override
+//			public void accept(TaskData taskData) {
+//				returnedData.add(taskData);
+//			}
+//		};
+//
+//		client.getSearchHits(query, collector, mapper, new NullProgressMonitor());
+//		assertEquals(1, returnedData.size());
+//		assertEquals(bugid, returnedData.iterator().next().getTaskId());
+//	}
 
 	/**
 	 * test for bug 335278: enhance search result handler to handle additional attributes

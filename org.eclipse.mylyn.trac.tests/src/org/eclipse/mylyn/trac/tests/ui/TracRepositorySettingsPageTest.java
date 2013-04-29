@@ -103,7 +103,7 @@ public class TracRepositorySettingsPageTest extends TestCase {
 	}
 
 	public void testValidateXmlRpc() throws Exception {
-		initialize(TracFixture.TRAC_0_10_XML_RPC);
+		initialize(TracFixture.TRAC_0_12_XML_RPC);
 
 		validator.run(new NullProgressMonitor());
 		assertNull(validator.getResult());
@@ -115,7 +115,7 @@ public class TracRepositorySettingsPageTest extends TestCase {
 	}
 
 	public void testValidateWeb() throws Exception {
-		initialize(TracFixture.TRAC_0_10_WEB);
+		initialize(TracFixture.TRAC_0_12_WEB);
 
 		validator.run(new NullProgressMonitor());
 		assertNull(validator.getResult());
@@ -127,7 +127,7 @@ public class TracRepositorySettingsPageTest extends TestCase {
 	}
 
 	public void testValidateAutomaticUser() throws Exception {
-		initialize(TracFixture.TRAC_0_10_XML_RPC);
+		initialize(TracFixture.TRAC_0_12_XML_RPC);
 
 		page.setTracVersion(null);
 		validator = page.new TracValidator(page.createTaskRepository(), null);
@@ -142,7 +142,7 @@ public class TracRepositorySettingsPageTest extends TestCase {
 	}
 
 	public void testValidateAutomaticAnonymous() throws Exception {
-		initialize(TracFixture.TRAC_0_10_XML_RPC);
+		initialize(TracFixture.TRAC_0_12_XML_RPC);
 
 		page.setUserId("");
 		page.setPassword("");

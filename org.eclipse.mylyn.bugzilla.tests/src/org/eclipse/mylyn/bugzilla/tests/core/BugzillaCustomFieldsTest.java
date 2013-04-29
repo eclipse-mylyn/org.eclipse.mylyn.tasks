@@ -19,16 +19,13 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.eclipse.mylyn.bugzilla.tests.support.BugzillaFixture;
-import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
-import org.eclipse.mylyn.commons.net.AuthenticationType;
+import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil.PrivilegeLevel;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaAttribute;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaClient;
 import org.eclipse.mylyn.internal.bugzilla.core.BugzillaVersion;
 import org.eclipse.mylyn.tasks.core.TaskRepository;
 import org.eclipse.mylyn.tasks.core.data.TaskAttribute;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
-import org.eclipse.mylyn.tasks.core.data.TaskMapper;
-import org.eclipse.mylyn.commons.sdk.util.CommonTestUtil.PrivilegeLevel;
 
 /**
  * Tests should be run against Bugzilla 3.2.4 or greater
@@ -50,80 +47,80 @@ public class BugzillaCustomFieldsTest extends TestCase {
 		client = BugzillaFixture.current().client();
 	}
 
-	public void testCustomAttributes() throws Exception {
-
-		String taskNumber = "2";
-		TaskData taskData = BugzillaFixture.current().getTask(taskNumber, client);
-		assertNotNull(taskData);
-		TaskMapper mapper = new TaskMapper(taskData);
-		assertEquals(taskNumber, taskData.getTaskId());
-
-//		SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-//		assertEquals(format1.parse("2009-09-16 14:11"), mapper.getCreationDate());
-
-		AuthenticationCredentials credentials = repository.getCredentials(AuthenticationType.REPOSITORY);
-		assertNotNull("credentials are null", credentials);
-		assertNotNull("Repositor User not set", credentials.getUserName());
-		assertNotNull("no password for Repository", credentials.getPassword());
-
-		TaskAttribute colorAttribute = mapper.getTaskData().getRoot().getAttribute("cf_multiselect");
-		assertNotNull("TaskAttribute Color did not exists", colorAttribute);
-		List<String> theColors = colorAttribute.getValues();
-		assertNotNull(theColors);
-		assertFalse("no colors set", theColors.isEmpty());
-
-		boolean red = false;
-		boolean green = false;
-		boolean yellow = false;
-		boolean blue = false;
-
-		for (Object element : theColors) {
-			String string = (String) element;
-
-			if (!red && string.compareTo("Red") == 0) {
-				red = true;
-			} else if (!green && string.compareTo("Green") == 0) {
-				green = true;
-			} else if (!yellow && string.compareTo("Yellow") == 0) {
-				yellow = true;
-			} else if (!blue && string.compareTo("Blue") == 0) {
-				blue = true;
-			}
-		}
-		changeCollorAndSubmit(taskData, colorAttribute, red, green, yellow, blue);
-		taskData = BugzillaFixture.current().getTask(taskNumber, client);
-		assertNotNull(taskData);
-		mapper = new TaskMapper(taskData);
-
-		colorAttribute = mapper.getTaskData().getRoot().getAttribute("cf_multiselect");
-		assertNotNull("TaskAttribute Color did not exists", colorAttribute);
-		theColors = colorAttribute.getValues();
-		assertNotNull(theColors);
-		assertFalse("no colors set", theColors.isEmpty());
-		boolean red_new = false;
-		boolean green_new = false;
-		boolean yellow_new = false;
-		boolean blue_new = false;
-
-		for (Object element : theColors) {
-			String string = (String) element;
-
-			if (!red_new && string.compareTo("Red") == 0) {
-				red_new = true;
-			} else if (!green_new && string.compareTo("Green") == 0) {
-				green_new = true;
-			} else if (!yellow_new && string.compareTo("Yellow") == 0) {
-				yellow_new = true;
-			} else if (!blue_new && string.compareTo("Blue") == 0) {
-				blue_new = true;
-			}
-		}
-		assertTrue("wrong change",
-				(!red && green && !yellow && !blue && red_new && green_new && !yellow_new && !blue_new)
-						|| (red && green && !yellow && !blue && !red_new && green_new && !yellow_new && !blue_new));
-		changeCollorAndSubmit(taskData, colorAttribute, red_new, green_new, yellow_new, blue_new);
-
-	}
+//	public void testCustomAttributes() throws Exception {
+//
+//		String taskNumber = "2";
+//		TaskData taskData = BugzillaFixture.current().getTask(taskNumber, client);
+//		assertNotNull(taskData);
+//		TaskMapper mapper = new TaskMapper(taskData);
+//		assertEquals(taskNumber, taskData.getTaskId());
+//
+////		SimpleDateFormat format1 = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+////		assertEquals(format1.parse("2009-09-16 14:11"), mapper.getCreationDate());
+//
+//		AuthenticationCredentials credentials = repository.getCredentials(AuthenticationType.REPOSITORY);
+//		assertNotNull("credentials are null", credentials);
+//		assertNotNull("Repositor User not set", credentials.getUserName());
+//		assertNotNull("no password for Repository", credentials.getPassword());
+//
+//		TaskAttribute colorAttribute = mapper.getTaskData().getRoot().getAttribute("cf_multiselect");
+//		assertNotNull("TaskAttribute Color did not exists", colorAttribute);
+//		List<String> theColors = colorAttribute.getValues();
+//		assertNotNull(theColors);
+//		assertFalse("no colors set", theColors.isEmpty());
+//
+//		boolean red = false;
+//		boolean green = false;
+//		boolean yellow = false;
+//		boolean blue = false;
+//
+//		for (Object element : theColors) {
+//			String string = (String) element;
+//
+//			if (!red && string.compareTo("Red") == 0) {
+//				red = true;
+//			} else if (!green && string.compareTo("Green") == 0) {
+//				green = true;
+//			} else if (!yellow && string.compareTo("Yellow") == 0) {
+//				yellow = true;
+//			} else if (!blue && string.compareTo("Blue") == 0) {
+//				blue = true;
+//			}
+//		}
+//		changeCollorAndSubmit(taskData, colorAttribute, red, green, yellow, blue);
+//		taskData = BugzillaFixture.current().getTask(taskNumber, client);
+//		assertNotNull(taskData);
+//		mapper = new TaskMapper(taskData);
+//
+//		colorAttribute = mapper.getTaskData().getRoot().getAttribute("cf_multiselect");
+//		assertNotNull("TaskAttribute Color did not exists", colorAttribute);
+//		theColors = colorAttribute.getValues();
+//		assertNotNull(theColors);
+//		assertFalse("no colors set", theColors.isEmpty());
+//		boolean red_new = false;
+//		boolean green_new = false;
+//		boolean yellow_new = false;
+//		boolean blue_new = false;
+//
+//		for (Object element : theColors) {
+//			String string = (String) element;
+//
+//			if (!red_new && string.compareTo("Red") == 0) {
+//				red_new = true;
+//			} else if (!green_new && string.compareTo("Green") == 0) {
+//				green_new = true;
+//			} else if (!yellow_new && string.compareTo("Yellow") == 0) {
+//				yellow_new = true;
+//			} else if (!blue_new && string.compareTo("Blue") == 0) {
+//				blue_new = true;
+//			}
+//		}
+//		assertTrue("wrong change",
+//				(!red && green && !yellow && !blue && red_new && green_new && !yellow_new && !blue_new)
+//						|| (red && green && !yellow && !blue && !red_new && green_new && !yellow_new && !blue_new));
+//		changeCollorAndSubmit(taskData, colorAttribute, red_new, green_new, yellow_new, blue_new);
+//
+//	}
 
 	private void changeCollorAndSubmit(TaskData taskData, TaskAttribute colorAttribute, boolean red, boolean green,
 			boolean yellow, boolean blue) throws Exception {

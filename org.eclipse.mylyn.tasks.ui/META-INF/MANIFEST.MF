@@ -59,4 +59,5 @@ Export-Package: org.eclipse.mylyn.internal.provisional.tasks.ui.wizards;x-intern
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-Localization: plugin
 Import-Package: com.ibm.icu.text,
+ org.eclipse.jdt.annotation,
  org.apache.commons.logging;version="[1.0.4,2.0.0)"
